@@ -17,10 +17,10 @@ import { notFound, unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getInitials } from '@/lib/utils';
-import { Gift, Mail, MapPin, Ruler } from 'lucide-react';
+import { Mail, MapPin, Ruler } from 'lucide-react';
+import { UserGiftList } from './user-gift-list';
 
 type Props = {
   params: Promise<{
@@ -159,34 +159,8 @@ export default async function UserPage({ params }: Props) {
                 <CardTitle>Wishlist</CardTitle>
                 <Badge variant="secondary">{gifts.length} gifts</Badge>
               </CardHeader>
-              <CardContent className="">
-                <div className="space-y-4 overflow-hidden">
-                  {gifts.map((gift) => (
-                    <div
-                      key={gift.id}
-                      className="flex items-center justify-between gap-4 p-4 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Gift className="h-5 w-5 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 overflow-hidden">
-                          <div className="font-medium truncate">
-                            {gift.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground truncate max-w-prose hidden md:block">
-                            {gift.url}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {gift.claimed ? (
-                          <Badge variant="secondary">Claimed</Badge>
-                        ) : (
-                          <Button size="sm">Claim Gift</Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <CardContent>
+                <UserGiftList gifts={gifts} currentUserId={session.user.id} />
               </CardContent>
             </Card>
           </div>

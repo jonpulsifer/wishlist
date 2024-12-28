@@ -11,12 +11,10 @@ import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 
 import { auth } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
-import { Button } from '@/components/ui/button';
 import {
   getPeopleForNewGiftModal,
   getSortedVisibleGiftsForUser,
 } from '@/lib/db/queries-cached';
-import { Plus } from 'lucide-react';
 import { unauthorized } from 'next/navigation';
 import { GiftList } from './gift-list';
 
@@ -71,6 +69,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
           search={q as string}
           sort={sort as 'name' | 'owner'}
           direction={direction as 'asc' | 'desc'}
+          currentUserId={session.user.id}
         />
       </div>
     </SidebarInset>

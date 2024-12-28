@@ -83,31 +83,35 @@ export const deleteGift = async (id: string) => {
   try {
     const { user } = await getSession();
     const gift = await db.gift.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       select: {
         ownerId: true,
         createdById: true,
+        name: true,
       },
     });
-    const isOwner = gift?.ownerId === user.id;
-    const isCreator = gift?.createdById === user.id;
+
+    if (!gift) {
+      return { error: 'Gift not found' };
+    }
+
+    const isOwner = gift.ownerId === user.id;
+    const isCreator = gift.createdById === user.id;
     if (!isOwner && !isCreator) {
       return { error: 'You are not the owner or creator of this gift' };
     }
+
     await db.gift.delete({
-      where: {
-        id,
-      },
+      where: { id },
     });
+    revalidateGiftRelatedCaches();
+    return { success: true, message: `${gift.name} has been deleted` };
   } catch (error) {
     if (error instanceof Error) {
       return { error: error.message };
     }
     return { error: 'Something went wrong in the server action' };
   }
-  revalidateGiftRelatedCaches();
 };
 
 export const updateGift = async ({

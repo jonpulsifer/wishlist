@@ -1,6 +1,6 @@
 'use client';
 
-import { claimGift, unclaimGift } from '@/app/actions';
+import { claimGift, deleteGift, unclaimGift } from '@/app/actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ interface GiftListProps {
   search: string;
   sort: string;
   direction: string;
+  currentUserId: string;
 }
 
 export function GiftList({
@@ -33,6 +34,7 @@ export function GiftList({
   search,
   sort,
   direction,
+  currentUserId,
 }: GiftListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,7 +120,7 @@ export function GiftList({
         });
         toast({
           title: 'Failed to update gift',
-          description: result.message,
+          description: result.error,
           variant: 'destructive',
         });
       }
@@ -126,6 +128,39 @@ export function GiftList({
       toast({
         title: 'An error occurred',
         description: 'Failed to update gift',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function handleDelete(giftId: string) {
+    try {
+      startTransition(() => {
+        setGifts((prev) => prev.filter((g) => g.id !== giftId));
+      });
+
+      const result = await deleteGift(giftId);
+
+      if (result.success) {
+        toast({
+          title: 'Gift deleted',
+          description: result.message,
+        });
+      } else {
+        // Revert on failure
+        startTransition(() => {
+          setGifts(gifts);
+        });
+        toast({
+          title: 'Failed to delete gift',
+          description: result.error,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'An error occurred',
+        description: 'Failed to delete gift',
         variant: 'destructive',
       });
     }
@@ -172,9 +207,14 @@ export function GiftList({
           >
             <div className="space-y-1">
               <div className="font-medium">{gift.name}</div>
-              <div className="text-sm text-muted-foreground">
-                Created by {gift.createdBy?.name}
-              </div>
+              {gift.createdBy?.id !== gift.owner.id && (
+                <div className="text-sm text-muted-foreground">
+                  Added by{' '}
+                  {gift.createdBy?.id === currentUserId
+                    ? 'you'
+                    : (gift.createdBy?.name ?? gift.createdBy?.email)}
+                </div>
+              )}
               <div className="md:hidden text-sm text-muted-foreground flex items-center gap-2">
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={gift.owner?.image || undefined} />
@@ -192,7 +232,9 @@ export function GiftList({
                 <AvatarImage src={gift.owner.image ?? undefined} />
                 <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
               </Avatar>
-              <span>{gift.owner.name}</span>
+              <span>
+                {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
+              </span>
             </div>
 
             <div className="hidden md:block text-muted-foreground">
@@ -202,14 +244,25 @@ export function GiftList({
             </div>
 
             <div className="text-right">
-              <Button
-                variant={gift.claimed ? 'destructive' : 'default'}
-                onClick={() => handleClaimToggle(gift)}
-                size="sm"
-                className="w-20 md:w-24"
-              >
-                {gift.claimed ? 'Unclaim' : 'Claim'}
-              </Button>
+              {gift.createdBy?.id === currentUserId ? (
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDelete(gift.id)}
+                  size="sm"
+                  className="w-20 md:w-24"
+                >
+                  Delete
+                </Button>
+              ) : (
+                <Button
+                  variant={gift.claimed ? 'destructive' : 'default'}
+                  onClick={() => handleClaimToggle(gift)}
+                  size="sm"
+                  className="w-20 md:w-24"
+                >
+                  {gift.claimed ? 'Unclaim' : 'Claim'}
+                </Button>
+              )}
             </div>
           </div>
         ))}
