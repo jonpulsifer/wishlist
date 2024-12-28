@@ -5,24 +5,35 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import santa from '@/public/santaicon.png';
 
-const welcome = (toast: any) => {
-  toast.success('Ho ho ho! Welcome!', {
-    icon: '🎅',
-    style: {
-      background: '#ff0066',
-      color: '#fff',
-    },
-  });
-};
+interface Snowflake {
+  id: number;
+  left: number;
+  size: number;
+  duration: number;
+  delay: number;
+}
 
 function LoginPage() {
+  const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
+  const { toast } = useToast();
   const [showLoading, setShowLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const { toast } = useToast();
+
+  useEffect(() => {
+    const flakes: Snowflake[] = Array.from({ length: 50 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      size: Math.random() * 1 + 0.2,
+      duration: Math.random() * 5 + 5, // 5s to 10s
+      delay: Math.random() * -10, // Random start time
+    }));
+    setSnowflakes(flakes);
+  }, []);
+
   if (showLoading) {
     return 'Loading...';
   }
@@ -30,8 +41,11 @@ function LoginPage() {
   const handleGoogle = (e: React.MouseEvent | React.FormEvent) => {
     setShowLoading(true);
     e.preventDefault();
-    signIn('google', { redirect: true, redirectTo: '/home' }).finally(() => {
-      welcome(toast);
+    signIn('google', { redirect: true, callbackUrl: '/home' }).finally(() => {
+      toast({
+        title: 'Welcome!',
+        description: 'Ho ho ho! Welcome! 🎅',
+      });
     });
   };
 
@@ -42,17 +56,17 @@ function LoginPage() {
 
       {/* Snowfall effect */}
       <div className="absolute inset-0 pointer-events-none">
-        {[...Array(50)].map((_, i) => (
+        {snowflakes.map((flake) => (
           <div
-            key={i}
+            key={flake.id}
             className="snow"
-            style={
-              {
-                '--size': `${Math.random() * 1 + 0.2}rem`,
-                '--left': `${Math.random() * 100}%`,
-                '--delay': `${Math.random() * 5}s`,
-              } as React.CSSProperties
-            }
+            style={{
+              left: `${flake.left}%`,
+              width: `${flake.size}rem`,
+              height: `${flake.size}rem`,
+              animationDuration: `${flake.duration}s`,
+              animationDelay: `${flake.delay}s`,
+            }}
           />
         ))}
       </div>

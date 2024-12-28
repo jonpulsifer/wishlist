@@ -22,20 +22,16 @@ import { getInitials } from '@/lib/utils';
 import { Mail, MapPin, Ruler } from 'lucide-react';
 import { UserGiftList } from './user-gift-list';
 
-type Props = {
-  params: Promise<{
-    id: string;
-  }>;
-};
-
-export default async function UserPage({ params }: Props) {
+export default async function UserPage() {
   const session = await auth();
   if (!session?.user?.id) {
     return unauthorized();
   }
-  const { id } = await params;
-  const user = await getUserById(id);
-  const gifts = await getVisibleGiftsForUserById(id, session.user.id);
+  const user = await getUserById(session.user.id);
+  const gifts = await getVisibleGiftsForUserById(
+    session.user.id,
+    session.user.id,
+  );
   if (!user) {
     notFound();
   }

@@ -66,6 +66,18 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      fontFamily: {
+        sans: ['var(--font-geist-sans)'],
+        mono: ['var(--font-geist-mono)'],
+      },
+      fontSize: {
+        base: '1rem',
+        xxs: '0.825rem',
+        xs: '0.875rem',
+        sm: '0.925rem',
+        md: '1.075rem',
+        lg: '1.175rem',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

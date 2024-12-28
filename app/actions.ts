@@ -20,7 +20,7 @@ const GiftSchema = z.object({
 
 export type GiftFormData = z.infer<typeof GiftSchema>;
 
-export const addGift = async (prevState: any, formData: GiftFormData) => {
+export const addGift = async (_state: unknown, formData: GiftFormData) => {
   const validatedFields = GiftSchema.safeParse(formData);
 
   if (!validatedFields.success) {
@@ -244,6 +244,38 @@ export const unclaimGift = async (id: string) => {
     });
     revalidateGiftRelatedCaches();
     return { success: true, message: `You unclaimed ${gift?.name}` };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong in the server action' };
+  }
+};
+
+export const updateUser = async (
+  id: string,
+  data: {
+    name: string;
+    address: string;
+    sizes: {
+      pants: string;
+      shirt: string;
+      shoes: string;
+    };
+  },
+) => {
+  try {
+    await db.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        address: data.address,
+        pant_size: data.sizes.pants,
+        shirt_size: data.sizes.shirt,
+        shoe_size: data.sizes.shoes,
+      },
+    });
+    return { success: true };
   } catch (error) {
     if (error instanceof Error) {
       return { error: error.message };
