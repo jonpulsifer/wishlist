@@ -4,7 +4,7 @@ import prisma from './client';
 const CURRENT_YEAR = new Date().getFullYear();
 const currentYearFilter = {
   createdAt: {
-    gte: new Date(`${CURRENT_YEAR}-01-01`),
+    gte: new Date(`${CURRENT_YEAR - 2}-01-01`),
     lt: new Date(`${CURRENT_YEAR + 1}-01-01`),
   },
 };

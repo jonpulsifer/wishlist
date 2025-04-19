@@ -30,7 +30,7 @@ import { ModeToggle } from './dark-mode-toggle';
 const items = [
   {
     title: 'Home',
-    url: '/home',
+    url: '/',
     icon: Home,
   },
   {
@@ -45,17 +45,17 @@ const items = [
   },
   {
     title: 'Claimed',
-    url: '/gifts/claimed',
+    url: '/claimed',
     icon: ListCheck,
   },
   {
     title: 'AI',
-    url: '#',
+    url: '/ai',
     icon: Bot,
   },
   {
     title: 'Secret Santa',
-    url: '#',
+    url: '/secret-santa',
     icon: CandyCane,
   },
   {
