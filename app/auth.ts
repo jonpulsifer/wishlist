@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 const prisma = new PrismaClient();
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // @ts-expect-error - PrismaAdapter is not typed correctly
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
