@@ -621,7 +621,7 @@ const ChristmasPlinko: React.FC = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm overflow-auto">
+    <div className="p-2 sm:p-4 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-xs overflow-auto">
       <div className="min-w-[400px]">
         <div className="">Score: {score}</div>
         <div className="">Peg Hits: {pegScore}</div>
@@ -631,7 +631,7 @@ const ChristmasPlinko: React.FC = () => {
         <svg
           width={dimensions.width}
           height={dimensions.height}
-          className="rounded-lg cursor-pointer bg-gradient-to-b from-blue-50/90 to-blue-100/90 dark:from-slate-800/90 dark:to-slate-900/90"
+          className="rounded-lg cursor-pointer bg-linear-to-b from-blue-50/90 to-blue-100/90 dark:from-slate-800/90 dark:to-slate-900/90"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -688,7 +688,7 @@ const ChristmasPlinko: React.FC = () => {
         </svg>
         <button
           className="mt-2 sm:mt-4 px-4 sm:px-6 py-2 sm:py-3 w-full sm:w-auto 
-            bg-gradient-to-br from-red-500/90 to-red-600/90 
+            bg-linear-to-br from-red-500/90 to-red-600/90 
             text-white rounded-lg font-medium shadow-sm 
             transition-all duration-150 ease-in-out
             hover:shadow-md hover:from-red-600/90 hover:to-red-700/90 

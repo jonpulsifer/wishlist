@@ -193,7 +193,7 @@ export function GiftList({
       </div>
 
       <div className="rounded-md border">
-        <div className="hidden md:grid md:grid-cols-[1fr,200px,200px,120px] gap-4 p-4 font-medium">
+        <div className="hidden md:grid md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 font-medium">
           <div>Gift</div>
           <div>Recipient</div>
           <div>Created</div>
@@ -203,7 +203,7 @@ export function GiftList({
         {filteredAndSortedGifts.map((gift) => (
           <div
             key={gift.id}
-            className="grid grid-cols-[1fr,auto] md:grid-cols-[1fr,200px,200px,120px] gap-4 p-4 items-center border-t"
+            className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 items-center border-t"
           >
             <div className="space-y-1">
               <div className="font-medium">{gift.name}</div>

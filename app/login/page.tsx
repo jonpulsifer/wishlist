@@ -52,7 +52,7 @@ function LoginPage() {
   return (
     <div className="relative flex min-h-screen flex-1 flex-col justify-center items-center px-6 py-12 lg:px-8 overflow-hidden">
       {/* Animated background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
+      <div className="fixed inset-0 bg-linear-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
 
       {/* Snowfall effect */}
       <div className="absolute inset-0 pointer-events-none">
@@ -120,7 +120,7 @@ function LoginPage() {
           >
             <button
               className="group flex justify-center font-semibold w-full h-12 p-3 rounded-xl 
-                        bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white
+                        bg-white/90 backdrop-blur-xs text-gray-900 hover:bg-white
                         shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)]
                         transition-all duration-300 ease-out"
               onClick={handleGoogle}
