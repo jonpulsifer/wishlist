@@ -34,7 +34,6 @@ export default function NotFound() {
     <div className="relative flex min-h-screen flex-1 flex-col justify-center items-center px-6 py-12 lg:px-8 overflow-hidden">
       {/* Animated background */}
       <div className="fixed inset-0 bg-linear-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
-
       {/* Snowfall effect */}
       <div className="absolute inset-0 pointer-events-none">
         {snowflakes.map((flake) => (
@@ -51,7 +50,6 @@ export default function NotFound() {
           />
         ))}
       </div>
-
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -99,7 +97,7 @@ export default function NotFound() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Link href="/" className="mt-8 inline-block">
+          <Link href="/" className="mt-8 inline-block" legacyBehavior>
             <button
               className="group flex justify-center font-semibold px-6 h-12 p-3 rounded-xl 
                       bg-white/90 backdrop-blur-xs text-gray-900 hover:bg-white
