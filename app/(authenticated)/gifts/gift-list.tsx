@@ -15,7 +15,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
 import { getInitials } from '@/lib/utils';
-import type { Gift } from '@prisma/client';
+import type { Gift } from '@/prisma/generated/client';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { startTransition, useMemo } from 'react';

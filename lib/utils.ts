@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import type { User } from '@/prisma/generated/client';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

@@ -26,7 +26,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@prisma/client';
+import type { User } from '@/prisma/generated/client';
 import { Loader2, Plus } from 'lucide-react';
 import * as React from 'react';
 import { useActionState } from 'react';
