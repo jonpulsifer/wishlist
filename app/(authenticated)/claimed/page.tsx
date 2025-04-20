@@ -8,17 +8,10 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { unclaimGift } from '@/app/actions';
 import Link from 'next/link';
-import { revalidatePath } from 'next/cache';
+import { toast } from '@/hooks/use-toast';
 
 interface Gift {
   id: string;
@@ -38,11 +31,23 @@ interface Gift {
   };
 }
 
-async function handleUnclaim(giftId: string) {
-  'use server';
+async function handleUnclaim(formData: FormData) {
+  const giftId = formData.get('giftId');
+  if (typeof giftId !== 'string') {
+    throw new Error('Gift ID is required');
+  }
   const result = await unclaimGift(giftId);
-  revalidatePath('/claimed');
-  return result;
+  if (result.error) {
+    toast({
+      title: 'Error',
+      description: result.error,
+    });
+  } else {
+    toast({
+      title: 'Success',
+      description: result.message,
+    });
+  }
 }
 
 export default async function ClaimedPage() {
@@ -130,7 +135,7 @@ export default async function ClaimedPage() {
                   {gift.owner.name || 'Unknown'}
                 </div>
                 <div className="text-right">
-                  <form action={handleUnclaim.bind(null, gift.id)}>
+                  <form action={handleUnclaim}>
                     <Button
                       variant="outline"
                       size="sm"
