@@ -1,5 +1,4 @@
 import { getSession } from '@/app/auth';
-import db from '@/lib/db/client';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,56 +7,12 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { WishlistCard } from './wishlist-card';
-
-interface Wishlist {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  password: string | null;
-  members: {
-    id: string;
-    name: string | null;
-    email: string;
-  }[];
-  gifts: {
-    id: string;
-    name: string;
-    description: string | null;
-    url: string | null;
-    claimed: boolean;
-  }[];
-}
+import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
 
 export default async function WishlistsPage() {
   const { user } = await getSession();
-
-  const wishlists = await db.wishlist.findMany({
-    include: {
-      members: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      gifts: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          url: true,
-          claimed: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  const wishlists = await getWishlistsWithMembers();
 
   return (
     <SidebarInset>
@@ -92,7 +47,7 @@ export default async function WishlistsPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {wishlists.map((wishlist: Wishlist) => {
+            {wishlists.map((wishlist) => {
               const isMember = wishlist.members.some(
                 (member) => member.id === user.id,
               );

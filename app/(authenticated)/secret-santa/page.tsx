@@ -20,39 +20,6 @@ import Link from 'next/link';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
 import { PlusIcon } from 'lucide-react';
 
-interface SecretSantaAssignment {
-  id: string;
-  recipient: {
-    id: string;
-    name: string | null;
-    address: string | null;
-    sizes: {
-      pants: string | null;
-      shirt: string | null;
-      shoes: string | null;
-    } | null;
-  };
-  wishlist: {
-    id: string;
-    name: string;
-    gifts: {
-      id: string;
-      name: string;
-      description: string | null;
-      url: string | null;
-      claimed: boolean;
-    }[];
-  };
-}
-
-interface Gift {
-  id: string;
-  name: string;
-  description: string | null;
-  url: string | null;
-  claimed: boolean;
-}
-
 export default async function SecretSantaPage() {
   const { user } = await getSession();
 
@@ -215,77 +182,6 @@ export default async function SecretSantaPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {currentAssignment.assignedTo.wishlists.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recipient's Wishlist</CardTitle>
-                  <CardDescription>
-                    {currentAssignment.assignedTo.wishlists[0].name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {currentAssignment.assignedTo.wishlists[0].gifts.length ===
-                  0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No gifts in this wishlist yet.
-                    </p>
-                  ) : (
-                    <div className="rounded-md border">
-                      <div className="hidden md:grid md:grid-cols-[1fr_200px_120px] gap-4 p-4 font-medium">
-                        <div>Gift</div>
-                        <div>Status</div>
-                        <div className="text-right">Actions</div>
-                      </div>
-                      {currentAssignment.assignedTo.wishlists[0].gifts.map(
-                        (gift: Gift) => (
-                          <div
-                            key={gift.id}
-                            className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_120px] gap-4 p-4 items-center border-t"
-                          >
-                            <div className="space-y-1">
-                              <div className="font-medium">{gift.name}</div>
-                              {gift.description && (
-                                <div className="text-sm text-muted-foreground">
-                                  {gift.description}
-                                </div>
-                              )}
-                              {gift.url && (
-                                <a
-                                  href={gift.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-blue-500 hover:underline"
-                                >
-                                  View Link
-                                </a>
-                              )}
-                            </div>
-                            <div className="text-muted-foreground">
-                              {gift.claimed ? 'Claimed' : 'Available'}
-                            </div>
-                            <div className="text-right">
-                              <Button
-                                variant={
-                                  gift.claimed ? 'destructive' : 'default'
-                                }
-                                size="sm"
-                                className="w-20 md:w-24"
-                                asChild
-                              >
-                                <Link href={`/gifts/${gift.id}`}>
-                                  {gift.claimed ? 'Unclaim' : 'Claim'}
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
 

@@ -1,5 +1,4 @@
 import { getSession } from '@/app/auth';
-import db from '@/lib/db/client';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,24 +11,7 @@ import { Button } from '@/components/ui/button';
 import { unclaimGift } from '@/app/actions';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
-
-interface Gift {
-  id: string;
-  name: string;
-  description: string | null;
-  url: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  image: string | null;
-  published: boolean;
-  ownerId: string;
-  claimed: boolean;
-  claimedById: string | null;
-  createdById: string | null;
-  owner: {
-    name: string | null;
-  };
-}
+import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 
 async function handleUnclaim(formData: FormData) {
   const giftId = formData.get('giftId');
@@ -52,22 +34,7 @@ async function handleUnclaim(formData: FormData) {
 
 export default async function ClaimedPage() {
   const { user } = await getSession();
-
-  const claimedGifts = await db.gift.findMany({
-    where: {
-      claimedById: user.id,
-    },
-    include: {
-      owner: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  const claimedGifts = await getClaimedGiftsForMe(user.id);
 
   return (
     <SidebarInset>
@@ -108,7 +75,7 @@ export default async function ClaimedPage() {
               <div>Recipient</div>
               <div className="text-right">Actions</div>
             </div>
-            {claimedGifts.map((gift: Gift) => (
+            {claimedGifts.map((gift) => (
               <div
                 key={gift.id}
                 className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_120px] gap-4 p-4 items-center border-t"

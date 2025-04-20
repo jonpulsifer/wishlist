@@ -13,18 +13,22 @@ import { useToast } from '@/hooks/use-toast';
 import { handleWishlistAction } from '@/app/actions';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import type { Prisma } from '@/prisma/generated/client';
 
 interface WishlistCardProps {
-  wishlist: {
-    id: string;
-    name: string;
-    password: string | null;
-    members: {
-      id: string;
-      name: string | null;
-      email: string;
-    }[];
-  };
+  wishlist: Prisma.WishlistGetPayload<{
+    select: {
+      id: true;
+      name: true;
+      members: {
+        select: {
+          id: true;
+          name: true;
+          email: true;
+        };
+      };
+    };
+  }>;
   isMember: boolean;
 }
 
@@ -39,7 +43,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
       const result = await handleWishlistAction(
         wishlist.id,
         isMember,
-        wishlist.password !== null ? pin : undefined,
+        formData.get('pin') as string,
       );
 
       if (result.error) {
@@ -62,8 +66,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
     }
   };
 
-  const isButtonDisabled =
-    isPending || (!isMember && wishlist.password !== null && !pin);
+  const isButtonDisabled = isPending || (!isMember && !pin);
 
   return (
     <Card>
@@ -91,7 +94,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
               </ul>
             </div>
           )}
-          {!isMember && wishlist.password !== null && (
+          {!isMember && (
             <div className="space-y-2">
               <div className="flex gap-2">
                 <Input

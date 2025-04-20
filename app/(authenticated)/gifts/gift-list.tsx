@@ -212,7 +212,9 @@ export function GiftList({
                   Added by{' '}
                   {gift.createdBy?.id === currentUserId
                     ? 'you'
-                    : (gift.createdBy?.name ?? gift.createdBy?.email)}
+                    : gift.createdBy?.name ||
+                      gift.createdBy?.email ||
+                      'someone else'}
                 </div>
               )}
               <div className="md:hidden text-sm text-muted-foreground flex items-center gap-2">

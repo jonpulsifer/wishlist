@@ -86,6 +86,25 @@ const getUsersWithGiftCount = unstable_cache(
   { tags: ['users', 'gifts'] },
 );
 
+const getWishlistsWithMembers = unstable_cache(
+  async () =>
+    prisma.wishlist.findMany({
+      select: {
+        id: true,
+        name: true,
+        members: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    }),
+  ['wishlistsWithMembers'],
+  { tags: ['wishlists', 'users'] },
+);
+
 const getWishlistsWithMemberIds = unstable_cache(
   async () =>
     prisma.wishlist.findMany({
@@ -406,4 +425,5 @@ export {
   getUsersWithGiftCount,
   getVisibleGiftsForUserById,
   getWishlistsWithMemberIds,
+  getWishlistsWithMembers,
 };
