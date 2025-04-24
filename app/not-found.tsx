@@ -97,7 +97,7 @@ export default function NotFound() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Link href="/" className="mt-8 inline-block" legacyBehavior>
+          <Link href="/home" className="mt-8 inline-block">
             <button
               className="group flex justify-center font-semibold px-6 h-12 p-3 rounded-xl 
                       bg-white/90 backdrop-blur-xs text-gray-900 hover:bg-white

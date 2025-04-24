@@ -43,20 +43,22 @@ export default async function PeoplePage() {
         <Table>
           <TableBody>
             {people.map((person) => (
-              <Link
-                legacyBehavior
-                href={`/people/${person.id}`}
+              <TableRow 
                 key={person.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
               >
-                <TableRow key={person.id}>
-                  <TableCell className="flex items-center gap-2">
-                    <Avatar>
-                      <AvatarImage src={person.image ?? undefined} />
-                      <AvatarFallback>{getInitials(person)}</AvatarFallback>
-                    </Avatar>
-                    {person.name ?? person.email}
-                  </TableCell>
-                  <TableCell>
+                <TableCell colSpan={2} className="p-0">
+                  <Link
+                    href={`/people/${person.id}`}
+                    className="flex items-center justify-between p-4 w-full h-full"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar>
+                        <AvatarImage src={person.image ?? undefined} />
+                        <AvatarFallback>{getInitials(person)}</AvatarFallback>
+                      </Avatar>
+                      {person.name ?? person.email}
+                    </div>
                     <Badge
                       variant={
                         person._count.gifts < 3 ? 'destructive' : 'default'
@@ -65,9 +67,9 @@ export default async function PeoplePage() {
                       {person._count.gifts} gift
                       {person._count.gifts === 1 ? '' : 's'}
                     </Badge>
-                  </TableCell>
-                </TableRow>
-              </Link>
+                  </Link>
+                </TableCell>
+              </TableRow>
             ))}
           </TableBody>
         </Table>
