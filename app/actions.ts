@@ -217,15 +217,22 @@ export const claimGift = async (id: string) => {
 export const unclaimGift = async (id: string) => {
   try {
     const { user } = await getSession();
+    const giftId = id;
+
+    if (!giftId) {
+      return { error: 'Gift ID is required' };
+    }
+
     const gift = await db.gift.findUnique({
       where: {
-        id,
+        id: giftId,
       },
       select: {
         claimedById: true,
         name: true,
       },
     });
+
     const isClaimed = gift?.claimedById === user.id;
     if (!isClaimed) {
       return { error: 'You have not claimed this gift' };
@@ -233,7 +240,7 @@ export const unclaimGift = async (id: string) => {
 
     await db.gift.update({
       where: {
-        id,
+        id: giftId,
       },
       data: {
         claimed: false,
@@ -357,7 +364,11 @@ export const leaveWishlist = async (wishlistId: string) => {
   }
 };
 
-export const handleWishlistAction = async (wishlistId: string, isMember: boolean, pin?: string) => {
+export const handleWishlistAction = async (
+  wishlistId: string,
+  isMember: boolean,
+  pin?: string,
+) => {
   if (isMember) {
     return leaveWishlist(wishlistId);
   }
@@ -380,7 +391,11 @@ export const createSecretSantaEvent = async (name: string) => {
       },
     });
     revalidateTag('secretSanta');
-    return { success: true, id: event.id, message: `${name} has been created.` };
+    return {
+      success: true,
+      id: event.id,
+      message: `${name} has been created.`,
+    };
   } catch (error) {
     if (error instanceof Error) {
       return { error: error.message };
@@ -389,7 +404,10 @@ export const createSecretSantaEvent = async (name: string) => {
   }
 };
 
-export const addParticipantsToSecretSantaEvent = async (eventId: string, participantIds: string[]) => {
+export const addParticipantsToSecretSantaEvent = async (
+  eventId: string,
+  participantIds: string[],
+) => {
   try {
     const { user } = await getSession();
 
@@ -404,22 +422,26 @@ export const addParticipantsToSecretSantaEvent = async (eventId: string, partici
     }
 
     if (event.createdById !== user.id) {
-      return { error: 'You do not have permission to modify this Secret Santa event' };
+      return {
+        error: 'You do not have permission to modify this Secret Santa event',
+      };
     }
 
     // Make sure participants aren't already assigned
-    if (event.participants.some(p => p.assignedToId !== null)) {
-      return { error: 'Cannot add participants after assignments have been made' };
+    if (event.participants.some((p) => p.assignedToId !== null)) {
+      return {
+        error: 'Cannot add participants after assignments have been made',
+      };
     }
 
     // Add participants
-    const participantData = participantIds.map(userId => ({
+    const participantData = participantIds.map((userId) => ({
       userId,
       eventId,
     }));
 
     await db.$transaction(
-      participantIds.map(userId =>
+      participantIds.map((userId) =>
         db.secretSantaParticipant.upsert({
           where: {
             eventId_userId: {
@@ -440,8 +462,8 @@ export const addParticipantsToSecretSantaEvent = async (eventId: string, partici
               },
             },
           },
-        })
-      )
+        }),
+      ),
     );
 
     revalidateTag('secretSanta');
@@ -454,7 +476,10 @@ export const addParticipantsToSecretSantaEvent = async (eventId: string, partici
   }
 };
 
-export const removeParticipantFromSecretSantaEvent = async (eventId: string, participantId: string) => {
+export const removeParticipantFromSecretSantaEvent = async (
+  eventId: string,
+  participantId: string,
+) => {
   try {
     const { user } = await getSession();
 
@@ -469,12 +494,16 @@ export const removeParticipantFromSecretSantaEvent = async (eventId: string, par
     }
 
     if (event.createdById !== user.id) {
-      return { error: 'You do not have permission to modify this Secret Santa event' };
+      return {
+        error: 'You do not have permission to modify this Secret Santa event',
+      };
     }
 
     // Make sure participants aren't already assigned
-    if (event.participants.some(p => p.assignedToId !== null)) {
-      return { error: 'Cannot remove participants after assignments have been made' };
+    if (event.participants.some((p) => p.assignedToId !== null)) {
+      return {
+        error: 'Cannot remove participants after assignments have been made',
+      };
     }
 
     await db.secretSantaParticipant.delete({
@@ -511,7 +540,9 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
     }
 
     if (event.createdById !== user.id) {
-      return { error: 'You do not have permission to modify this Secret Santa event' };
+      return {
+        error: 'You do not have permission to modify this Secret Santa event',
+      };
     }
 
     // Make sure we have enough participants
@@ -520,12 +551,12 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
     }
 
     // Make sure participants aren't already assigned
-    if (event.participants.some(p => p.assignedToId !== null)) {
+    if (event.participants.some((p) => p.assignedToId !== null)) {
       return { error: 'Participants have already been assigned' };
     }
 
     // Get all participant IDs
-    const participantIds = event.participants.map(p => p.userId);
+    const participantIds = event.participants.map((p) => p.userId);
 
     // Shuffle participant IDs to create random assignments
     const shuffledIds = [...participantIds].sort(() => Math.random() - 0.5);
@@ -562,8 +593,8 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
               },
             },
           },
-        })
-      )
+        }),
+      ),
     );
 
     revalidateTag('secretSanta');

@@ -5,32 +5,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { unclaimGift } from '@/app/actions';
-import Link from 'next/link';
-import { toast } from '@/hooks/use-toast';
-import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 
-async function handleUnclaim(formData: FormData) {
-  const giftId = formData.get('giftId');
-  if (typeof giftId !== 'string') {
-    throw new Error('Gift ID is required');
-  }
-  const result = await unclaimGift(giftId);
-  if (result.error) {
-    toast({
-      title: 'Error',
-      description: result.error,
-    });
-  } else {
-    toast({
-      title: 'Success',
-      description: result.message,
-    });
-  }
-}
+import Link from 'next/link';
+
+import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
+import GiftList from './gift-list';
 
 export default async function ClaimedPage() {
   const { user } = await getSession();
@@ -69,52 +51,7 @@ export default async function ClaimedPage() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-md border">
-            <div className="hidden md:grid md:grid-cols-[1fr_200px_120px] gap-4 p-4 font-medium">
-              <div>Gift</div>
-              <div>Recipient</div>
-              <div className="text-right">Actions</div>
-            </div>
-            {claimedGifts.map((gift) => (
-              <div
-                key={gift.id}
-                className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_120px] gap-4 p-4 items-center border-t"
-              >
-                <div className="space-y-1">
-                  <div className="font-medium">{gift.name}</div>
-                  {gift.description && (
-                    <div className="text-sm text-muted-foreground">
-                      {gift.description}
-                    </div>
-                  )}
-                  {gift.url && (
-                    <a
-                      href={gift.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline"
-                    >
-                      View Link
-                    </a>
-                  )}
-                </div>
-                <div className="text-muted-foreground">
-                  {gift.owner.name || 'Unknown'}
-                </div>
-                <div className="text-right">
-                  <form action={handleUnclaim}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-20 md:w-24"
-                    >
-                      Unclaim
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
+          <GiftList gifts={claimedGifts} />
         )}
       </div>
     </SidebarInset>

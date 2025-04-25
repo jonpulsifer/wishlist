@@ -1,5 +1,5 @@
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import { PrismaClient, type User } from '@/prisma/generated/client';
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { redirect } from 'next/navigation';
@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 const prisma = new PrismaClient();
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // @ts-expect-error - PrismaAdapter is not typed correctly
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({

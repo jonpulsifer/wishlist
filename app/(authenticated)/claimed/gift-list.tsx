@@ -1,0 +1,110 @@
+'use client';
+import { unclaimGift } from '@/app/actions';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import type { Prisma } from '@/prisma/generated/client';
+import Link from 'next/link';
+import { startTransition, useOptimistic } from 'react';
+
+type ClaimedGift = Prisma.GiftGetPayload<{
+  include: {
+    owner: true;
+  };
+}>;
+
+export default function GiftList({
+  gifts: initialGifts,
+}: { gifts: ClaimedGift[] }) {
+  const { toast } = useToast();
+  const [gifts, setGifts] = useOptimistic(initialGifts);
+
+  async function handleUnclaim(giftId: string) {
+    try {
+      // Optimistically update the UI
+      startTransition(() => {
+        setGifts((prev) => prev.filter((gift) => gift.id !== giftId));
+      });
+
+      // Perform the server action
+      const result = await unclaimGift(giftId);
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: result.message,
+        });
+      } else {
+        // Revert on failure
+        startTransition(() => {
+          setGifts(initialGifts);
+        });
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      // Revert on error
+      startTransition(() => {
+        setGifts(initialGifts);
+      });
+      toast({
+        title: 'An error occurred',
+        description: 'Failed to unclaim gift',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  return (
+    <div className="rounded-md border">
+      <div className="hidden md:grid md:grid-cols-[1fr_200px_120px] gap-4 p-4 font-medium">
+        <div>Gift</div>
+        <div>Recipient</div>
+        <div className="text-right">Actions</div>
+      </div>
+      {gifts.map((gift) => (
+        <div
+          key={gift.id}
+          className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_120px] gap-4 p-4 items-center border-t"
+        >
+          <div className="space-y-1">
+            <div className="font-medium">{gift.name}</div>
+            {gift.description && (
+              <div className="text-sm text-muted-foreground">
+                {gift.description}
+              </div>
+            )}
+            {gift.url && (
+              <a
+                href={gift.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-500 hover:underline"
+              >
+                View Link
+              </a>
+            )}
+          </div>
+          <Link
+            href={`/people/${gift.owner.id}`}
+            className="text-muted-foreground"
+          >
+            {gift.owner.name || 'Unknown'}
+          </Link>
+          <div className="text-right">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-20 md:w-24"
+              onClick={() => handleUnclaim(gift.id)}
+            >
+              Unclaim
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

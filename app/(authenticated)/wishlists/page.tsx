@@ -7,8 +7,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { WishlistCard } from './wishlist-card';
 import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
+import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {
   const { user } = await getSession();

@@ -1,5 +1,7 @@
 'use client';
 
+import { handleWishlistAction } from '@/app/actions';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,13 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { handleWishlistAction } from '@/app/actions';
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import type { Prisma } from '@/prisma/generated/client';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface WishlistCardProps {
   wishlist: Prisma.WishlistGetPayload<{

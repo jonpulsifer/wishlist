@@ -1,13 +1,11 @@
 import { getSession } from '@/app/auth';
-import db from '@/lib/db/client';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -15,10 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import db from '@/lib/db/client';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
 import { PlusIcon } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function SecretSantaPage() {
   const { user } = await getSession();

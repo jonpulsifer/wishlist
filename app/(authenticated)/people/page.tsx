@@ -43,7 +43,7 @@ export default async function PeoplePage() {
         <Table>
           <TableBody>
             {people.map((person) => (
-              <TableRow 
+              <TableRow
                 key={person.id}
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
               >

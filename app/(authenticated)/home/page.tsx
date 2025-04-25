@@ -1,11 +1,22 @@
 import { getSession } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import {
@@ -15,30 +26,19 @@ import {
   getUsersWithGiftCount,
   getWishlistsWithMemberIds,
 } from '@/lib/db/queries-cached';
-import { unauthorized } from 'next/navigation';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { getInitials } from '@/lib/utils';
-import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
 import {
-  CalendarIcon,
-  GiftIcon,
-  UserIcon,
-  Users2Icon,
-  ChevronRightIcon,
   AlertCircleIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  GiftIcon,
   ListTodoIcon,
   PlusIcon,
+  UserIcon,
+  Users2Icon,
 } from 'lucide-react';
+import Link from 'next/link';
+import { unauthorized } from 'next/navigation';
 
 export default async function HomePage() {
   const { user } = await getSession();

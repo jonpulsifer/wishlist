@@ -1,5 +1,5 @@
-import { faker } from '@faker-js/faker';
 import type { User, Wishlist } from '@/prisma/generated/client';
+import { faker } from '@faker-js/faker';
 
 import prisma from '../lib/db/client';
 
