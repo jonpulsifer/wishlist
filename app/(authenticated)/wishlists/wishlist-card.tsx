@@ -12,8 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Prisma } from '@/prisma/generated/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LockIcon, UsersIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useFormStatus } from 'react-dom';
 
 interface WishlistCardProps {
   wishlist: Prisma.WishlistGetPayload<{
@@ -32,13 +33,34 @@ interface WishlistCardProps {
   isMember: boolean;
 }
 
+// This component must be a direct child of the form for useFormStatus to work
+function SubmitButton({ isMember }: { isMember: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      variant={isMember ? 'destructive' : 'default'}
+      className="w-full"
+      disabled={pending}
+    >
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {isMember ? 'Leaving...' : 'Joining...'}
+        </>
+      ) : isMember ? (
+        'Leave Wishlist'
+      ) : (
+        'Join Wishlist'
+      )}
+    </Button>
+  );
+}
+
 export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
   const { toast } = useToast();
-  const [isPending, setIsPending] = useState(false);
-  const [pin, setPin] = useState('');
 
-  const handleSubmit = async (formData: FormData) => {
-    setIsPending(true);
+  async function handleWishlistSubmit(formData: FormData) {
     try {
       const result = await handleWishlistAction(
         wishlist.id,
@@ -61,24 +83,29 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
         variant: 'destructive',
         description: 'Something went wrong. Please try again.',
       });
-    } finally {
-      setIsPending(false);
     }
-  };
-
-  const isButtonDisabled = isPending || (!isMember && !pin);
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{wishlist.name}</CardTitle>
-        <CardDescription>
-          {isMember ? `${wishlist.members.length} members` : 'Private wishlist'}
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>{wishlist.name}</CardTitle>
+            <CardDescription className="flex items-center gap-1">
+              <UsersIcon className="h-3 w-3" />
+              {isMember
+                ? `${wishlist.members.length} members`
+                : 'Private wishlist'}
+            </CardDescription>
+          </div>
+          {!isMember && <LockIcon className="h-4 w-4 text-muted-foreground" />}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {isMember && (
+          {/* Member list - only shown to members */}
+          {isMember && wishlist.members.length > 0 && (
             <div>
               <h4 className="text-sm font-medium mb-2">Members</h4>
               <ul className="text-sm text-muted-foreground">
@@ -94,14 +121,21 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
               </ul>
             </div>
           )}
+
+          {/* For non-members, show privacy message */}
           {!isMember && (
-            <div className="space-y-2">
-              <div className="flex gap-2">
+            <p className="text-sm text-muted-foreground">
+              Join this wishlist to see its members and gifts.
+            </p>
+          )}
+
+          {/* Form for joining/leaving */}
+          <form action={handleWishlistSubmit} className="space-y-4">
+            {!isMember && (
+              <div className="space-y-2">
                 <Input
                   type="text"
                   name="pin"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
                   placeholder="0000"
                   className="w-full text-center tracking-widest"
                   maxLength={4}
@@ -109,29 +143,13 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
                   inputMode="numeric"
                   required
                 />
+                <p className="text-xs text-muted-foreground text-center">
+                  Enter 4-digit pin
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Enter 4-digit pin
-              </p>
-            </div>
-          )}
-          <form action={handleSubmit}>
-            <Button
-              variant={isMember ? 'destructive' : 'default'}
-              className="w-full"
-              disabled={isButtonDisabled}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isMember ? 'Leaving...' : 'Joining...'}
-                </>
-              ) : isMember ? (
-                'Leave Wishlist'
-              ) : (
-                'Join Wishlist'
-              )}
-            </Button>
+            )}
+
+            <SubmitButton isMember={isMember} />
           </form>
         </div>
       </CardContent>

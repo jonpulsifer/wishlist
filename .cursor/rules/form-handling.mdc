@@ -1,0 +1,53 @@
+---
+description: When interacting with forms
+globs: 
+alwaysApply: false
+---
+# Form Handling Pattern
+
+Forms using server actions should follow these patterns:
+
+## Server Components
+
+Server components handle data fetching and user validation:
+
+```jsx
+// Example pattern for server component wrapper
+async function SecureComponent({ userId }) {
+  // Fetch data on the server
+  const data = await getData();
+  
+  // Server-side validation
+  const isAuthorized = validateAccess(data, userId);
+  
+  // Pass only necessary data to client
+  return <ClientComponent data={data} isAuthorized={isAuthorized} />;
+}
+```
+
+## Client Components with useFormStatus
+
+For forms that submit to server actions:
+
+1. Create a dedicated SubmitButton component for proper status handling:
+
+```jsx
+// This component must be a direct child of the form
+function SubmitButton({ label }) {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button disabled={pending}>
+      {pending ? 'Submitting...' : label}
+    </Button>
+  );
+}
+
+// Use in form
+<form action={serverAction}>
+  {/* Form fields */}
+  <SubmitButton label="Submit" />
+</form>
+```
+
+2. Handle form submissions with proper feedback and error handling

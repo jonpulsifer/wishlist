@@ -409,10 +409,54 @@ const getSecretSantaEvents = unstable_cache(
   { tags: ['secretSanta'] },
 );
 
+const getGiftWithAccessCheck = unstable_cache(
+  async (giftId: string, userId: string) => {
+    const gift = await prisma.gift.findUnique({
+      where: {
+        id: giftId,
+      },
+      include: {
+        owner: true,
+        claimedBy: true,
+        createdBy: true,
+        wishlists: {
+          select: {
+            id: true,
+            name: true,
+            members: {
+              where: { id: userId },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!gift) return null;
+
+    // Check if user has access through any wishlist
+    const hasAccess = gift.wishlists.some(
+      (wishlist) => wishlist.members.length > 0,
+    );
+    if (!hasAccess) return null;
+
+    const isOwner = gift.ownerId === userId;
+    const isCreator = gift.createdById === userId;
+
+    return {
+      ...gift,
+      canEdit: isOwner || isCreator,
+    };
+  },
+  ['giftWithAccess'],
+  { tags: ['gifts', 'users', 'wishlists'] },
+);
+
 export {
   getClaimedGiftsForMe,
   getFullUserById,
   getGiftById,
+  getGiftWithAccessCheck,
   getGiftsWithOwnerClaimedByAndCreatedBy,
   getGiftWithOwnerClaimedByAndCreatedBy,
   getLatestVisibleGiftsForUserById,

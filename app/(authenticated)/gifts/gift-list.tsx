@@ -17,6 +17,7 @@ import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
 import { getInitials } from '@/lib/utils';
 import type { Gift } from '@/prisma/generated/client';
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { startTransition, useMemo } from 'react';
 import { useOptimistic } from 'react';
@@ -205,7 +206,10 @@ export function GiftList({
             key={gift.id}
             className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 items-center border-t"
           >
-            <div className="space-y-1">
+            <Link
+              href={`/gifts/${gift.id}`}
+              className="space-y-1 hover:opacity-80"
+            >
               <div className="font-medium">{gift.name}</div>
               {gift.createdBy?.id !== gift.owner.id && (
                 <div className="text-sm text-muted-foreground">
@@ -227,9 +231,23 @@ export function GiftList({
                   addSuffix: true,
                 })}
               </div>
-            </div>
+              {gift.url && (
+                <a
+                  href={gift.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm text-blue-500 hover:underline"
+                >
+                  View Product
+                </a>
+              )}
+            </Link>
 
-            <div className="hidden md:flex items-center gap-2">
+            <Link
+              href={`/people/${gift.owner.id}`}
+              className="hidden md:flex items-center gap-2 hover:opacity-80"
+            >
               <Avatar className="h-6 w-6">
                 <AvatarImage src={gift.owner.image ?? undefined} />
                 <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
@@ -237,7 +255,7 @@ export function GiftList({
               <span>
                 {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
               </span>
-            </div>
+            </Link>
 
             <div className="hidden md:block text-muted-foreground">
               {formatDistanceToNow(new Date(gift.createdAt), {

@@ -8,11 +8,11 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
+import { Suspense } from 'react';
 import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {
   const { user } = await getSession();
-  const wishlists = await getWishlistsWithMembers();
 
   return (
     <SidebarInset>
@@ -39,29 +39,62 @@ export default async function WishlistsPage() {
           </div>
         </div>
 
-        {wishlists.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">
-              There are no wishlists yet.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {wishlists.map((wishlist) => {
-              const isMember = wishlist.members.some(
-                (member) => member.id === user.id,
-              );
-              return (
-                <WishlistCard
-                  key={wishlist.id}
-                  wishlist={wishlist}
-                  isMember={isMember}
-                />
-              );
-            })}
-          </div>
-        )}
+        <Suspense fallback={<WishlistsLoading />}>
+          <WishlistsContent userId={user.id} />
+        </Suspense>
       </div>
     </SidebarInset>
+  );
+}
+
+function WishlistsLoading() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-lg border p-4 space-y-3">
+          <div className="h-7 bg-muted rounded w-3/4 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-1/2 animate-pulse" />
+          <div className="h-20 bg-muted/50 rounded animate-pulse mt-4" />
+          <div className="h-10 bg-muted rounded animate-pulse mt-4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function WishlistsContent({ userId }: { userId: string }) {
+  const wishlists = await getWishlistsWithMembers();
+
+  if (wishlists.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-lg text-muted-foreground">
+          There are no wishlists yet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {wishlists.map((wishlist) => {
+        // Determine if the current user is a member of this wishlist
+        const isMember = wishlist.members.some(
+          (member) => member.id === userId,
+        );
+
+        if (!isMember) {
+          wishlist.members = [];
+        }
+
+        return (
+          <WishlistCard
+            key={wishlist.id}
+            wishlist={wishlist}
+            isMember={isMember}
+          />
+        );
+      })}
+    </div>
   );
 }

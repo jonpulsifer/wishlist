@@ -1,0 +1,69 @@
+---
+description: 
+globs: *.tsx,*.ts
+alwaysApply: false
+---
+# Project Structure
+
+This is a Next.js 15 application with React 19 using the App Router and server components. It uses Prisma as the ORM and auth.js for user and session management
+
+This project uses Tailwind v4 https://tailwindcss.com/blog/tailwindcss-v4 and shadcn/ui components https://ui.shadcn.com/docs
+
+Key directories:
+- `app/` - Contains the application routes using Next.js App Router
+  - `app/(authenticated)/` - Routes that require authentication
+  - `app/actions.ts` - Server actions for data mutations
+- `components/` - Reusable UI components, including shadcn/ui
+- `lib/` - Utility functions and shared code
+- `prisma/` - Database schema and generated types
+
+# Security Pattern
+
+## Data Access Control
+
+1. Always perform server-side validation before sending sensitive data to the client
+2. Use server components to filter data before passing to client components
+3. Never trust client-side state for access control decisions
+
+Example for wishlists:
+
+```jsx
+// Server component
+async function WishlistContent({ userId }) {
+  const wishlists = await getWishlistsWithMembers();
+  
+  return (
+    <div>
+      {wishlists.map((wishlist) => {
+        // Server-side check if user is a member
+        const isMember = wishlist.members.some(m => m.id === userId);
+        
+        // Don't send member details to client if not a member
+        if (!isMember) {
+          wishlist.members = [];
+        }
+        
+        return <WishlistCard wishlist={wishlist} isMember={isMember} />;
+      })}
+    </div>
+  );
+}
+```
+
+## Cache Invalidation
+
+When modifying data, always invalidate relevant caches:
+
+```js
+// Example from action
+export const joinWishlist = async (wishlistId, pin) => {
+  // Update data...
+  
+  // Revalidate caches
+  revalidateGiftRelatedCaches();
+  revalidateTag('wishlists');
+  revalidateTag('wishlistsWithMembers');
+  
+  return { success: true, message: 'Success' };
+};
+```

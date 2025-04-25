@@ -1,0 +1,68 @@
+---
+description: 
+globs: *.tsx
+alwaysApply: false
+---
+# Client Component Patterns
+
+All client components (marked with `'use client';`) should follow these patterns:
+
+## List Components
+Example: [app/(authenticated)/claimed/gift-list.tsx](mdc:app/(authenticated)/claimed/gift-list.tsx)
+
+1. Use `useOptimistic` for state management https://react.dev/reference/react/useOptimistic
+2. Use `startTransition` for UI updates https://react.dev/reference/react/startTransition
+3. Handle actions with direct function call if possible, use validated forms https://react.dev/reference/react/useActionState
+4. Provide proper error handling and reversion to initial state 
+5. Use consistent UI patterns from shadcn/ui
+
+## Form Handling
+Don't use `useFormStatus` directly. Instead:
+
+1. Create dedicated button/form components with their own hooks
+2. Or use optimistic UI patterns with `useOptimistic` and `startTransition`
+
+## Data Fetching
+Data should be fetched in server components when possible, then passed to client components as props.
+
+## Naming Conventions
+- `handle*` - Client-side action handlers (e.g., `handleUnclaim`)
+- `*List` - Components that display lists (e.g., `GiftList`)
+- Use PascalCase for component names
+- Use camelCase for variables and functions
+
+# UI Patterns
+
+## Link Patterns
+
+For list items with multiple links:
+
+1. Make entire cells clickable for better UX
+2. Use `stopPropagation()` for nested links
+3. Add hover effects for visual feedback
+
+Example from [app/(authenticated)/gifts/gift-list.tsx](mdc:app/(authenticated)/gifts/gift-list.tsx):
+
+```jsx
+<Link href={`/gifts/${gift.id}`} className="space-y-1 hover:opacity-80">
+  <div className="font-medium">{gift.name}</div>
+  {/* Gift details */}
+  
+  {gift.url && (
+    <a
+      href={gift.url}
+      onClick={(e) => e.stopPropagation()}
+      className="text-blue-500 hover:underline"
+    >
+      View Product
+    </a>
+  )}
+</Link>
+```
+
+## List Components
+
+When displaying lists of items:
+1. Use consistent grid layouts with responsive variants
+2. Show/hide columns based on viewport size
+3. Include proper loading states with skeletons
