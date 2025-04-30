@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { getFullUserById } from './db/queries-cached';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY ?? '',
 });
 
 export type GiftRecommendation = {

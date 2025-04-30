@@ -1,6 +1,6 @@
 import type { User } from '@/prisma/generated/client';
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/prisma/generated/client';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { redirect } from 'next/navigation';
