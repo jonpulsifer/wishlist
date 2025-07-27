@@ -4,36 +4,19 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loading } from '@/components/ui/loading';
 import { useToast } from '@/hooks/use-toast';
+import { SnowfallBackground } from '@/components/snowfall-background';
 
 import santa from '@/public/santaicon.png';
 
-interface Snowflake {
-  id: number;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-}
+
 
 function LoginPage() {
-  const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const { toast } = useToast();
   const [showLoading, setShowLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    const flakes: Snowflake[] = Array.from({ length: 50 }).map((_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      size: Math.random() * 1 + 0.2,
-      duration: Math.random() * 5 + 5, // 5s to 10s
-      delay: Math.random() * -10, // Random start time
-    }));
-    setSnowflakes(flakes);
-  }, []);
 
   if (showLoading) {
     return <Loading message="Signing you in..." />;
@@ -52,25 +35,7 @@ function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen flex-1 flex-col justify-center items-center px-6 py-12 lg:px-8 overflow-hidden">
-      {/* Animated background */}
-      <div className="fixed inset-0 bg-linear-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
-
-      {/* Snowfall effect */}
-      <div className="absolute inset-0 pointer-events-none">
-        {snowflakes.map((flake) => (
-          <div
-            key={flake.id}
-            className="snow"
-            style={{
-              left: `${flake.left}%`,
-              width: `${flake.size}rem`,
-              height: `${flake.size}rem`,
-              animationDuration: `${flake.duration}s`,
-              animationDelay: `${flake.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+      <SnowfallBackground intensity="normal" showBackground={true} />
 
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}

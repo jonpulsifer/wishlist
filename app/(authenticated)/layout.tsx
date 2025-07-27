@@ -13,7 +13,7 @@ async function Layout({ children }: { children: React.ReactNode }) {
     <SessionProvider session={session}>
       <SidebarProvider>
         <AppSidebar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 relative z-10">{children}</main>
       </SidebarProvider>
     </SessionProvider>
   );

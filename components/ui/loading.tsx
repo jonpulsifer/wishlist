@@ -2,16 +2,9 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import santa from '@/public/santaicon.png';
-
-interface Snowflake {
-  id: number;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-}
+import { SnowfallBackground } from '@/components/snowfall-background';
 
 interface LoadingProps {
   message?: string;
@@ -22,41 +15,11 @@ export function Loading({
   message = 'Loading...',
   showSanta = true,
 }: LoadingProps) {
-  const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    const flakes: Snowflake[] = Array.from({ length: 50 }).map((_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      size: Math.random() * 1 + 0.2,
-      duration: Math.random() * 5 + 5,
-      delay: Math.random() * -10,
-    }));
-    setSnowflakes(flakes);
-  }, []);
 
   return (
     <div className="relative flex min-h-screen flex-1 flex-col justify-center items-center px-6 py-12 lg:px-8 overflow-hidden">
-      {/* Animated background */}
-      <div className="fixed inset-0 bg-linear-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
-
-      {/* Snowfall effect */}
-      <div className="absolute inset-0 pointer-events-none">
-        {snowflakes.map((flake) => (
-          <div
-            key={flake.id}
-            className="snow"
-            style={{
-              left: `${flake.left}%`,
-              width: `${flake.size}rem`,
-              height: `${flake.size}rem`,
-              animationDuration: `${flake.duration}s`,
-              animationDelay: `${flake.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+      <SnowfallBackground intensity="normal" showBackground={true} />
 
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
