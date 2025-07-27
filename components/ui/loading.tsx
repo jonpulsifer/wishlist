@@ -110,27 +110,38 @@ export function Loading({ message = "Loading...", showSanta = true }: LoadingPro
           </div>
         </motion.div>
 
-        {/* Pulsing dots */}
+        {/* Pulsing snowflakes */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-6 flex space-x-2"
+          className="mt-6 flex space-x-3"
         >
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-3 h-3 bg-white rounded-full"
+              className="text-white"
               animate={{
-                scale: [1, 1.2, 1],
+                scale: [1, 1.3, 1],
                 opacity: [0.5, 1, 0.5],
+                rotate: [0, 180, 360],
               }}
               transition={{
-                duration: 1.5,
+                duration: 2,
                 repeat: Infinity,
-                delay: i * 0.2,
+                delay: i * 0.3,
               }}
-            />
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="drop-shadow-lg"
+              >
+                <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" />
+              </svg>
+            </motion.div>
           ))}
         </motion.div>
       </motion.div>
