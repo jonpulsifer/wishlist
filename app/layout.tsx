@@ -78,7 +78,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SnowfallBackground intensity="light" showBackground={true} />
+          <SnowfallBackground intensity="normal" showBackground={false} />
           {children}
 
           <Toaster />
