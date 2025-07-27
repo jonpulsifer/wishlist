@@ -1,9 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-
 import { updateUser } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,8 +26,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, {

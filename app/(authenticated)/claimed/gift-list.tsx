@@ -1,10 +1,10 @@
 'use client';
+import Link from 'next/link';
+import { startTransition, useOptimistic } from 'react';
 import { unclaimGift } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Prisma } from '@/prisma/generated/client';
-import Link from 'next/link';
-import { startTransition, useOptimistic } from 'react';
 
 type ClaimedGift = Prisma.GiftGetPayload<{
   include: {
@@ -14,7 +14,9 @@ type ClaimedGift = Prisma.GiftGetPayload<{
 
 export default function GiftList({
   gifts: initialGifts,
-}: { gifts: ClaimedGift[] }) {
+}: {
+  gifts: ClaimedGift[];
+}) {
   const { toast } = useToast();
   const [gifts, setGifts] = useOptimistic(initialGifts);
 
@@ -44,7 +46,7 @@ export default function GiftList({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       // Revert on error
       startTransition(() => {
         setGifts(initialGifts);

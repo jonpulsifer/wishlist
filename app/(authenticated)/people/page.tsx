@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +14,6 @@ import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { getUsersForPeoplePage } from '@/lib/db/queries-cached';
 import { getInitials } from '@/lib/utils';
-import Link from 'next/link';
-import { unauthorized } from 'next/navigation';
 
 export default async function PeoplePage() {
   const session = await auth();

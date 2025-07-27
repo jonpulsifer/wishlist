@@ -1,6 +1,6 @@
-import type { User } from '@/prisma/generated/client';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { User } from '@/prisma/generated/client';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

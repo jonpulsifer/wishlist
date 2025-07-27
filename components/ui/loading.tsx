@@ -1,9 +1,9 @@
 'use client';
 
-import santa from '@/public/santaicon.png';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import santa from '@/public/santaicon.png';
 
 interface Snowflake {
   id: number;
@@ -18,7 +18,10 @@ interface LoadingProps {
   showSanta?: boolean;
 }
 
-export function Loading({ message = "Loading...", showSanta = true }: LoadingProps) {
+export function Loading({
+  message = 'Loading...',
+  showSanta = true,
+}: LoadingProps) {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -37,7 +40,7 @@ export function Loading({ message = "Loading...", showSanta = true }: LoadingPro
     <div className="relative flex min-h-screen flex-1 flex-col justify-center items-center px-6 py-12 lg:px-8 overflow-hidden">
       {/* Animated background */}
       <div className="fixed inset-0 bg-linear-to-br from-slate-200 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift" />
-      
+
       {/* Snowfall effect */}
       <div className="absolute inset-0 pointer-events-none">
         {snowflakes.map((flake) => (
@@ -106,7 +109,10 @@ export function Loading({ message = "Loading...", showSanta = true }: LoadingPro
         >
           <div className="relative">
             <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-red-500 rounded-full animate-spin" style={{ animationDelay: '-0.5s' }}></div>
+            <div
+              className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-red-500 rounded-full animate-spin"
+              style={{ animationDelay: '-0.5s' }}
+            ></div>
           </div>
         </motion.div>
 

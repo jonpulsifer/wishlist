@@ -1,13 +1,12 @@
 'use client';
 
+import { formatDistanceToNow } from 'date-fns';
+import { startTransition, useOptimistic } from 'react';
 import { claimGift, deleteGift, unclaimGift } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
 import type { Gift } from '@/prisma/generated/client';
-import { formatDistanceToNow } from 'date-fns';
-import { startTransition } from 'react';
-import { useOptimistic } from 'react';
 
 interface UserGiftListProps {
   gifts: GiftWithOwnerAndClaimedByAndCreatedBy[];
@@ -54,7 +53,7 @@ export function UserGiftList({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to update gift',
@@ -81,7 +80,7 @@ export function UserGiftList({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to delete gift',

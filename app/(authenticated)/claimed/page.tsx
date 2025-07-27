@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSession } from '@/app/auth';
 import {
   Breadcrumb,
@@ -8,8 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-
-import Link from 'next/link';
 
 import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 import GiftList from './gift-list';

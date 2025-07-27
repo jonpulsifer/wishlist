@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -9,14 +9,12 @@
     "lineWidth": 80,
     "attributePosition": "auto"
   },
-  "organizeImports": { "enabled": true },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
-      "a11y": {
-        "all": false
-      },
+      "a11y": "off",
       "complexity": {
         "noUselessFragments": "off"
       },
@@ -28,6 +26,7 @@
         "noParameterAssign": "off"
       },
       "suspicious": {
+        "noDocumentCookie": "off",
         "noExplicitAny": "off",
         "noArrayIndexKey": "off"
       }
@@ -48,7 +47,7 @@
   },
   "overrides": [
     {
-      "include": ["*.html"],
+      "includes": ["**/*.html"],
       "javascript": { "formatter": { "trailingCommas": "none" } }
     }
   ],

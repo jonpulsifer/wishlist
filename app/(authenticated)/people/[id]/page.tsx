@@ -1,3 +1,8 @@
+import { Mail, MapPin, Ruler } from 'lucide-react';
+import { notFound, unauthorized } from 'next/navigation';
+import { auth } from '@/app/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -6,20 +11,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import {
   getUserById,
   getVisibleGiftsForUserById,
 } from '@/lib/db/queries-cached';
-import { notFound, unauthorized } from 'next/navigation';
-
-import { auth } from '@/app/auth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getInitials } from '@/lib/utils';
-import { Mail, MapPin, Ruler } from 'lucide-react';
 import { UserGiftList } from './user-gift-list';
 
 type Props = {

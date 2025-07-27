@@ -1,17 +1,5 @@
 'use client';
 
-import { claimGift, deleteGift, unclaimGift, updateGift } from '@/app/actions';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { getInitials } from '@/lib/utils';
-import type { Gift, User, Wishlist } from '@/prisma/generated/client';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Gift as GiftIcon,
@@ -24,8 +12,19 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { startTransition, useState } from 'react';
-import { useOptimistic } from 'react';
+import { startTransition, useOptimistic, useState } from 'react';
+import { claimGift, deleteGift, unclaimGift, updateGift } from '@/app/actions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { getInitials } from '@/lib/utils';
+import type { Gift, User, Wishlist } from '@/prisma/generated/client';
 
 interface GiftDetailProps {
   gift: Gift & {
@@ -88,7 +87,7 @@ export function GiftDetail({
         title: 'Gift updated',
         description: 'Your changes have been saved.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to update gift',
@@ -125,7 +124,7 @@ export function GiftDetail({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to update gift',
@@ -154,7 +153,7 @@ export function GiftDetail({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to delete gift',

@@ -1,3 +1,4 @@
+import { notFound, unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
 import {
   Breadcrumb,
@@ -10,7 +11,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { getUserById } from '@/lib/db/queries-cached';
-import { notFound, unauthorized } from 'next/navigation';
 import { UserDetailsForm } from './user-details-form';
 
 export default async function EditUserPage() {

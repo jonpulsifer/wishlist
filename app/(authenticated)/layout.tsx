@@ -1,9 +1,9 @@
-import { auth } from '@/app/auth';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Loading } from '@/components/ui/loading';
 // import { getPeopleForNewGiftModal } from 'lib/db/queries-cached';
 import { SessionProvider } from 'next-auth/react';
+import { auth } from '@/app/auth';
+import { AppSidebar } from '@/components/app-sidebar';
+import { Loading } from '@/components/ui/loading';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 async function Layout({ children }: { children: React.ReactNode }) {
   const session = await auth();

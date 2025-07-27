@@ -1,6 +1,6 @@
+import { NextResponse } from 'next/server';
 import { getSession } from '@/app/auth';
 import { getUsersForPeoplePage } from '@/lib/db/queries-cached';
-import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {

@@ -1,9 +1,8 @@
 'use client';
 
-import santaIcon from '@/public/santaicon.png';
-import { motion, useAnimation } from 'framer-motion';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import santaIcon from '@/public/santaicon.png';
 
 const BOARD_WIDTH = 400;
 const BOARD_HEIGHT = 600;
@@ -27,7 +26,7 @@ type ScorePopup = {
 };
 
 // Add color constants for theme support
-const THEME_COLORS = {
+const _THEME_COLORS = {
   light: {
     background: 'rgba(241, 245, 249, 0.9)', // Light blue-gray
     peg: '#FFD700', // Gold
@@ -168,7 +167,7 @@ const Bucket: React.FC<{
 };
 
 // Add helper function for line segment collision
-const lineCircleCollision = (
+const _lineCircleCollision = (
   lineStart: Position,
   lineEnd: Position,
   circle: Position,

@@ -1,5 +1,7 @@
 'use client';
 
+import { Loader2, LockIcon, UsersIcon } from 'lucide-react';
+import { useFormStatus } from 'react-dom';
 import { handleWishlistAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +14,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Prisma } from '@/prisma/generated/client';
-import { Loader2, LockIcon, UsersIcon } from 'lucide-react';
-import { useState } from 'react';
-import { useFormStatus } from 'react-dom';
 
 interface WishlistCardProps {
   wishlist: Prisma.WishlistGetPayload<{
@@ -78,7 +77,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
           description: result.message,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         variant: 'destructive',
         description: 'Something went wrong. Please try again.',

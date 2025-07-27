@@ -1,7 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Loading } from '@/components/ui/loading';
-import { useState, useEffect } from 'react';
 
 export default function DemoLoadingPage() {
   const [showLoading, setShowLoading] = useState(true);

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getSession } from '@/app/auth';
 import {
   Breadcrumb,
@@ -8,7 +9,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
-import { Suspense } from 'react';
 import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {

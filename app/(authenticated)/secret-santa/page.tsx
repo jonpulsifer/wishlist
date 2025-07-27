@@ -1,3 +1,5 @@
+import { PlusIcon } from 'lucide-react';
+import Link from 'next/link';
 import { getSession } from '@/app/auth';
 import {
   Breadcrumb,
@@ -17,8 +19,6 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import db from '@/lib/db/client';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
-import { PlusIcon } from 'lucide-react';
-import Link from 'next/link';
 
 export default async function SecretSantaPage() {
   const { user } = await getSession();

@@ -1,21 +1,18 @@
+import { unauthorized } from 'next/navigation';
+import { auth } from '@/app/auth';
+import { AddGiftDialog } from '@/components/add-gift-dialog';
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-
-import { auth } from '@/app/auth';
-import { AddGiftDialog } from '@/components/add-gift-dialog';
 import {
   getPeopleForNewGiftModal,
   getSortedVisibleGiftsForUser,
 } from '@/lib/db/queries-cached';
-import { unauthorized } from 'next/navigation';
 import { GiftList } from './gift-list';
 
 interface PageProps {

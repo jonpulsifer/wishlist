@@ -7,7 +7,7 @@ import {
   ListCheck,
   Users,
 } from 'lucide-react';
-
+import Image from 'next/image';
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +20,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-
-import Image from 'next/image';
 
 import santaIcon from '@/public/santaicon.png';
 import { ModeToggle } from './dark-mode-toggle';
@@ -75,8 +73,7 @@ const getNextChristmas = () => {
 
 export function AppSidebar() {
   const daysUntilChristmas = Math.floor(
-    (getNextChristmas().getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24),
+    (getNextChristmas().getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
   return (
     <Sidebar>

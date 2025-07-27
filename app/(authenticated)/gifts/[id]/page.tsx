@@ -1,3 +1,6 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { getSession } from '@/app/auth';
 import {
   Breadcrumb,
@@ -10,9 +13,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { getGiftWithAccessCheck } from '@/lib/db/queries-cached';
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { GiftDetail } from './gift-detail';
 
 type Props = {

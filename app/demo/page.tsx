@@ -1,8 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { ArrowRight, Loader2, Snowflake } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, Snowflake, Loader2 } from 'lucide-react';
 
 export default function DemoPage() {
   const demos = [
@@ -35,7 +35,8 @@ export default function DemoPage() {
             Demo Pages
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Explore the beautiful pages we've created with festive animations and modern design
+            Explore the beautiful pages we've created with festive animations
+            and modern design
           </p>
         </motion.div>
 

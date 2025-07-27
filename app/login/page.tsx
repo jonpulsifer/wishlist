@@ -1,12 +1,12 @@
 'use client';
 
-import { useToast } from '@/hooks/use-toast';
-import { Loading } from '@/components/ui/loading';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { signIn } from 'next-auth/react';
 import Image from 'next/image';
+import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { Loading } from '@/components/ui/loading';
+import { useToast } from '@/hooks/use-toast';
 
 import santa from '@/public/santaicon.png';
 

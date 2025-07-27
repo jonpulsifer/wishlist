@@ -1,11 +1,11 @@
 'use client';
 
-import santa from '@/public/santaicon.png';
 import { motion } from 'framer-motion';
 import { Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import santa from '@/public/santaicon.png';
 
 interface Snowflake {
   id: number;

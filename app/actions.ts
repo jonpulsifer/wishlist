@@ -1,9 +1,9 @@
 'use server';
 
-import { getSession } from '@/app/auth';
-import db from '@/lib/db/client';
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
+import { getSession } from '@/app/auth';
+import db from '@/lib/db/client';
 
 const revalidateGiftRelatedCaches = () => {
   revalidateTag('gifts');
@@ -435,7 +435,7 @@ export const addParticipantsToSecretSantaEvent = async (
     }
 
     // Add participants
-    const participantData = participantIds.map((userId) => ({
+    const _participantData = participantIds.map((userId) => ({
       userId,
       eventId,
     }));

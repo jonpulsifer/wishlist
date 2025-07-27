@@ -1,5 +1,9 @@
 'use client';
 
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { startTransition, useMemo, useOptimistic } from 'react';
 import { claimGift, deleteGift, unclaimGift } from '@/app/actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,11 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
 import { getInitials } from '@/lib/utils';
 import type { Gift } from '@/prisma/generated/client';
-import { formatDistanceToNow } from 'date-fns';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { startTransition, useMemo } from 'react';
-import { useOptimistic } from 'react';
 
 interface GiftListProps {
   initialGifts: GiftWithOwnerAndClaimedByAndCreatedBy[];
@@ -125,7 +124,7 @@ export function GiftList({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to update gift',
@@ -158,7 +157,7 @@ export function GiftList({
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'An error occurred',
         description: 'Failed to delete gift',
