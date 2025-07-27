@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSession } from '@/app/auth';
+import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,8 +8,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
 
 import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 import GiftList from './gift-list';
@@ -19,19 +19,15 @@ export default async function ClaimedPage() {
 
   return (
     <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-        <div className="flex items-center gap-2 px-3">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>Claimed Gifts</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
+      <AppHeader>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbPage>Claimed Gifts</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </AppHeader>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Claimed Gifts</h1>

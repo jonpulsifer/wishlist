@@ -41,7 +41,6 @@ import {
 import { getInitials } from '@/lib/utils';
 
 import santaIcon from '@/public/santaicon.png';
-import { ModeToggle } from './dark-mode-toggle';
 
 // Menu items.
 const items = [
@@ -166,16 +165,14 @@ function FunSection() {
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 border-t">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-lg">{getChristmasEmoji()}</span>
-        <div className="flex flex-col">
-          <span className="font-medium">{getChristmasMessage()}</span>
-          <span className="text-xs text-muted-foreground">
-            <Sparkles className="inline h-3 w-3 mr-1" />
-            Holiday spirit mode
-          </span>
-        </div>
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-lg">{getChristmasEmoji()}</span>
+      <div className="flex flex-col">
+        <span className="font-medium">{getChristmasMessage()}</span>
+        <span className="text-xs text-muted-foreground">
+          <Sparkles className="inline h-3 w-3 mr-1" />
+          Holiday spirit mode
+        </span>
       </div>
     </div>
   );
@@ -229,10 +226,8 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="space-y-2">
-          <FunSection />
-          <div className="flex items-center gap-2 p-2">
-            <ModeToggle />
-            <div className="flex-1" />
+          <div className="flex items-center justify-between p-2">
+            <FunSection />
             <UserSection />
           </div>
         </div>
