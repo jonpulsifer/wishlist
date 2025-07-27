@@ -9,7 +9,7 @@ This directory contains GitHub Actions workflows for automated CI/CD.
 - **Purpose**: Build and test the application
 - **Features**:
   - Sets up PostgreSQL database
-  - Installs dependencies with pnpm 10.13.1
+  - Installs dependencies with pnpm 10.11.1
   - Runs build process
   - Executes tests
   - Uses Node.js >=22
@@ -45,7 +45,7 @@ Set up these secrets in your GitHub repository settings:
 The workflows automatically:
 1. Create PostgreSQL databases for testing
 2. Copy `.env.example` to `.env` files
-3. Set up Node.js >=22 environment with pnpm 10.13.1
+3. Set up Node.js >=22 environment with pnpm 10.11.1
 
 ## Database Setup
 
