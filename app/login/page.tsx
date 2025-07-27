@@ -1,6 +1,7 @@
 'use client';
 
 import { useToast } from '@/hooks/use-toast';
+import { Loading } from '@/components/ui/loading';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { signIn } from 'next-auth/react';
@@ -35,7 +36,7 @@ function LoginPage() {
   }, []);
 
   if (showLoading) {
-    return 'Loading...';
+    return <Loading message="Signing you in..." />;
   }
 
   const handleGoogle = (e: React.MouseEvent | React.FormEvent) => {
