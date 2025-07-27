@@ -4,12 +4,12 @@ import {
   BookUser,
   Bot,
   CandyCane,
+  ChevronsUpDown,
   Gift,
   Home,
   ListCheck,
   LogOut,
   Settings,
-  Sparkles,
   User,
   Users,
 } from 'lucide-react';
@@ -17,7 +17,6 @@ import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,53 +95,6 @@ function UserSection() {
     return null;
   }
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-7 w-7 rounded-full p-0">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src={session.user.image ?? undefined} />
-            <AvatarFallback className="text-xs">
-              {getInitials(session.user)}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {session.user.name || session.user.email}
-            </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {session.user.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a href="/people/me">
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="/people/me/edit">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function FunSection() {
   const daysUntilChristmas = Math.floor(
     (getNextChristmas().getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
@@ -154,25 +106,84 @@ function FunSection() {
     return '🎅';
   };
 
-  const getChristmasMessage = () => {
-    if (daysUntilChristmas <= 0) return "It's Christmas!";
-    if (daysUntilChristmas === 1) return 'Tomorrow!';
-    if (daysUntilChristmas <= 7) return `${daysUntilChristmas} days!`;
-    if (daysUntilChristmas <= 30) return `${daysUntilChristmas} days`;
-    return `${daysUntilChristmas} days`;
-  };
-
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="text-base">{getChristmasEmoji()}</span>
-      <div className="flex flex-col min-w-0">
-        <span className="font-medium truncate">{getChristmasMessage()}</span>
-        <span className="text-xs text-muted-foreground flex items-center">
-          <Sparkles className="h-3 w-3 mr-1 flex-shrink-0" />
-          <span className="truncate">Holiday spirit</span>
-        </span>
-      </div>
-    </div>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage
+                  src={session.user.image ?? undefined}
+                  alt={session.user.name || session.user.email}
+                />
+                <AvatarFallback className="rounded-lg text-xs">
+                  {getInitials(session.user)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">
+                  {session.user.name || session.user.email}
+                </span>
+                <span className="truncate text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="text-base">{getChristmasEmoji()}</span>
+                  <span>Holiday spirit</span>
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            align="end"
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="p-0 font-normal">
+              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarImage
+                    src={session.user.image ?? undefined}
+                    alt={session.user.name || session.user.email}
+                  />
+                  <AvatarFallback className="rounded-lg text-xs">
+                    {getInitials(session.user)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">
+                    {session.user.name || session.user.email}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {session.user.email}
+                  </span>
+                </div>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/people/me">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href="/people/me/edit">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => signOut()}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }
 
@@ -223,10 +234,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center justify-between p-3">
-          <FunSection />
-          <UserSection />
-        </div>
+        <UserSection />
       </SidebarFooter>
     </Sidebar>
   );
