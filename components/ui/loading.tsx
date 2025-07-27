@@ -3,8 +3,8 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useState } from 'react';
-import santa from '@/public/santaicon.png';
 import { SnowfallBackground } from '@/components/snowfall-background';
+import santa from '@/public/santaicon.png';
 
 interface LoadingProps {
   message?: string;
