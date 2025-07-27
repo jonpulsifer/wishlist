@@ -99,8 +99,8 @@ function UserSection() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
-          <Avatar className="h-8 w-8">
+        <Button variant="ghost" className="h-7 w-7 rounded-full p-0">
+          <Avatar className="h-7 w-7">
             <AvatarImage src={session.user.image ?? undefined} />
             <AvatarFallback className="text-xs">
               {getInitials(session.user)}
@@ -156,22 +156,20 @@ function FunSection() {
 
   const getChristmasMessage = () => {
     if (daysUntilChristmas <= 0) return "It's Christmas!";
-    if (daysUntilChristmas === 1) return 'Christmas is tomorrow!';
-    if (daysUntilChristmas <= 7) return `${daysUntilChristmas} days to go!`;
-    if (daysUntilChristmas <= 30) {
-      return `${daysUntilChristmas} days until Christmas`;
-    }
-    return `${daysUntilChristmas} days until Christmas`;
+    if (daysUntilChristmas === 1) return 'Tomorrow!';
+    if (daysUntilChristmas <= 7) return `${daysUntilChristmas} days!`;
+    if (daysUntilChristmas <= 30) return `${daysUntilChristmas} days`;
+    return `${daysUntilChristmas} days`;
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-lg">{getChristmasEmoji()}</span>
-      <div className="flex flex-col">
-        <span className="font-medium">{getChristmasMessage()}</span>
-        <span className="text-xs text-muted-foreground">
-          <Sparkles className="inline h-3 w-3 mr-1" />
-          Holiday spirit mode
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-base">{getChristmasEmoji()}</span>
+      <div className="flex flex-col min-w-0">
+        <span className="font-medium truncate">{getChristmasMessage()}</span>
+        <span className="text-xs text-muted-foreground flex items-center">
+          <Sparkles className="h-3 w-3 mr-1 flex-shrink-0" />
+          <span className="truncate">Holiday spirit</span>
         </span>
       </div>
     </div>
@@ -225,11 +223,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-2">
-            <FunSection />
-            <UserSection />
-          </div>
+        <div className="flex items-center justify-between p-3">
+          <FunSection />
+          <UserSection />
         </div>
       </SidebarFooter>
     </Sidebar>
