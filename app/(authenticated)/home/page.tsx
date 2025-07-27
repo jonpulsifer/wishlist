@@ -121,7 +121,7 @@ export default async function HomePage() {
 
         {/* Festive Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="relative overflow-hidden border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950 dark:to-pink-950 hover:shadow-lg transition-all duration-300 hover:scale-105">
+          <Card className="relative overflow-hidden border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50/70 to-pink-50/70 dark:from-red-950/70 dark:to-pink-950/70 backdrop-blur-sm hover:shadow-lg transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-20 h-20 bg-red-200 dark:bg-red-800 rounded-full -translate-y-10 translate-x-10 opacity-20"></div>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -148,7 +148,7 @@ export default async function HomePage() {
             </CardFooter>
           </Card>
 
-          <Card className="relative overflow-hidden border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 hover:shadow-lg transition-all duration-300 hover:scale-105">
+          <Card className="relative overflow-hidden border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/70 to-emerald-50/70 dark:from-green-950/70 dark:to-emerald-950/70 backdrop-blur-sm hover:shadow-lg transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-20 h-20 bg-green-200 dark:bg-green-800 rounded-full -translate-y-10 translate-x-10 opacity-20"></div>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -175,7 +175,7 @@ export default async function HomePage() {
             </CardFooter>
           </Card>
 
-          <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 hover:shadow-lg transition-all duration-300 hover:scale-105">
+          <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 dark:from-blue-950/70 dark:to-indigo-950/70 backdrop-blur-sm hover:shadow-lg transition-all duration-300 hover:scale-105">
             <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 dark:bg-blue-800 rounded-full -translate-y-10 translate-x-10 opacity-20"></div>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -206,7 +206,7 @@ export default async function HomePage() {
         {/* Recent Activity and Alerts */}
         <div className="grid gap-4 md:grid-cols-2">
           {/* Latest Gifts */}
-          <Card className="md:col-span-1 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950 dark:to-violet-950">
+          <Card className="md:col-span-1 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50/70 to-violet-50/70 dark:from-purple-950/70 dark:to-violet-950/70 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 ✨ Latest Gifts
@@ -277,7 +277,7 @@ export default async function HomePage() {
           </Card>
 
           {/* Alerts Card */}
-          <Card className="md:col-span-1 border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950">
+          <Card className="md:col-span-1 border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50/70 to-orange-50/70 dark:from-amber-950/70 dark:to-orange-950/70 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <AlertCircleIcon className="h-5 w-5 mr-2 text-amber-500" />🚨
