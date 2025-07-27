@@ -5,8 +5,8 @@ import { Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import santa from '@/public/santaicon.png';
 import { SnowfallBackground } from '@/components/snowfall-background';
+import santa from '@/public/santaicon.png';
 
 export default function NotFound() {
   const [isHovered, setIsHovered] = useState(false);

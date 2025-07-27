@@ -5,13 +5,11 @@ import { Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
+import { SnowfallBackground } from '@/components/snowfall-background';
 import { Loading } from '@/components/ui/loading';
 import { useToast } from '@/hooks/use-toast';
-import { SnowfallBackground } from '@/components/snowfall-background';
 
 import santa from '@/public/santaicon.png';
-
-
 
 function LoginPage() {
   const { toast } = useToast();
