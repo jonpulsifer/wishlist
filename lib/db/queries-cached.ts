@@ -46,6 +46,7 @@ const getUsersWithGiftCount = unstable_cache(
           select: {
             gifts: {
               where: {
+                archived: false,
                 ...currentYearFilter,
                 AND: {
                   OR: [
@@ -120,7 +121,10 @@ const getWishlistsWithMemberIds = unstable_cache(
           select: {
             members: true,
             gifts: {
-              where: currentYearFilter,
+              where: {
+                archived: false,
+                ...currentYearFilter,
+              },
             },
           },
         },
@@ -142,6 +146,7 @@ const getUserById = unstable_cache(
   { tags: ['users'] },
 );
 
+// Gets user with ALL gifts (including archived) for AI recommendations
 const getFullUserById = unstable_cache(
   async (id: string) =>
     prisma.user.findUnique({
@@ -149,7 +154,7 @@ const getFullUserById = unstable_cache(
       include: {
         wishlists: true,
         secretSantaParticipations: true,
-        gifts: true,
+        gifts: true, // Includes ALL gifts (archived and non-archived)
       },
     }),
   ['fullUserById'],
@@ -160,6 +165,8 @@ const getVisibleGiftsForUserById = unstable_cache(
   async (id: string, currentUserId: string) =>
     prisma.gift.findMany({
       where: {
+        // Only filter out archived gifts when viewing someone else's profile
+        ...(currentUserId !== id && { archived: false }),
         ownerId: id,
         createdById: currentUserId === id ? id : undefined,
         ...currentYearFilter,
@@ -201,6 +208,7 @@ const getUsersForPeoplePage = unstable_cache(
           select: {
             gifts: {
               where: {
+                archived: false,
                 ...currentYearFilter,
                 AND: {
                   OR: [
@@ -254,7 +262,10 @@ const getGiftsWithOwnerClaimedByAndCreatedBy = unstable_cache(
         createdBy: { select: { id: true, name: true, email: true } },
         claimedBy: { select: { id: true, name: true, email: true } },
       },
-      where: currentYearFilter,
+      where: {
+        archived: false,
+        ...currentYearFilter,
+      },
     }),
   ['gifts'],
   {
@@ -266,6 +277,7 @@ const getClaimedGiftsForMe = unstable_cache(
   async (currentUserId: string) =>
     prisma.gift.findMany({
       where: {
+        archived: false,
         claimedById: {
           equals: currentUserId,
         },
@@ -327,6 +339,7 @@ const getSortedVisibleGiftsForUser = unstable_cache(
       column === 'owner' ? { owner: { name: direction } } : { name: direction };
     return prisma.gift.findMany({
       where: {
+        archived: false,
         NOT: { ownerId: userId },
         wishlists: {
           some: {
@@ -356,6 +369,7 @@ const getLatestVisibleGiftsForUserById = unstable_cache(
   async (id: string) =>
     prisma.gift.findMany({
       where: {
+        archived: false,
         ...currentYearFilter,
         ownerId: { not: id },
         AND: {
@@ -433,6 +447,9 @@ const getGiftWithAccessCheck = unstable_cache(
     });
 
     if (!gift) return null;
+
+    // Don't return archived gifts
+    if (gift.archived) return null;
 
     // Check if user has access through any wishlist
     const hasAccess = gift.wishlists.some(

@@ -84,6 +84,7 @@ model Gift {
   url         String?
   description String?
   published   Boolean    @default(false)
+  archived    Boolean    @default(false)
   owner       User       @relation(fields: [ownerId], references: [id])
   ownerId     String     @db.Uuid
   claimed     Boolean    @default(false)
@@ -98,6 +99,7 @@ model Gift {
   @@index([claimedById, createdAt])
   @@index([claimed, createdAt])
   @@index([createdById, createdAt])
+  @@index([archived])
 }
 
 model Wishlist {

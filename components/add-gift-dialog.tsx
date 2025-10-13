@@ -94,12 +94,13 @@ export function AddGiftDialog({ users, currentUser }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
-          Add New Gift
+          <span className="hidden sm:inline">Add New Gift</span>
+          <span className="sm:hidden">Add Gift</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add a new gift</DialogTitle>
           <DialogDescription>

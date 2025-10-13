@@ -2,6 +2,7 @@ import { CandyCane, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/app/auth';
+import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,8 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
 
 const ADMIN_EMAIL = 'jonathan@pulsifer.ca';
 
@@ -30,20 +30,16 @@ export default async function AdminPage() {
 
   return (
     <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-        <div className="flex items-center gap-2 px-3">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>Admin</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
-      <div className="flex flex-1 flex-col gap-6 p-4">
+      <AppHeader>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbPage>Admin</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </AppHeader>
+      <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6" />
           <h1 className="text-2xl sm:text-3xl font-bold">Admin Panel</h1>

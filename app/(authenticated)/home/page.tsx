@@ -72,30 +72,32 @@ export default async function HomePage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-6 p-4">
+      <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
         {/* Welcome Header with festive elements */}
         <div className="relative">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-4">
             <div className="relative">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl sm:text-4xl font-bold">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold break-words min-w-0">
                   Welcome back, {user.name || user.email}
                 </h1>
-                <Sparkles className="h-5 w-5 text-yellow-500/70" />
+                <Sparkles className="h-5 w-5 text-yellow-500/70 flex-shrink-0" />
               </div>
             </div>
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <AddGiftDialog currentUser={user} users={addGiftDialogUsers} />
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link href="/claimed">
                   <GiftIcon className="h-4 w-4" />
-                  View Claimed Gifts
+                  <span className="hidden sm:inline">View Claimed Gifts</span>
+                  <span className="sm:hidden">Claimed</span>
                 </Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link href="/people/me">
                   <UserIcon className="h-4 w-4" />
-                  View My Profile
+                  <span className="hidden sm:inline">View My Profile</span>
+                  <span className="sm:hidden">Profile</span>
                 </Link>
               </Button>
             </div>
@@ -139,8 +141,8 @@ export default async function HomePage() {
                         >
                           <div className="bg-background/60 rounded-lg p-3 border border-red-200/30 dark:border-red-800/30 hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/50 transition-all duration-200">
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-12 w-12 ring-2 ring-red-200/50 dark:ring-red-800/50 group-hover:ring-red-300/70 dark:group-hover:ring-red-700/70 transition-all">
-                                <AvatarFallback className="bg-gradient-to-br from-red-500/70 to-pink-500/70 text-white text-lg">
+                              <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-red-200/50 dark:ring-red-800/50 group-hover:ring-red-300/70 dark:group-hover:ring-red-700/70 transition-all flex-shrink-0">
+                                <AvatarFallback className="bg-gradient-to-br from-red-500/70 to-pink-500/70 text-white text-sm sm:text-lg">
                                   {p.assignedTo.name
                                     ? p.assignedTo.name.charAt(0).toUpperCase()
                                     : p.assignedTo.email
@@ -148,15 +150,15 @@ export default async function HomePage() {
                                         .toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <div className="text-xs text-muted-foreground mb-1">
                                   You're Secret Santa for:
                                 </div>
-                                <div className="text-sm font-semibold group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                                <div className="text-sm font-semibold group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate">
                                   {p.assignedTo.name || p.assignedTo.email}
                                 </div>
                               </div>
-                              <ChevronRightIcon className="h-5 w-5 text-red-500/40 group-hover:text-red-500/70 group-hover:translate-x-1 transition-all" />
+                              <ChevronRightIcon className="h-5 w-5 text-red-500/40 group-hover:text-red-500/70 group-hover:translate-x-1 transition-all flex-shrink-0" />
                             </div>
                           </div>
                         </Link>
@@ -192,73 +194,65 @@ export default async function HomePage() {
         </div>
 
         {/* Latest Gifts Card */}
-        <Link
-          href="/gifts"
-          className="block group"
-          style={{ textDecoration: 'none' }}
-          tabIndex={-1}
-          aria-label="View all gifts"
-        >
-          <Card className="relative overflow-hidden border-green-200/50 dark:border-green-800/50 bg-gradient-to-br from-green-50/30 to-emerald-50/30 dark:from-green-950/30 dark:to-emerald-950/30 hover:shadow-md transition-shadow duration-200 cursor-pointer outline-none">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-green-200 dark:bg-green-800 rounded-full -translate-y-10 translate-x-10 opacity-10"></div>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                ✨ Latest Gifts
-                <Star className="h-4 w-4 text-yellow-500/60" />
-              </CardTitle>
-              <CardDescription>
-                Recently added gifts from people on your wishlists 🎁
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {latestGifts.length === 0 ? (
-                <div className="text-center py-6">
-                  <div className="text-4xl mb-2">🎁</div>
-                  <p className="text-sm text-muted-foreground">
-                    No recent gifts found.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Be the first to add some holiday magic! ✨
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {latestGifts.slice(0, 5).map((gift) => (
-                    <Link href={`/gifts/${gift.id}`} key={gift.id}>
-                      <div
-                        key={gift.id}
-                        className="flex items-center border-b border-muted pb-2 hover:bg-accent/30 rounded p-2 transition-colors"
-                      >
-                        <Avatar className="h-8 w-8 mr-2 ring-1 ring-green-200/50 dark:ring-green-800/50">
-                          <AvatarFallback className="bg-gradient-to-br from-green-500/70 to-emerald-500/70 text-white">
-                            {gift.owner.name
-                              ? gift.owner.name.charAt(0).toUpperCase()
-                              : gift.owner.email.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-none flex items-center gap-1">
-                            {gift.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Added by {gift.owner.name || gift.owner.email}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <span
-                    className="text-xs text-green-600 dark:text-green-400 flex items-center font-medium ml-auto group-hover:underline mt-2"
-                    style={{ float: 'right', pointerEvents: 'none' }}
+        <Card className="relative overflow-hidden border-green-200/50 dark:border-green-800/50 bg-gradient-to-br from-green-50/30 to-emerald-50/30 dark:from-green-950/30 dark:to-emerald-950/30">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-green-200 dark:bg-green-800 rounded-full -translate-y-10 translate-x-10 opacity-10"></div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              ✨ Latest Gifts
+              <Star className="h-4 w-4 text-yellow-500/60" />
+            </CardTitle>
+            <CardDescription>
+              Recently added gifts from people on your wishlists 🎁
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {latestGifts.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="text-4xl mb-2">🎁</div>
+                <p className="text-sm text-muted-foreground">
+                  No recent gifts found.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Be the first to add some holiday magic! ✨
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {latestGifts.slice(0, 5).map((gift) => (
+                  <Link
+                    href={`/gifts/${gift.id}`}
+                    key={gift.id}
+                    className="flex items-center border-b border-muted pb-2 hover:bg-accent/30 rounded p-2 transition-colors"
                   >
-                    View all gifts
-                    <ChevronRightIcon className="h-3 w-3 ml-1" />
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
+                    <Avatar className="h-8 w-8 mr-2 ring-1 ring-green-200/50 dark:ring-green-800/50">
+                      <AvatarFallback className="bg-gradient-to-br from-green-500/70 to-emerald-500/70 text-white text-xs">
+                        {gift.owner.name
+                          ? gift.owner.name.charAt(0).toUpperCase()
+                          : gift.owner.email.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-1 min-w-0">
+                      <p className="text-sm font-medium leading-none truncate">
+                        {gift.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Added by {gift.owner.name || gift.owner.email}
+                      </p>
+                    </div>
+                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+                  </Link>
+                ))}
+                <Link
+                  href="/gifts"
+                  className="text-xs text-green-600 dark:text-green-400 flex items-center justify-end font-medium hover:underline mt-2"
+                >
+                  View all gifts
+                  <ChevronRightIcon className="h-3 w-3 ml-1" />
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </SidebarInset>
   );

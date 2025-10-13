@@ -43,6 +43,7 @@ type SecretSantaEvent = {
     assignedTo: {
       id: string;
       name: string | null;
+      email: string;
     } | null;
   }[];
 };
@@ -227,7 +228,9 @@ function EventCard({
                   </div>
                   {participant.assignedTo && (
                     <div className="text-xs text-muted-foreground">
-                      → {participant.assignedTo.name}
+                      →{' '}
+                      {participant.assignedTo.name ||
+                        participant.assignedTo.email}
                     </div>
                   )}
                 </div>

@@ -200,91 +200,110 @@ export function GiftList({
           <div className="text-right">Actions</div>
         </div>
 
-        {filteredAndSortedGifts.map((gift) => (
-          <div
-            key={gift.id}
-            className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 items-center border-t"
-          >
-            <Link
-              href={`/gifts/${gift.id}`}
-              className="space-y-1 hover:opacity-80"
+        {filteredAndSortedGifts.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="text-6xl mb-4">🎁</div>
+            <h3 className="text-lg font-semibold mb-2">
+              {search ? 'No gifts found' : 'No gifts yet'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {search
+                ? `No gifts match "${search}". Try adjusting your search.`
+                : 'Start adding gifts to your wishlist or ask others to add some for you!'}
+            </p>
+            {!search && (
+              <Button asChild>
+                <Link href="/people/me">View My Profile</Link>
+              </Button>
+            )}
+          </div>
+        ) : (
+          filteredAndSortedGifts.map((gift) => (
+            <div
+              key={gift.id}
+              className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 items-center border-t"
             >
-              <div className="font-medium">{gift.name}</div>
-              {gift.createdBy?.id !== gift.owner.id && (
-                <div className="text-sm text-muted-foreground">
-                  Added by{' '}
-                  {gift.createdBy?.id === currentUserId
-                    ? 'you'
-                    : gift.createdBy?.name ||
-                      gift.createdBy?.email ||
-                      'someone else'}
+              <Link
+                href={`/gifts/${gift.id}`}
+                className="space-y-1 hover:opacity-80"
+              >
+                <div className="font-medium">{gift.name}</div>
+                {gift.createdBy?.id !== gift.owner.id && (
+                  <div className="text-sm text-muted-foreground">
+                    Added by{' '}
+                    {gift.createdBy?.id === currentUserId
+                      ? 'you'
+                      : gift.createdBy?.name ||
+                        gift.createdBy?.email ||
+                        'someone else'}
+                  </div>
+                )}
+                <div className="md:hidden text-sm text-muted-foreground flex items-center gap-2">
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={gift.owner?.image || undefined} />
+                    <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
+                  </Avatar>
+                  <span>{gift.owner?.name}</span>•{' '}
+                  {formatDistanceToNow(new Date(gift.createdAt), {
+                    addSuffix: true,
+                  })}
                 </div>
-              )}
-              <div className="md:hidden text-sm text-muted-foreground flex items-center gap-2">
-                <Avatar className="h-5 w-5">
-                  <AvatarImage src={gift.owner?.image || undefined} />
+                {gift.url && (
+                  <a
+                    href={gift.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm text-blue-500 hover:underline"
+                  >
+                    View Product
+                  </a>
+                )}
+              </Link>
+
+              <Link
+                href={`/people/${gift.owner.id}`}
+                className="hidden md:flex items-center gap-2 hover:opacity-80"
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={gift.owner.image ?? undefined} />
                   <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
                 </Avatar>
-                <span>{gift.owner?.name}</span>•{' '}
+                <span>
+                  {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
+                </span>
+              </Link>
+
+              <div className="hidden md:block text-muted-foreground">
                 {formatDistanceToNow(new Date(gift.createdAt), {
                   addSuffix: true,
                 })}
               </div>
-              {gift.url && (
-                <a
-                  href={gift.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-sm text-blue-500 hover:underline"
-                >
-                  View Product
-                </a>
-              )}
-            </Link>
 
-            <Link
-              href={`/people/${gift.owner.id}`}
-              className="hidden md:flex items-center gap-2 hover:opacity-80"
-            >
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={gift.owner.image ?? undefined} />
-                <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
-              </Avatar>
-              <span>
-                {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
-              </span>
-            </Link>
-
-            <div className="hidden md:block text-muted-foreground">
-              {formatDistanceToNow(new Date(gift.createdAt), {
-                addSuffix: true,
-              })}
+              <div className="text-right">
+                {gift.createdBy?.id === currentUserId ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDelete(gift.id)}
+                    size="sm"
+                    className="w-20 md:w-24"
+                  >
+                    Delete
+                  </Button>
+                ) : (
+                  <Button
+                    variant={gift.claimed ? 'destructive' : 'default'}
+                    onClick={() => handleClaimToggle(gift)}
+                    size="sm"
+                    className="w-20 md:w-24"
+                  >
+                    {gift.claimed ? 'Unclaim' : 'Claim'}
+                  </Button>
+                )}
+              </div>
             </div>
-
-            <div className="text-right">
-              {gift.createdBy?.id === currentUserId ? (
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDelete(gift.id)}
-                  size="sm"
-                  className="w-20 md:w-24"
-                >
-                  Delete
-                </Button>
-              ) : (
-                <Button
-                  variant={gift.claimed ? 'destructive' : 'default'}
-                  onClick={() => handleClaimToggle(gift)}
-                  size="sm"
-                  className="w-20 md:w-24"
-                >
-                  {gift.claimed ? 'Unclaim' : 'Claim'}
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

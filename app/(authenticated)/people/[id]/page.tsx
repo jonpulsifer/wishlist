@@ -1,6 +1,8 @@
-import { Mail, MapPin, Ruler } from 'lucide-react';
+import { Mail, MapPin, Pencil, Ruler } from 'lucide-react';
+import Link from 'next/link';
 import { notFound, unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
+import { AppHeader } from '@/components/app-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,9 +13,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
 import {
   getUserById,
   getVisibleGiftsForUserById,
@@ -32,48 +35,64 @@ export default async function UserPage({ params }: Props) {
   if (!session?.user?.id) {
     return unauthorized();
   }
-  const { id } = await params;
+  const { id: rawId } = await params;
+
+  // Handle the 'me' vanity route
+  const id = rawId === 'me' ? session.user.id : rawId;
+
   const user = await getUserById(id);
   const gifts = await getVisibleGiftsForUserById(id, session.user.id);
   if (!user) {
     notFound();
   }
 
+  const isOwnProfile = user.id === session.user.id;
+
   return (
     <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-        <div className="flex items-center gap-2 px-3">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/people">People</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{user?.name || user?.email}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
+      <AppHeader>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/people">People</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="max-w-[150px] sm:max-w-none truncate">
+                {user?.name || user?.email}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </AppHeader>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="container mx-auto py-6 space-y-8">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={user.image ?? undefined} />
-              <AvatarFallback className="text-2xl">
-                {getInitials(user)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold">{user.name ?? user.email}</h1>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>{user.email}</span>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 shrink-0">
+                <AvatarImage src={user.image ?? undefined} />
+                <AvatarFallback className="text-xl sm:text-2xl">
+                  {getInitials(user)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold truncate">
+                  {user.name ?? user.email}
+                </h1>
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{user.email}</span>
+                </div>
               </div>
             </div>
+            {isOwnProfile && (
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="/people/me/edit">
+                  <Pencil className="h-4 w-4" />
+                  Edit Profile
+                </Link>
+              </Button>
+            )}
           </div>
 
           <div className="grid gap-6">

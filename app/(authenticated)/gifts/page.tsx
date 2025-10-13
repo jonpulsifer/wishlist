@@ -1,3 +1,5 @@
+import { User } from 'lucide-react';
+import Link from 'next/link';
 import { unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
@@ -8,6 +10,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
 import {
   getPeopleForNewGiftModal,
@@ -55,7 +58,15 @@ export default async function GiftsPage({ searchParams }: PageProps) {
               have created, and Gifts that you have already claimed.
             </p>
           </div>
-          <AddGiftDialog users={users} currentUser={session.user} />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button asChild variant="outline">
+              <Link href="/people/me">
+                <User className="h-4 w-4 mr-2" />
+                View My Gifts
+              </Link>
+            </Button>
+            <AddGiftDialog users={users} currentUser={session.user} />
+          </div>
         </div>
         <GiftList
           initialGifts={gifts}

@@ -114,6 +114,88 @@ export const deleteGift = async (id: string) => {
   }
 };
 
+export const archiveGift = async (id: string) => {
+  try {
+    const { user } = await getSession();
+    const gift = await db.gift.findUnique({
+      where: { id },
+      select: {
+        ownerId: true,
+        createdById: true,
+        name: true,
+        archived: true,
+      },
+    });
+
+    if (!gift) {
+      return { error: 'Gift not found' };
+    }
+
+    const isOwner = gift.ownerId === user.id;
+    const isCreator = gift.createdById === user.id;
+    if (!isOwner && !isCreator) {
+      return { error: 'You are not the owner or creator of this gift' };
+    }
+
+    if (gift.archived) {
+      return { error: 'Gift is already archived' };
+    }
+
+    await db.gift.update({
+      where: { id },
+      data: { archived: true },
+    });
+    revalidateGiftRelatedCaches();
+    return { success: true, message: `${gift.name} has been archived` };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong in the server action' };
+  }
+};
+
+export const unarchiveGift = async (id: string) => {
+  try {
+    const { user } = await getSession();
+    const gift = await db.gift.findUnique({
+      where: { id },
+      select: {
+        ownerId: true,
+        createdById: true,
+        name: true,
+        archived: true,
+      },
+    });
+
+    if (!gift) {
+      return { error: 'Gift not found' };
+    }
+
+    const isOwner = gift.ownerId === user.id;
+    const isCreator = gift.createdById === user.id;
+    if (!isOwner && !isCreator) {
+      return { error: 'You are not the owner or creator of this gift' };
+    }
+
+    if (!gift.archived) {
+      return { error: 'Gift is not archived' };
+    }
+
+    await db.gift.update({
+      where: { id },
+      data: { archived: false },
+    });
+    revalidateGiftRelatedCaches();
+    return { success: true, message: `${gift.name} has been unarchived` };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong in the server action' };
+  }
+};
+
 export const updateGift = async ({
   id,
   name,
@@ -1097,5 +1179,48 @@ export const getAllSecretSantaEventsAdmin = async () => {
       return { error: error.message };
     }
     return { error: 'Something went wrong fetching Secret Santa events' };
+  }
+};
+
+// AI Recommendations actions
+export const getAIRecommendationsForUser = async (targetUserId: string) => {
+  try {
+    const { user } = await getSession();
+
+    // Verify that the current user has access to this person
+    const targetUser = await db.user.findFirst({
+      where: {
+        id: targetUserId,
+        wishlists: {
+          some: {
+            members: { some: { id: user.id } },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    if (!targetUser) {
+      return { error: 'User not found or you do not have access' };
+    }
+
+    // Dynamically import the AI module to avoid loading it unnecessarily
+    const { getRecommendationsForHomePage } = await import('@/lib/ai');
+    const recommendations = await getRecommendationsForHomePage(targetUserId);
+
+    return {
+      success: true,
+      recommendations,
+      targetUser,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong getting AI recommendations' };
   }
 };

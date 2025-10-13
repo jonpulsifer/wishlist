@@ -9,13 +9,17 @@ import {
   Home,
   ListCheck,
   LogOut,
+  Monitor,
+  Moon,
   Settings,
   Shield,
+  Sun,
   User,
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
+import { useTheme } from 'next-themes';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -24,6 +28,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -91,6 +98,7 @@ const getNextChristmas = () => {
 
 function UserSection() {
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
 
   if (!session?.user) {
     return null;
@@ -176,6 +184,32 @@ function UserSection() {
                 <span>Settings</span>
               </a>
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                {theme === 'light' ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : theme === 'dark' ? (
+                  <Moon className="mr-2 h-4 w-4" />
+                ) : (
+                  <Monitor className="mr-2 h-4 w-4" />
+                )}
+                <span>Theme</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => setTheme('light')}>
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span>Light</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  <Moon className="mr-2 h-4 w-4" />
+                  <span>Dark</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('system')}>
+                  <Monitor className="mr-2 h-4 w-4" />
+                  <span>System</span>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
