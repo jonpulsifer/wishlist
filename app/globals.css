@@ -254,22 +254,26 @@
   }
   body {
     @apply bg-background text-foreground;
-    background: linear-gradient(135deg, 
-      rgba(219, 234, 254, 0.3) 0%, 
-      rgba(186, 230, 253, 0.2) 25%, 
-      rgba(147, 197, 253, 0.15) 50%, 
-      rgba(196, 181, 253, 0.2) 75%, 
-      rgba(219, 234, 254, 0.3) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(219, 234, 254, 0.3) 0%,
+      rgba(186, 230, 253, 0.2) 25%,
+      rgba(147, 197, 253, 0.15) 50%,
+      rgba(196, 181, 253, 0.2) 75%,
+      rgba(219, 234, 254, 0.3) 100%
+    );
     background-attachment: fixed;
   }
-  
+
   .dark body {
-    background: linear-gradient(135deg, 
-      rgba(30, 41, 59, 0.4) 0%, 
-      rgba(51, 65, 85, 0.3) 25%, 
-      rgba(71, 85, 105, 0.2) 50%, 
-      rgba(88, 80, 141, 0.3) 75%, 
-      rgba(30, 41, 59, 0.4) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.4) 0%,
+      rgba(51, 65, 85, 0.3) 25%,
+      rgba(71, 85, 105, 0.2) 50%,
+      rgba(88, 80, 141, 0.3) 75%,
+      rgba(30, 41, 59, 0.4) 100%
+    );
     background-attachment: fixed;
   }
 }
@@ -287,7 +291,8 @@
 }
 
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -296,7 +301,12 @@
 }
 
 .snow {
-  background: radial-gradient(circle, white 0%, rgba(255, 255, 255, 0.8) 50%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    white 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 100%
+  );
   border-radius: 50%;
   position: absolute;
   animation: fall linear infinite;
