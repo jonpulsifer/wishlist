@@ -118,7 +118,8 @@ export default function CreateSecretSantaPage() {
   const loadPeople = async () => {
     try {
       // Use fetch instead of direct module import to avoid Node.js issues
-      const response = await fetch('/api/people');
+      // Include current user in the list for Secret Santa
+      const response = await fetch('/api/people?includeCurrentUser=true');
       if (!response.ok) {
         throw new Error('Failed to fetch people');
       }
