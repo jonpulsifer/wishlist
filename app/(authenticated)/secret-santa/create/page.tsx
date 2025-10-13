@@ -10,6 +10,7 @@ import {
   addParticipantsToSecretSantaEvent,
   assignSecretSantaParticipants,
   createSecretSantaEvent,
+  getPeopleForSecretSanta,
 } from '@/app/actions';
 import {
   Breadcrumb,
@@ -60,9 +61,6 @@ interface User {
   name: string | null;
   email: string;
   image: string | null;
-  _count: {
-    gifts: number;
-  };
 }
 
 export default function CreateSecretSantaPage() {
@@ -117,13 +115,18 @@ export default function CreateSecretSantaPage() {
   // Load people from wishlists
   const loadPeople = async () => {
     try {
-      // Use fetch instead of direct module import to avoid Node.js issues
-      const response = await fetch('/api/people');
-      if (!response.ok) {
-        throw new Error('Failed to fetch people');
+      const result = await getPeopleForSecretSanta();
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: result.error,
+        });
+        return;
       }
-      const data = await response.json();
-      setUsers(data);
+      if (result.people) {
+        setUsers(result.people);
+      }
     } catch (error) {
       console.error('Error loading people:', error);
       toast({

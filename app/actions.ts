@@ -377,6 +377,38 @@ export const handleWishlistAction = async (
 };
 
 // Secret Santa actions
+export const getPeopleForSecretSanta = async () => {
+  try {
+    const { user } = await getSession();
+
+    // Fetch all users in the same wishlists as the current user, including the current user
+    const people = await db.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+      },
+      where: {
+        wishlists: {
+          some: {
+            members: { some: { id: user.id } },
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+    return { success: true, people };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong fetching people' };
+  }
+};
+
 export const createSecretSantaEvent = async (name: string) => {
   try {
     const { user } = await getSession();
