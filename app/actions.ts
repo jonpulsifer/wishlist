@@ -380,13 +380,6 @@ export const handleWishlistAction = async (
 export const getPeopleForSecretSanta = async () => {
   try {
     const { user } = await getSession();
-    const CURRENT_YEAR = new Date().getFullYear();
-    const currentYearFilter = {
-      createdAt: {
-        gte: new Date(`${CURRENT_YEAR - 2}-01-01`),
-        lt: new Date(`${CURRENT_YEAR + 1}-01-01`),
-      },
-    };
 
     // Fetch all users in the same wishlists as the current user, including the current user
     const people = await db.user.findMany({
@@ -395,27 +388,6 @@ export const getPeopleForSecretSanta = async () => {
         name: true,
         email: true,
         image: true,
-        _count: {
-          select: {
-            gifts: {
-              where: {
-                ...currentYearFilter,
-                AND: {
-                  OR: [
-                    { claimed: false },
-                    {
-                      claimed: true,
-                      claimedBy: {
-                        id: user.id,
-                      },
-                    },
-                    { createdBy: { id: user.id } },
-                  ],
-                },
-              },
-            },
-          },
-        },
       },
       where: {
         wishlists: {

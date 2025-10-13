@@ -61,9 +61,6 @@ interface User {
   name: string | null;
   email: string;
   image: string | null;
-  _count: {
-    gifts: number;
-  };
 }
 
 export default function CreateSecretSantaPage() {
