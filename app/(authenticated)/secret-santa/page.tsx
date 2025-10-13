@@ -1,4 +1,4 @@
-import { PlusIcon } from 'lucide-react';
+import { Archive, CalendarIcon, Gift, PlusIcon, Users } from 'lucide-react';
 import Link from 'next/link';
 import { getSession } from '@/app/auth';
 import {
@@ -23,12 +23,11 @@ import { getSecretSantaEvents } from '@/lib/db/queries-cached';
 export default async function SecretSantaPage() {
   const { user } = await getSession();
 
-  // Get assignment and events
-  const [assignment, events] = await Promise.all([
-    db.secretSantaParticipant.findFirst({
+  // Get all assignments for the user and events
+  const [assignments, events] = await Promise.all([
+    db.secretSantaParticipant.findMany({
       where: {
         userId: user.id,
-        assignedToId: { not: null },
       },
       include: {
         assignedTo: {
@@ -39,21 +38,6 @@ export default async function SecretSantaPage() {
             pant_size: true,
             shirt_size: true,
             shoe_size: true,
-            wishlists: {
-              select: {
-                id: true,
-                name: true,
-                gifts: {
-                  select: {
-                    id: true,
-                    name: true,
-                    description: true,
-                    url: true,
-                    claimed: true,
-                  },
-                },
-              },
-            },
           },
         },
         event: true,
@@ -62,23 +46,21 @@ export default async function SecretSantaPage() {
     getSecretSantaEvents(user.id),
   ]);
 
-  // For current assignment, we need to adapt the data structure
-  let currentAssignment = null;
-  if (assignment?.assignedTo) {
-    currentAssignment = {
-      id: assignment.id,
-      eventName: assignment.event?.name || 'Secret Santa',
-      assignedTo: {
-        id: assignment.assignedTo.id,
-        name: assignment.assignedTo.name,
-        address: assignment.assignedTo.address,
-        pant_size: assignment.assignedTo.pant_size,
-        shirt_size: assignment.assignedTo.shirt_size,
-        shoe_size: assignment.assignedTo.shoe_size,
-        wishlists: assignment.assignedTo.wishlists,
-      },
-    };
-  }
+  // Create a map of assignments by eventId for easy lookup
+  const assignmentsByEvent = new Map(assignments.map((a) => [a.eventId, a]));
+
+  // Sort events by createdAt (newest first) and separate by year
+  const currentYear = new Date().getFullYear();
+  const sortedEvents = [...events].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  const currentEvents = sortedEvents.filter(
+    (event) => new Date(event.createdAt).getFullYear() === currentYear,
+  );
+  const pastEvents = sortedEvents.filter(
+    (event) => new Date(event.createdAt).getFullYear() < currentYear,
+  );
 
   return (
     <SidebarInset>
@@ -95,12 +77,12 @@ export default async function SecretSantaPage() {
           </Breadcrumb>
         </div>
       </header>
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-1 flex-col gap-6 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Secret Santa</h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              View your assigned recipient and organize Secret Santa events.
+              View your Secret Santa events and assignments.
             </p>
           </div>
           <Button asChild>
@@ -111,121 +93,204 @@ export default async function SecretSantaPage() {
           </Button>
         </div>
 
-        {!currentAssignment ? (
+        {events.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">
-              You haven't been assigned a Secret Santa recipient yet.
+            <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg text-muted-foreground mb-4">
+              No Secret Santa events yet.
             </p>
-            {events.length > 0 ? (
-              <p className="text-sm text-muted-foreground mt-2">
-                You are participating in{' '}
-                {events.filter((e) => e.isParticipating).length} event(s), but
-                assignments haven't been made yet.
-              </p>
-            ) : (
-              <Button asChild className="mt-4">
-                <Link href="/secret-santa/create">
-                  Create a Secret Santa Event
-                </Link>
-              </Button>
-            )}
+            <Button asChild>
+              <Link href="/secret-santa/create">Create Your First Event</Link>
+            </Button>
           </div>
         ) : (
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Recipient</CardTitle>
-                <CardDescription>
-                  For: {currentAssignment.eventName}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium mb-2">Assigned To</h3>
-                    <p className="text-lg font-semibold">
-                      {currentAssignment.assignedTo.name || 'Unknown'}
-                    </p>
-                  </div>
-                  {currentAssignment.assignedTo.address && (
-                    <div>
-                      <h3 className="font-medium mb-2">Address</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {currentAssignment.assignedTo.address}
-                      </p>
-                    </div>
-                  )}
-                  {(currentAssignment.assignedTo.pant_size ||
-                    currentAssignment.assignedTo.shirt_size ||
-                    currentAssignment.assignedTo.shoe_size) && (
-                    <div>
-                      <h3 className="font-medium mb-2">Sizes</h3>
-                      <ul className="text-sm text-muted-foreground">
-                        {currentAssignment.assignedTo.pant_size && (
-                          <li>
-                            Pants: {currentAssignment.assignedTo.pant_size}
-                          </li>
-                        )}
-                        {currentAssignment.assignedTo.shirt_size && (
-                          <li>
-                            Shirt: {currentAssignment.assignedTo.shirt_size}
-                          </li>
-                        )}
-                        {currentAssignment.assignedTo.shoe_size && (
-                          <li>
-                            Shoes: {currentAssignment.assignedTo.shoe_size}
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          <>
+            {/* Current Year Events */}
+            {currentEvents.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  {currentYear} Events
+                </h2>
+                <div className="grid gap-4">
+                  {currentEvents.map((event) => {
+                    const assignment = assignmentsByEvent.get(event.id);
+                    const hasAssignments = event.participants.some(
+                      (p) => p.assignedToId,
+                    );
 
-        {/* List of Secret Santa Events */}
-        {events.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-xl font-bold mb-4">Your Secret Santa Events</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {events.map((event) => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <CardTitle>{event.name}</CardTitle>
-                    <CardDescription>
-                      {event.participants.length} participants
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">Status:</span>
-                        <span className="text-sm">
-                          {event.participants.some((p) => p.assignedToId)
-                            ? 'Assignments Made'
-                            : 'Waiting for Assignments'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">
-                          Your Status:
-                        </span>
-                        <span className="text-sm">
-                          {event.isParticipating
-                            ? 'Participating'
-                            : event.canJoin
-                              ? 'Not Joined'
-                              : 'Closed'}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+                    return (
+                      <Card key={event.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle>{event.name}</CardTitle>
+                              <CardDescription className="flex items-center gap-4 mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {event.participants.length} participants
+                                </span>
+                                {event.isParticipating && (
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                    You're participating
+                                  </span>
+                                )}
+                              </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasAssignments ? (
+                                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full">
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-1 rounded-full">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {assignment?.assignedTo ? (
+                            <div className="space-y-3 bg-primary/5 p-4 rounded-lg border border-primary/10">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Gift className="h-4 w-4 text-primary" />
+                                <h3 className="font-semibold text-primary">
+                                  Your Assignment
+                                </h3>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  You're giving to
+                                </p>
+                                <p className="text-lg font-bold mt-1">
+                                  {assignment.assignedTo.name || 'Unknown'}
+                                </p>
+                              </div>
+                              {assignment.assignedTo.address && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Address
+                                  </p>
+                                  <p className="text-sm mt-0.5">
+                                    {assignment.assignedTo.address}
+                                  </p>
+                                </div>
+                              )}
+                              {(assignment.assignedTo.pant_size ||
+                                assignment.assignedTo.shirt_size ||
+                                assignment.assignedTo.shoe_size) && (
+                                <div>
+                                  <p className="text-sm text-muted-foreground mb-1">
+                                    Sizes
+                                  </p>
+                                  <div className="flex gap-3 text-sm">
+                                    {assignment.assignedTo.shirt_size && (
+                                      <span>
+                                        Shirt:{' '}
+                                        {assignment.assignedTo.shirt_size}
+                                      </span>
+                                    )}
+                                    {assignment.assignedTo.pant_size && (
+                                      <span>
+                                        Pants: {assignment.assignedTo.pant_size}
+                                      </span>
+                                    )}
+                                    {assignment.assignedTo.shoe_size && (
+                                      <span>
+                                        Shoes: {assignment.assignedTo.shoe_size}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : event.isParticipating && hasAssignments ? (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <p className="text-sm">
+                                You're participating but haven't been assigned
+                                yet.
+                              </p>
+                            </div>
+                          ) : event.isParticipating ? (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <p className="text-sm">
+                                Waiting for assignments to be made.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <p className="text-sm">
+                                {event.canJoin
+                                  ? 'You are not participating in this event.'
+                                  : 'This event is closed.'}
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Past Year Events */}
+            {pastEvents.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-muted-foreground">
+                  <Archive className="h-5 w-5" />
+                  Past Events
+                </h2>
+                <div className="grid gap-4 opacity-60">
+                  {pastEvents.map((event) => {
+                    const assignment = assignmentsByEvent.get(event.id);
+                    const eventYear = new Date(event.createdAt).getFullYear();
+
+                    return (
+                      <Card key={event.id} className="bg-muted/30">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-muted-foreground">
+                                {event.name}
+                              </CardTitle>
+                              <CardDescription className="flex items-center gap-4 mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {event.participants.length} participants
+                                </span>
+                                <span>{eventYear}</span>
+                              </CardDescription>
+                            </div>
+                            <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full">
+                              Completed
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {assignment?.assignedTo ? (
+                            <div className="text-sm text-muted-foreground">
+                              <p>
+                                You gave to:{' '}
+                                <span className="font-medium">
+                                  {assignment.assignedTo.name || 'Unknown'}
+                                </span>
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">
+                              <p>You were not assigned in this event.</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </SidebarInset>
