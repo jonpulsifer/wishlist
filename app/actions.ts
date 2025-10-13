@@ -590,22 +590,101 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
     // Get all participant IDs
     const participantIds = event.participants.map((p) => p.userId);
 
-    // Shuffle participant IDs to create random assignments
-    const shuffledIds = [...participantIds].sort(() => Math.random() - 0.5);
-
-    // Assign each participant to the next person in the shuffled list
-    const assignments = participantIds.map((userId, index) => {
-      const nextIndex = (index + 1) % participantIds.length;
-      return {
-        userId,
-        assignedToId: shuffledIds[nextIndex],
-        assignedById: user.id,
-      };
+    // Fetch exclusion pairs for all participants
+    const participantsWithExclusions = await db.user.findMany({
+      where: {
+        id: { in: participantIds },
+      },
+      select: {
+        id: true,
+        secretSantaDoNotMatchWith: {
+          select: {
+            id: true,
+          },
+        },
+      },
     });
+
+    const exclusionMap = new Map<string, Set<string>>();
+    participantsWithExclusions.forEach((p) => {
+      const excludedIds = new Set(p.secretSantaDoNotMatchWith.map((e) => e.id));
+      exclusionMap.set(p.id, excludedIds);
+    });
+
+    // Fetch historical assignments from previous events (current year and previous year)
+    const currentYear = new Date().getFullYear();
+    const previousYearStart = new Date(currentYear - 1, 0, 1);
+
+    const historicalAssignments = await db.secretSantaParticipant.findMany({
+      where: {
+        userId: { in: participantIds },
+        assignedToId: { not: null },
+        event: {
+          createdAt: { gte: previousYearStart },
+          id: { not: eventId },
+        },
+      },
+      select: {
+        userId: true,
+        assignedToId: true,
+      },
+    });
+
+    const historicalMap = new Map<string, Set<string>>();
+    historicalAssignments.forEach((assignment) => {
+      if (!assignment.assignedToId) return;
+      if (!historicalMap.has(assignment.userId)) {
+        historicalMap.set(assignment.userId, new Set());
+      }
+      historicalMap.get(assignment.userId)!.add(assignment.assignedToId);
+    });
+
+    // Try to create valid assignments with constraints
+    const assignments = createSecretSantaAssignments(
+      participantIds,
+      exclusionMap,
+      historicalMap,
+    );
+
+    if (!assignments) {
+      return {
+        error:
+          'Could not create valid assignments with current exclusions. Please review exclusion pairs.',
+      };
+    }
+
+    // Validate assignments before saving
+    const givers = new Set(assignments.map((a) => a.userId));
+    const receivers = new Set(assignments.map((a) => a.assignedToId));
+
+    console.log('Assignment validation:', {
+      totalParticipants: participantIds.length,
+      totalAssignments: assignments.length,
+      uniqueGivers: givers.size,
+      uniqueReceivers: receivers.size,
+      participantIds: participantIds.sort(),
+      giverIds: Array.from(givers).sort(),
+      receiverIds: Array.from(receivers).sort(),
+      assignments: assignments.map((a) => `${a.userId} -> ${a.assignedToId}`),
+    });
+
+    // Check if everyone is accounted for
+    const missingGivers = participantIds.filter((id) => !givers.has(id));
+    const missingReceivers = participantIds.filter((id) => !receivers.has(id));
+
+    if (missingGivers.length > 0 || missingReceivers.length > 0) {
+      console.error('VALIDATION FAILED:', {
+        missingGivers,
+        missingReceivers,
+      });
+      return {
+        error: `Assignment validation failed. Missing givers: ${missingGivers.length}, Missing receivers: ${missingReceivers.length}`,
+      };
+    }
 
     // Update each participant with their assignment
     await Promise.all(
-      assignments.map(({ userId, assignedToId, assignedById }) =>
+      assignments.map(({ userId, assignedToId }) =>
         db.secretSantaParticipant.update({
           where: {
             eventId_userId: {
@@ -621,7 +700,7 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
             },
             assignedBy: {
               connect: {
-                id: assignedById,
+                id: user.id,
               },
             },
           },
@@ -636,5 +715,387 @@ export const assignSecretSantaParticipants = async (eventId: string) => {
       return { error: error.message };
     }
     return { error: 'Something went wrong making the assignments' };
+  }
+};
+
+// Helper function to create Secret Santa assignments with constraints
+function createSecretSantaAssignments(
+  participantIds: string[],
+  exclusionMap: Map<string, Set<string>>,
+  historicalMap: Map<string, Set<string>>,
+): Array<{ userId: string; assignedToId: string }> | null {
+  const n = participantIds.length;
+  const maxAttempts = 1000;
+
+  console.log('Creating Secret Santa assignments:', {
+    participantCount: n,
+    participantIds: participantIds.sort(),
+    exclusions: Array.from(exclusionMap.entries()).map(([id, excluded]) => ({
+      userId: id,
+      excludedIds: Array.from(excluded),
+    })),
+  });
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Shuffle participant order for randomness
+    const shuffledIds = [...participantIds].sort(() => Math.random() - 0.5);
+
+    // Try to find a valid assignment using backtracking
+    const result = backtrackAssignment(
+      shuffledIds,
+      [],
+      new Set(participantIds),
+      exclusionMap,
+      historicalMap,
+    );
+
+    if (result) {
+      console.log(`Found valid assignment on attempt ${attempt + 1}`);
+      return result;
+    }
+  }
+
+  console.error(
+    'Failed to find valid assignment after',
+    maxAttempts,
+    'attempts',
+  );
+  return null; // Could not find valid assignment
+}
+
+// Backtracking helper to find valid Secret Santa assignments
+function backtrackAssignment(
+  remainingGivers: string[],
+  currentAssignments: Array<{ userId: string; assignedToId: string }>,
+  availableReceivers: Set<string>,
+  exclusionMap: Map<string, Set<string>>,
+  historicalMap: Map<string, Set<string>>,
+): Array<{ userId: string; assignedToId: string }> | null {
+  // Base case: all givers have been assigned
+  if (remainingGivers.length === 0) {
+    return currentAssignments;
+  }
+
+  const giverId = remainingGivers[0];
+  const excluded = exclusionMap.get(giverId) || new Set();
+  const historical = historicalMap.get(giverId) || new Set();
+
+  // Get all valid candidates for this giver
+  const candidates = Array.from(availableReceivers).filter(
+    (id) => id !== giverId && !excluded.has(id),
+  );
+
+  if (candidates.length === 0) {
+    return null; // Dead end, backtrack
+  }
+
+  // Prefer non-historical matches but keep historical as backup
+  const nonHistoricalCandidates = candidates.filter(
+    (id) => !historical.has(id),
+  );
+  const historicalCandidates = candidates.filter((id) => historical.has(id));
+
+  // Shuffle both lists for randomness
+  const shuffledNonHistorical = nonHistoricalCandidates.sort(
+    () => Math.random() - 0.5,
+  );
+  const shuffledHistorical = historicalCandidates.sort(
+    () => Math.random() - 0.5,
+  );
+
+  // Try non-historical first, then historical
+  const orderedCandidates = [...shuffledNonHistorical, ...shuffledHistorical];
+
+  // Try each candidate
+  for (const recipientId of orderedCandidates) {
+    // Make the assignment
+    const newAssignments = [
+      ...currentAssignments,
+      { userId: giverId, assignedToId: recipientId },
+    ];
+    const newAvailable = new Set(availableReceivers);
+    newAvailable.delete(recipientId);
+
+    // Recurse
+    const result = backtrackAssignment(
+      remainingGivers.slice(1),
+      newAssignments,
+      newAvailable,
+      exclusionMap,
+      historicalMap,
+    );
+
+    if (result) {
+      return result; // Found a valid complete assignment
+    }
+
+    // If result is null, try next candidate (backtrack)
+  }
+
+  return null; // No valid assignment found with this giver
+}
+
+// Admin actions
+const ADMIN_EMAIL = 'jonathan@pulsifer.ca';
+
+const isAdmin = (userEmail: string) => {
+  return userEmail === ADMIN_EMAIL;
+};
+
+export const getSecretSantaExclusions = async () => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    const users = await db.user.findMany({
+      where: {
+        secretSantaDoNotMatchWith: {
+          some: {},
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        secretSantaDoNotMatchWith: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    // Convert to exclusion pair format for easier UI handling
+    const exclusions: Array<{
+      user1: { id: string; name: string | null; email: string };
+      user2: { id: string; name: string | null; email: string };
+    }> = [];
+
+    const processedPairs = new Set<string>();
+
+    users.forEach((user) => {
+      user.secretSantaDoNotMatchWith.forEach((excludedUser) => {
+        const pairKey = [user.id, excludedUser.id].sort().join('-');
+        if (!processedPairs.has(pairKey)) {
+          processedPairs.add(pairKey);
+          exclusions.push({
+            user1: { id: user.id, name: user.name, email: user.email },
+            user2: {
+              id: excludedUser.id,
+              name: excludedUser.name,
+              email: excludedUser.email,
+            },
+          });
+        }
+      });
+    });
+
+    return { exclusions };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong fetching exclusions' };
+  }
+};
+
+export const createSecretSantaExclusion = async (
+  user1Id: string,
+  user2Id: string,
+) => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    if (user1Id === user2Id) {
+      return { error: 'Cannot exclude a user from themselves' };
+    }
+
+    // Check if exclusion already exists (in either direction)
+    const existingExclusion = await db.user.findFirst({
+      where: {
+        id: user1Id,
+        secretSantaDoNotMatchWith: {
+          some: {
+            id: user2Id,
+          },
+        },
+      },
+    });
+
+    if (existingExclusion) {
+      return { error: 'This exclusion already exists' };
+    }
+
+    // Create bidirectional exclusion
+    await db.$transaction([
+      db.user.update({
+        where: { id: user1Id },
+        data: {
+          secretSantaDoNotMatchWith: {
+            connect: { id: user2Id },
+          },
+        },
+      }),
+      db.user.update({
+        where: { id: user2Id },
+        data: {
+          secretSantaDoNotMatchWith: {
+            connect: { id: user1Id },
+          },
+        },
+      }),
+    ]);
+
+    revalidateTag('secretSanta');
+    return { success: true, message: 'Exclusion created successfully' };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong creating the exclusion' };
+  }
+};
+
+export const deleteSecretSantaExclusion = async (
+  user1Id: string,
+  user2Id: string,
+) => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    // Remove bidirectional exclusion
+    await db.$transaction([
+      db.user.update({
+        where: { id: user1Id },
+        data: {
+          secretSantaDoNotMatchWith: {
+            disconnect: { id: user2Id },
+          },
+        },
+      }),
+      db.user.update({
+        where: { id: user2Id },
+        data: {
+          secretSantaDoNotMatchWith: {
+            disconnect: { id: user1Id },
+          },
+        },
+      }),
+    ]);
+
+    revalidateTag('secretSanta');
+    return { success: true, message: 'Exclusion removed successfully' };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong removing the exclusion' };
+  }
+};
+
+export const getAllUsersForExclusions = async () => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    const users = await db.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    return { users };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong fetching users' };
+  }
+};
+
+export const deleteSecretSantaEvent = async (eventId: string) => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    // Delete all participants first (cascade should handle this, but being explicit)
+    await db.secretSantaParticipant.deleteMany({
+      where: { eventId },
+    });
+
+    // Delete the event
+    await db.secretSantaEvent.delete({
+      where: { id: eventId },
+    });
+
+    revalidateTag('secretSanta');
+    return {
+      success: true,
+      message: 'Secret Santa event deleted successfully',
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong deleting the Secret Santa event' };
+  }
+};
+
+export const getAllSecretSantaEventsAdmin = async () => {
+  try {
+    const { user } = await getSession();
+
+    if (!isAdmin(user.email)) {
+      return { error: 'Unauthorized: Admin access required' };
+    }
+
+    const events = await db.secretSantaEvent.findMany({
+      include: {
+        participants: {
+          include: {
+            user: true,
+            assignedTo: true,
+          },
+        },
+        createdBy: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return { events };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+    return { error: 'Something went wrong fetching Secret Santa events' };
   }
 };

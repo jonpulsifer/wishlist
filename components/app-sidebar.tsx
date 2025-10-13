@@ -10,6 +10,7 @@ import {
   ListCheck,
   LogOut,
   Settings,
+  Shield,
   User,
   Users,
 } from 'lucide-react';
@@ -188,6 +189,9 @@ function UserSection() {
 }
 
 export function AppSidebar() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.email === 'jonathan@pulsifer.ca';
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -229,6 +233,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a href="/admin">
+                      <Shield />
+                      <span>Admin</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

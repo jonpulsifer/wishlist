@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.6/schema.json",
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -19,7 +19,8 @@
         "noUselessFragments": "off"
       },
       "correctness": {
-        "useExhaustiveDependencies": "off"
+        "useExhaustiveDependencies": "off",
+        "useUniqueElementIds": "off"
       },
       "style": {
         "noNonNullAssertion": "off",
@@ -28,7 +29,8 @@
       "suspicious": {
         "noDocumentCookie": "off",
         "noExplicitAny": "off",
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noUnknownAtRules": "off"
       }
     }
   },

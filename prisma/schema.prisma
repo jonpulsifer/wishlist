@@ -63,6 +63,8 @@ model User {
   secretSantaParticipations SecretSantaParticipant[]
   secretSantaAssignedTo     SecretSantaParticipant[] @relation("AssignedTo")
   secretSantaAssignedBy     SecretSantaParticipant[] @relation("AssignedBy")
+  secretSantaDoNotMatchWith User[]                   @relation("SecretSantaExclusions")
+  secretSantaExcludedBy     User[]                   @relation("SecretSantaExclusions")
 }
 
 model VerificationToken {

@@ -25,6 +25,25 @@ type ScorePopup = {
   y: number;
 };
 
+// Add ScorePopup component
+const ScorePopup: React.FC<{ x: number; y: number }> = ({ x, y }) => (
+  <g className="score-popup">
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      fill="#FFE873"
+      fontSize="16"
+      className="animate-score-popup"
+      style={{
+        filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
+      }}
+    >
+      +1
+    </text>
+  </g>
+);
+
 // Add color constants for theme support
 const _THEME_COLORS = {
   light: {
@@ -577,25 +596,6 @@ const ChristmasPlinko: React.FC = () => {
       }));
     }
   };
-
-  // Add ScorePopup component
-  const ScorePopup: React.FC<{ x: number; y: number }> = ({ x, y }) => (
-    <g className="score-popup">
-      <text
-        x={x}
-        y={y}
-        textAnchor="middle"
-        fill="#FFE873"
-        fontSize="16"
-        className="animate-score-popup"
-        style={{
-          filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
-        }}
-      >
-        +1
-      </text>
-    </g>
-  );
 
   // Update button text based on game state
   const buttonText = () => {
