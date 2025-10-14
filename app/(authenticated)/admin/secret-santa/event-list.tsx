@@ -2,7 +2,7 @@
 
 import { CalendarIcon, Trash2, Users } from 'lucide-react';
 import { startTransition, useOptimistic } from 'react';
-import { deleteSecretSantaEvent } from '@/app/actions';
+import { deleteSecretSantaEvent } from '@/app/_actions/secret-santa';
 import {
   AlertDialog,
   AlertDialogAction,

@@ -1,14 +1,12 @@
-// import { getPeopleForNewGiftModal } from 'lib/db/queries-cached';
+import { redirect } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import { auth } from '@/app/auth';
 import { AppSidebar } from '@/components/app-sidebar';
-import { Loading } from '@/components/ui/loading';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 async function Layout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user) return <Loading message="Authenticating..." />;
-  // const people = await getPeopleForNewGiftModal(session.user.id);
+  if (!session?.user) redirect('/');
   return (
     <SessionProvider session={session}>
       <SidebarProvider>

@@ -5,7 +5,7 @@ import { startTransition, useOptimistic, useState } from 'react';
 import {
   createSecretSantaExclusion,
   deleteSecretSantaExclusion,
-} from '@/app/actions';
+} from '@/app/_actions/secret-santa';
 import {
   AlertDialog,
   AlertDialogAction,

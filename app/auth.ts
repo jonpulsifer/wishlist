@@ -2,7 +2,6 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { redirect } from 'next/navigation';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
-import type { User } from '@/prisma/generated/client';
 import { PrismaClient } from '@/prisma/generated/client';
 
 const prisma = new PrismaClient();
@@ -32,7 +31,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
     async session({ session, user }) {
-      session.user = user as User;
+      const userWithRoles = await prisma.user.findUnique({
+        where: { id: user.id },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      session.user = userWithRoles as SessionUser;
       return session;
     },
   },
@@ -42,6 +52,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     updateAge: 24 * 60 * 60,
   },
 });
+
+type SessionUser = {
+  id: string;
+  image: string | null;
+  name: string | null;
+  email: string;
+  roles: Array<{ role: { name: string } }>;
+  emailVerified: Date | null;
+};
 
 export const getSession = async () => {
   const session = await auth();
@@ -59,12 +78,26 @@ declare module 'next-auth' {
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
    */
   interface Session {
-    user: {
-      /** The user's id */
-      id: string;
-      image: string | null;
-      name: string | null;
-      email: string;
-    } & DefaultSession['user'];
+    user: SessionUser & DefaultSession['user'];
   }
 }
+
+export const isGodmode = (user: SessionUser) => {
+  return (
+    user.roles.some((userRole) => userRole.role.name === 'godmode') || false
+  );
+};
+
+export const isSecretSantaAdmin = (user: SessionUser) => {
+  return (
+    user.roles.some(
+      (userRole) => userRole.role.name === 'secret-santa-manager',
+    ) || false
+  );
+};
+
+export const hasRole = (user: SessionUser, roleName: string) => {
+  return (
+    user.roles.some((userRole) => userRole.role.name === roleName) || false
+  );
+};

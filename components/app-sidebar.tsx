@@ -224,7 +224,7 @@ function UserSection() {
 
 export function AppSidebar() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.email === 'jonathan@pulsifer.ca';
+  const showAdminButton = (session?.user?.roles?.length ?? 0) > 0;
 
   return (
     <Sidebar>
@@ -267,7 +267,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
+              {showAdminButton && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <a href="/admin">

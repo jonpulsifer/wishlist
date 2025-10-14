@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { startTransition, useOptimistic } from 'react';
-import { unclaimGift } from '@/app/actions';
+import { unclaimGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Prisma } from '@/prisma/generated/client';

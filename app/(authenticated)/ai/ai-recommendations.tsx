@@ -2,8 +2,9 @@
 
 import { Loader2, Plus, Sparkles } from 'lucide-react';
 import * as React from 'react';
-import type { GiftFormData } from '@/app/actions';
-import { addGift, getAIRecommendationsForUser } from '@/app/actions';
+import type { GiftFormData } from '@/app/_actions/gifts';
+import { addGift } from '@/app/_actions/gifts';
+import { getAIRecommendationsForUser } from '@/app/_actions/user';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,7 +61,8 @@ export function AIRecommendations({ people }: Props) {
 
     setIsLoading(true);
     try {
-      const result = await getAIRecommendationsForUser(selectedPersonId);
+      const result: Awaited<ReturnType<typeof getAIRecommendationsForUser>> =
+        await getAIRecommendationsForUser(selectedPersonId);
 
       if ('error' in result) {
         toast({

@@ -10,7 +10,7 @@ import {
   deleteGift,
   unarchiveGift,
   unclaimGift,
-} from '@/app/actions';
+} from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';

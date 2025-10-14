@@ -13,7 +13,12 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { startTransition, useOptimistic, useState } from 'react';
-import { claimGift, deleteGift, unclaimGift, updateGift } from '@/app/actions';
+import {
+  claimGift,
+  deleteGift,
+  unclaimGift,
+  updateGift,
+} from '@/app/_actions/gifts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

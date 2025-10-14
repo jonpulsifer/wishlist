@@ -1,10 +1,6 @@
 import { redirect } from 'next/navigation';
-import {
-  getAllSecretSantaEventsAdmin,
-  getAllUsersForExclusions,
-  getSecretSantaExclusions,
-} from '@/app/_actions/secret-santa';
-import { getSession, isSecretSantaAdmin } from '@/app/auth';
+import { getAllRoles, getAllUsersForRoles } from '@/app/_actions/roles';
+import { getSession, isGodmode } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -15,22 +11,21 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { SecretSantaEventList } from './event-list';
-import { ExclusionManager } from './exclusion-manager';
+import { RoleManager } from './role-manager';
 
-export default async function AdminSecretSantaPage() {
+export default async function AdminRolesPage() {
   const { user } = await getSession();
-  if (!isSecretSantaAdmin(user)) {
+
+  if (!isGodmode(user)) {
     redirect('/');
   }
 
-  const [eventsResult, exclusionsResult, usersResult] = await Promise.all([
-    getAllSecretSantaEventsAdmin(),
-    getSecretSantaExclusions(),
-    getAllUsersForExclusions(),
+  const [rolesResult, usersResult] = await Promise.all([
+    getAllRoles(),
+    getAllUsersForRoles(),
   ]);
 
-  if (eventsResult.error || !eventsResult.events) {
+  if (rolesResult.error || !rolesResult.roles) {
     return (
       <SidebarInset>
         <AppHeader>
@@ -41,19 +36,19 @@ export default async function AdminSecretSantaPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>Secret Santa</BreadcrumbPage>
+                <BreadcrumbPage>Roles</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </AppHeader>
         <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-          <p className="text-destructive">Error: {eventsResult.error}</p>
+          <p className="text-destructive">Error: {rolesResult.error}</p>
         </div>
       </SidebarInset>
     );
   }
 
-  const exclusions = exclusionsResult.exclusions || [];
+  const roles = rolesResult.roles || [];
   const users = usersResult.users || [];
 
   return (
@@ -66,24 +61,20 @@ export default async function AdminSecretSantaPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Secret Santa</BreadcrumbPage>
+              <BreadcrumbPage>Roles</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
       <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            Secret Santa Management
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            View and manage all Secret Santa events and exclusion pairs.
-          </p>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Role Management</h1>
         </div>
+        <p className="text-muted-foreground">
+          Manage user roles and permissions for the application.
+        </p>
 
-        <ExclusionManager exclusions={exclusions} users={users} />
-
-        <SecretSantaEventList events={eventsResult.events} />
+        <RoleManager roles={roles} users={users} />
       </div>
     </SidebarInset>
   );

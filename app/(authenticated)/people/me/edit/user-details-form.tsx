@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { updateUser } from '@/app/actions';
+import { updateUser } from '@/app/_actions/user';
 import { Button } from '@/components/ui/button';
 import {
   Card,

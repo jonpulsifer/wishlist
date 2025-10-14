@@ -159,7 +159,7 @@ const previousYearStart = new Date(currentYear - 1, 0, 1);
 
 ## ⚠️ Important Notes
 
-1. **Admin Access**: Only users with email `jonathan@pulsifer.ca` can access admin features
+1. **Admin Access**: Only users with roles can access admin features
 2. **Database Push Required**: Run `npx prisma db push` to apply schema changes
 3. **Linter Errors**: Expected until Prisma client is regenerated
 4. **No Migration Files**: This project uses `prisma db push` instead of migrations

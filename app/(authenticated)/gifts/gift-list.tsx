@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { startTransition, useMemo, useOptimistic } from 'react';
-import { claimGift, deleteGift, unclaimGift } from '@/app/actions';
+import { claimGift, deleteGift, unclaimGift } from '@/app/_actions/gifts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

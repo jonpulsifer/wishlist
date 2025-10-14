@@ -1,462 +1,8 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { z } from 'zod';
-import { getSession } from '@/app/auth';
+import { getSession, isGodmode } from '@/app/auth';
 import db from '@/lib/db/client';
-
-const revalidateGiftRelatedCaches = () => {
-  revalidateTag('gifts');
-  revalidateTag('users');
-  revalidateTag('wishlists');
-};
-
-const GiftSchema = z.object({
-  recipientId: z.string().min(1, 'Recipient is required'),
-  name: z.string().min(1, 'Gift name is required'),
-  url: z.string().url().optional().or(z.literal('')),
-  description: z.string().optional(),
-});
-
-export type GiftFormData = z.infer<typeof GiftSchema>;
-
-export const addGift = async (_state: unknown, formData: GiftFormData) => {
-  const validatedFields = GiftSchema.safeParse(formData);
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to add gift. Please check the form for errors.',
-    };
-  }
-
-  try {
-    const { user } = await getSession();
-    const wishlists = await db.wishlist.findMany({
-      select: {
-        id: true,
-      },
-      where: {
-        members: {
-          some: {
-            id: user.id,
-          },
-        },
-      },
-    });
-
-    const wishlistIds = wishlists.map((wishlist) => ({ id: wishlist.id }));
-    await db.gift.create({
-      data: {
-        name: validatedFields.data.name,
-        url: validatedFields.data.url,
-        description: validatedFields.data.description,
-        owner: {
-          connect: {
-            id: validatedFields.data.recipientId,
-          },
-        },
-        createdBy: {
-          connect: {
-            id: user.id,
-          },
-        },
-        wishlists: {
-          connect: wishlistIds,
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return {
-      success: true,
-      message: `${validatedFields.data.name} has been added to the wishlist.`,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const deleteGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
-      },
-    });
-
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-
-    await db.gift.delete({
-      where: { id },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been deleted` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const archiveGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
-        archived: true,
-      },
-    });
-
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-
-    if (gift.archived) {
-      return { error: 'Gift is already archived' };
-    }
-
-    await db.gift.update({
-      where: { id },
-      data: { archived: true },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been archived` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const unarchiveGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
-        archived: true,
-      },
-    });
-
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-
-    if (!gift.archived) {
-      return { error: 'Gift is not archived' };
-    }
-
-    await db.gift.update({
-      where: { id },
-      data: { archived: false },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been unarchived` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const updateGift = async ({
-  id,
-  name,
-  description,
-  url,
-}: {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-}) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        ownerId: true,
-        createdById: true,
-      },
-    });
-    const isOwner = gift?.ownerId === user.id;
-    const isCreator = gift?.createdById === user.id;
-    if (isOwner || isCreator) {
-      await db.gift.update({
-        where: {
-          id,
-        },
-        data: {
-          name,
-          url,
-          description,
-        },
-      });
-    } else {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-  revalidateGiftRelatedCaches();
-};
-
-export const claimGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        claimedBy: true,
-        ownerId: true,
-        name: true,
-      },
-    });
-
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    // determine if the gift has been claimed by someone else
-    const isClaimed = Boolean(gift?.claimedBy);
-    if (isClaimed) {
-      return { error: 'This gift has already been claimed' };
-    }
-
-    // determine if the gift is owned by the current user
-    const isOwner = gift?.ownerId === user.id;
-    if (isOwner) {
-      return { error: 'You cannot claim your own gift' };
-    }
-
-    await db.gift.update({
-      where: {
-        id,
-      },
-      data: {
-        claimed: true,
-        claimedBy: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `You claimed ${gift?.name}` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const unclaimGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const giftId = id;
-
-    if (!giftId) {
-      return { error: 'Gift ID is required' };
-    }
-
-    const gift = await db.gift.findUnique({
-      where: {
-        id: giftId,
-      },
-      select: {
-        claimedById: true,
-        name: true,
-      },
-    });
-
-    const isClaimed = gift?.claimedById === user.id;
-    if (!isClaimed) {
-      return { error: 'You have not claimed this gift' };
-    }
-
-    await db.gift.update({
-      where: {
-        id: giftId,
-      },
-      data: {
-        claimed: false,
-        claimedBy: {
-          disconnect: true,
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `You unclaimed ${gift?.name}` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const updateUser = async (
-  id: string,
-  data: {
-    name: string;
-    address: string;
-    sizes: {
-      pants: string;
-      shirt: string;
-      shoes: string;
-    };
-  },
-) => {
-  try {
-    await db.user.update({
-      where: { id },
-      data: {
-        name: data.name,
-        address: data.address,
-        pant_size: data.sizes.pants,
-        shirt_size: data.sizes.shirt,
-        shoe_size: data.sizes.shoes,
-      },
-    });
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const joinWishlist = async (wishlistId: string, pin?: string) => {
-  try {
-    const { user } = await getSession();
-
-    // Get the wishlist to check its password
-    const wishlist = await db.wishlist.findUnique({
-      where: { id: wishlistId },
-      select: { password: true },
-    });
-
-    if (!wishlist) {
-      return { error: 'Wishlist not found' };
-    }
-
-    // Only validate pin if the wishlist has a password
-    if (wishlist.password) {
-      if (!pin) {
-        return { error: 'Pin is required to join this wishlist' };
-      }
-
-      // Validate pin format
-      if (!/^\d{4}$/.test(pin)) {
-        return { error: 'Pin must be 4 digits' };
-      }
-
-      if (wishlist.password !== pin) {
-        return { error: 'Invalid pin' };
-      }
-    }
-
-    await db.wishlist.update({
-      where: { id: wishlistId },
-      data: {
-        members: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: 'Successfully joined wishlist' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const leaveWishlist = async (wishlistId: string) => {
-  try {
-    const { user } = await getSession();
-    await db.wishlist.update({
-      where: { id: wishlistId },
-      data: {
-        members: {
-          disconnect: {
-            id: user.id,
-          },
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: 'Successfully left wishlist' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const handleWishlistAction = async (
-  wishlistId: string,
-  isMember: boolean,
-  pin?: string,
-) => {
-  if (isMember) {
-    return leaveWishlist(wishlistId);
-  }
-
-  return joinWishlist(wishlistId, pin);
-};
 
 // Secret Santa actions
 export const getPeopleForSecretSanta = async () => {
@@ -917,18 +463,11 @@ function backtrackAssignment(
   return null; // No valid assignment found with this giver
 }
 
-// Admin actions
-const ADMIN_EMAIL = 'jonathan@pulsifer.ca';
-
-const isAdmin = (userEmail: string) => {
-  return userEmail === ADMIN_EMAIL;
-};
-
 export const getSecretSantaExclusions = async () => {
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -996,7 +535,7 @@ export const createSecretSantaExclusion = async (
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -1057,7 +596,7 @@ export const deleteSecretSantaExclusion = async (
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -1095,7 +634,7 @@ export const getAllUsersForExclusions = async () => {
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -1123,7 +662,7 @@ export const deleteSecretSantaEvent = async (eventId: string) => {
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -1154,7 +693,7 @@ export const getAllSecretSantaEventsAdmin = async () => {
   try {
     const { user } = await getSession();
 
-    if (!isAdmin(user.email)) {
+    if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
 
@@ -1179,48 +718,5 @@ export const getAllSecretSantaEventsAdmin = async () => {
       return { error: error.message };
     }
     return { error: 'Something went wrong fetching Secret Santa events' };
-  }
-};
-
-// AI Recommendations actions
-export const getAIRecommendationsForUser = async (targetUserId: string) => {
-  try {
-    const { user } = await getSession();
-
-    // Verify that the current user has access to this person
-    const targetUser = await db.user.findFirst({
-      where: {
-        id: targetUserId,
-        wishlists: {
-          some: {
-            members: { some: { id: user.id } },
-          },
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-    });
-
-    if (!targetUser) {
-      return { error: 'User not found or you do not have access' };
-    }
-
-    // Dynamically import the AI module to avoid loading it unnecessarily
-    const { getRecommendationsForHomePage } = await import('@/lib/ai');
-    const recommendations = await getRecommendationsForHomePage(targetUserId);
-
-    return {
-      success: true,
-      recommendations,
-      targetUser,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong getting AI recommendations' };
   }
 };

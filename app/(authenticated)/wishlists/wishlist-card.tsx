@@ -2,7 +2,7 @@
 
 import { Loader2, LockIcon, UsersIcon } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
-import { handleWishlistAction } from '@/app/actions';
+import { handleWishlistAction } from '@/app/_actions/wishlists';
 import { Button } from '@/components/ui/button';
 import {
   Card,

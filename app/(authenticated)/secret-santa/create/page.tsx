@@ -11,7 +11,7 @@ import {
   assignSecretSantaParticipants,
   createSecretSantaEvent,
   getPeopleForSecretSanta,
-} from '@/app/actions';
+} from '@/app/_actions/secret-santa';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,

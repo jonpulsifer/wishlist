@@ -3,8 +3,8 @@
 import { Loader2, Plus } from 'lucide-react';
 import * as React from 'react';
 import { useActionState } from 'react';
-import type { GiftFormData } from '@/app/actions';
-import { addGift } from '@/app/actions';
+import type { GiftFormData } from '@/app/_actions/gifts';
+import { addGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

@@ -65,6 +65,27 @@ model User {
   secretSantaAssignedBy     SecretSantaParticipant[] @relation("AssignedBy")
   secretSantaDoNotMatchWith User[]                   @relation("SecretSantaExclusions")
   secretSantaExcludedBy     User[]                   @relation("SecretSantaExclusions")
+  roles                     UserRole[]               @relation("UserRoles")
+}
+
+model Role {
+  id        String     @id @default(uuid()) @db.Uuid
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  name      String     @unique
+  users     UserRole[] @relation("UserRoles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.Uuid
+  roleId    String   @db.Uuid
+  user      User     @relation("UserRoles", fields: [userId], references: [id])
+  role      Role     @relation("UserRoles", fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
 }
 
 model VerificationToken {

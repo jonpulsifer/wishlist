@@ -1,4 +1,4 @@
-import { CandyCane, Shield } from 'lucide-react';
+import { CandyCane, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/app/auth';
@@ -19,12 +19,9 @@ import {
 } from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
 
-const ADMIN_EMAIL = 'jonathan@pulsifer.ca';
-
 export default async function AdminPage() {
   const { user } = await getSession();
-
-  if (user.email !== ADMIN_EMAIL) {
+  if (!user.roles) {
     redirect('/');
   }
 
@@ -62,6 +59,23 @@ export default async function AdminPage() {
             <CardContent>
               <Button asChild className="w-full">
                 <Link href="/admin/secret-santa">Manage Events</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:bg-accent/50 transition-colors">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Role Management
+              </CardTitle>
+              <CardDescription>
+                Manage user roles and permissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link href="/admin/roles">Manage Roles</Link>
               </Button>
             </CardContent>
           </Card>

@@ -17,7 +17,7 @@ function LoginPage() {
   const [isHovered, setIsHovered] = useState(false);
 
   if (showLoading) {
-    return <Loading message="Signing you in..." />;
+    return <Loading message="Signing in..." />;
   }
 
   const handleGoogle = (e: React.MouseEvent | React.FormEvent) => {
