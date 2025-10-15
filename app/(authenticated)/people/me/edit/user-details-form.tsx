@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import * as z from 'zod';
 import { updateUser } from '@/app/_actions/user';
 import { Button } from '@/components/ui/button';
@@ -28,16 +29,12 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
-  address: z.string().min(5, {
-    message: 'Please enter a valid address.',
-  }),
+  name: z.string().optional(),
+  address: z.string().optional(),
   sizes: z.object({
-    pants: z.string().min(1, 'Required'),
-    shirt: z.string().min(1, 'Required'),
-    shoes: z.string().min(1, 'Required'),
+    pants: z.string().optional(),
+    shirt: z.string().optional(),
+    shoes: z.string().optional(),
   }),
 });
 
@@ -53,9 +50,9 @@ export function UserDetailsForm({ user }: { user: any }) {
       name: user?.name || '',
       address: user?.address || '',
       sizes: {
-        pants: user?.sizes?.pants || '',
-        shirt: user?.sizes?.shirt || '',
-        shoes: user?.sizes?.shoes || '',
+        pants: user?.pant_size || '',
+        shirt: user?.shirt_size || '',
+        shoes: user?.shoe_size || '',
       },
     },
   });
@@ -63,11 +60,23 @@ export function UserDetailsForm({ user }: { user: any }) {
   async function onSubmit(data: FormValues) {
     setIsLoading(true);
     try {
-      await updateUser(user.id, data);
+      const result = await updateUser(user.id, data);
+
+      if (result.error) {
+        toast.error('Failed to update profile', {
+          description: result.error,
+        });
+        return;
+      }
+
+      toast.success('Profile updated successfully!');
       router.push(`/people/${user.id}`);
       router.refresh();
     } catch (error) {
       console.error(error);
+      toast.error('Failed to update profile', {
+        description: 'An unexpected error occurred',
+      });
     } finally {
       setIsLoading(false);
     }

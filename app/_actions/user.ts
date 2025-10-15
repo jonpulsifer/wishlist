@@ -1,31 +1,39 @@
 'use server';
 
+import { revalidateTag } from 'next/cache';
 import { getSession } from '@/app/auth';
 import db from '@/lib/db/client';
 
 export const updateUser = async (
   id: string,
   data: {
-    name: string;
-    address: string;
+    name?: string;
+    address?: string;
     sizes: {
-      pants: string;
-      shirt: string;
-      shoes: string;
+      pants?: string;
+      shirt?: string;
+      shoes?: string;
     };
   },
 ) => {
   try {
+    const updateData: any = {};
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.sizes.pants !== undefined) updateData.pant_size = data.sizes.pants;
+    if (data.sizes.shirt !== undefined)
+      updateData.shirt_size = data.sizes.shirt;
+    if (data.sizes.shoes !== undefined) updateData.shoe_size = data.sizes.shoes;
+
     await db.user.update({
       where: { id },
-      data: {
-        name: data.name,
-        address: data.address,
-        pant_size: data.sizes.pants,
-        shirt_size: data.sizes.shirt,
-        shoe_size: data.sizes.shoes,
-      },
+      data: updateData,
     });
+
+    // Revalidate user-related caches
+    revalidateTag('users');
+
     return { success: true };
   } catch (error) {
     if (error instanceof Error) {
