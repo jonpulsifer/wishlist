@@ -25,7 +25,7 @@ export default async function WishlistsPage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
+      <div className="flex flex-1 flex-col gap-4 p-2 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Wishlists</h1>

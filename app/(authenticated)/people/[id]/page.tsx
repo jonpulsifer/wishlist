@@ -65,13 +65,13 @@ export default async function UserPage({ params }: Props) {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-1 flex-col gap-4 p-2">
         <div className="container mx-auto py-6 space-y-8">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 shrink-0">
+              <Avatar className="h-12 w-12 sm:h-16 sm:w-16 shrink-0">
                 <AvatarImage src={user.image ?? undefined} />
-                <AvatarFallback className="text-xl sm:text-2xl">
+                <AvatarFallback className="text-md sm:text-2xl">
                   {getInitials(user)}
                 </AvatarFallback>
               </Avatar>
@@ -95,7 +95,7 @@ export default async function UserPage({ params }: Props) {
             )}
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
@@ -114,7 +114,7 @@ export default async function UserPage({ params }: Props) {
                 <div className="space-y-4">
                   <div className="flex items-start gap-2">
                     <Ruler className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-full">
                       <div className="font-medium">Sizes</div>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
@@ -142,12 +142,12 @@ export default async function UserPage({ params }: Props) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Wishlist</CardTitle>
                 <Badge variant="secondary">{gifts.length} gifts</Badge>
               </CardHeader>
-              <CardContent>
+              <CardContent className="w-full max-w-full">
                 <UserGiftList gifts={gifts} currentUserId={session.user.id} />
               </CardContent>
             </Card>

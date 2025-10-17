@@ -1,3 +1,4 @@
+import { UsersIcon } from 'lucide-react';
 import Link from 'next/link';
 import { unauthorized } from 'next/navigation';
 import { auth } from '@/app/auth';
@@ -10,6 +11,13 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { getUsersForPeoplePage } from '@/lib/db/queries-cached';
@@ -32,43 +40,55 @@ export default async function PeoplePage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        <p className="text-sm text-muted-foreground">
-          Here is a list of people who are part of your wishlists.
-        </p>
-        <Table>
-          <TableBody>
-            {people.map((person) => (
-              <TableRow
-                key={person.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <TableCell colSpan={2} className="p-0">
-                  <Link
-                    href={`/people/${person.id}`}
-                    className="flex items-center justify-between p-4 w-full h-full"
+      <div className="flex flex-1 flex-col gap-4 p-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UsersIcon className="h-4 w-4" />
+              Your Wishlist Participants
+            </CardTitle>
+            <CardDescription>
+              Here is a list of people who are part of your wishlists.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableBody>
+                {people.map((person) => (
+                  <TableRow
+                    key={person.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      <Avatar>
-                        <AvatarImage src={person.image ?? undefined} />
-                        <AvatarFallback>{getInitials(person)}</AvatarFallback>
-                      </Avatar>
-                      {person.name ?? person.email}
-                    </div>
-                    <Badge
-                      variant={
-                        person._count.gifts < 3 ? 'destructive' : 'default'
-                      }
-                    >
-                      {person._count.gifts} gift
-                      {person._count.gifts === 1 ? '' : 's'}
-                    </Badge>
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <TableCell colSpan={2} className="p-0">
+                      <Link
+                        href={`/people/${person.id}`}
+                        className="flex items-center justify-between p-4 w-full h-full"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar>
+                            <AvatarImage src={person.image ?? undefined} />
+                            <AvatarFallback>
+                              {getInitials(person)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {person.name ?? person.email}
+                        </div>
+                        <Badge
+                          variant={
+                            person._count.gifts < 3 ? 'destructive' : 'default'
+                          }
+                        >
+                          {person._count.gifts} gift
+                          {person._count.gifts === 1 ? '' : 's'}
+                        </Badge>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </SidebarInset>
   );

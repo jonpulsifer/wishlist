@@ -65,7 +65,7 @@ export default async function GiftPage({ params }: Props) {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
+      <div className="flex flex-1 flex-col gap-4 p-2 max-w-full overflow-hidden">
         <div className="container mx-auto py-6">
           <GiftDetail
             gift={gift}

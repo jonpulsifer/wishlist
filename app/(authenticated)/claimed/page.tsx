@@ -28,7 +28,7 @@ export default async function ClaimedPage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-4">
+      <div className="flex flex-1 flex-col gap-4 p-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Claimed Gifts</h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">
