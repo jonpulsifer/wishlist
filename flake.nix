@@ -1,6 +1,6 @@
 {
   description = "A prisma test project";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/master";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils }:

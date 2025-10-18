@@ -193,13 +193,6 @@ export function GiftList({
       </div>
 
       <div className="rounded-md border">
-        <div className="hidden md:grid md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 font-medium">
-          <div>Gift</div>
-          <div>Recipient</div>
-          <div>Created</div>
-          <div className="text-right">Actions</div>
-        </div>
-
         {filteredAndSortedGifts.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-6xl mb-4">🎁</div>
@@ -221,7 +214,7 @@ export function GiftList({
           filteredAndSortedGifts.map((gift) => (
             <div
               key={gift.id}
-              className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px_120px] gap-4 p-4 items-center border-t"
+              className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_150px_auto] gap-4 p-4 items-center border-t"
             >
               <Link
                 href={`/gifts/${gift.id}`}
@@ -248,17 +241,6 @@ export function GiftList({
                     addSuffix: true,
                   })}
                 </div>
-                {gift.url && (
-                  <a
-                    href={gift.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-sm text-blue-500 hover:underline"
-                  >
-                    View Product
-                  </a>
-                )}
               </Link>
 
               <Link
@@ -269,16 +251,17 @@ export function GiftList({
                   <AvatarImage src={gift.owner.image ?? undefined} />
                   <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
                 </Avatar>
-                <span>
-                  {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
-                </span>
+                <div className="flex flex-col">
+                  <span>
+                    {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
+                  </span>
+                  <span className="text-muted-foreground text-xxs">
+                    {formatDistanceToNow(new Date(gift.createdAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                </div>
               </Link>
-
-              <div className="hidden md:block text-muted-foreground">
-                {formatDistanceToNow(new Date(gift.createdAt), {
-                  addSuffix: true,
-                })}
-              </div>
 
               <div className="text-right">
                 {gift.createdBy?.id === currentUserId ? (
