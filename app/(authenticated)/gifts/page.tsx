@@ -1,8 +1,10 @@
 import { User } from 'lucide-react';
 import Link from 'next/link';
 import { unauthorized } from 'next/navigation';
+import { Suspense } from 'react';
 import { auth } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
+import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -12,6 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   getPeopleForNewGiftModal,
   getSortedVisibleGiftsForUser,
@@ -49,7 +52,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
+      <AppContent>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Gifts</h1>
@@ -68,14 +71,16 @@ export default async function GiftsPage({ searchParams }: PageProps) {
             <AddGiftDialog users={users} currentUser={session.user} />
           </div>
         </div>
-        <GiftList
-          initialGifts={gifts}
-          search={q as string}
-          sort={sort as 'name' | 'owner'}
-          direction={direction as 'asc' | 'desc'}
-          currentUserId={session.user.id}
-        />
-      </div>
+        <Suspense fallback={<Skeleton className="h-full w-full" />}>
+          <GiftList
+            initialGifts={gifts}
+            search={q as string}
+            sort={sort as 'name' | 'owner'}
+            direction={direction as 'asc' | 'desc'}
+            currentUserId={session.user.id}
+          />
+        </Suspense>
+      </AppContent>
     </SidebarInset>
   );
 }

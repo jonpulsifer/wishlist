@@ -1,6 +1,7 @@
 import { Bot } from 'lucide-react';
 import { unauthorized } from 'next/navigation';
 import { getSession } from '@/app/auth';
+import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -37,7 +38,7 @@ export default async function AIPage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
+      <AppContent>
         {/* Header */}
         <div className="relative">
           <div className="flex flex-col gap-2">
@@ -56,7 +57,7 @@ export default async function AIPage() {
 
         {/* AI Recommendations Component */}
         <AIRecommendations people={people} />
-      </div>
+      </AppContent>
     </SidebarInset>
   );
 }

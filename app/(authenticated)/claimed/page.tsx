@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSession } from '@/app/auth';
+import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -9,7 +10,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
-
 import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 import GiftList from './gift-list';
 
@@ -28,7 +28,7 @@ export default async function ClaimedPage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-2">
+      <AppContent>
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Claimed Gifts</h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">
@@ -48,7 +48,7 @@ export default async function ClaimedPage() {
         ) : (
           <GiftList gifts={claimedGifts} />
         )}
-      </div>
+      </AppContent>
     </SidebarInset>
   );
 }

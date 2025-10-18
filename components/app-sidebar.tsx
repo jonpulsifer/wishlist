@@ -20,7 +20,7 @@ import {
 import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
-
+import { Suspense } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -44,9 +44,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { getInitials } from '@/lib/utils';
-
 import santaIcon from '@/public/santaicon.png';
 
 // Menu items.
@@ -227,7 +229,7 @@ export function AppSidebar() {
   const showAdminButton = (session?.user?.roles?.length ?? 0) > 0;
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -267,7 +269,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {showAdminButton && (
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {showAdminButton && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Settings</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <a href="/admin">
@@ -275,14 +284,34 @@ export function AppSidebar() {
                       <span>Admin</span>
                     </a>
                   </SidebarMenuButton>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild>
+                        <a href="/admin/secret-santa">
+                          <CandyCane />
+                          <span>Secret Santa</span>
+                        </a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild>
+                        <a href="/admin/roles">
+                          <Users />
+                          <span>Roles</span>
+                        </a>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
                 </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
-        <UserSection />
+        <Suspense fallback={<div>Loading...</div>}>
+          <UserSection />
+        </Suspense>
       </SidebarFooter>
     </Sidebar>
   );
