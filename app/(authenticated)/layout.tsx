@@ -9,11 +9,9 @@ async function Layout({ children }: { children: React.ReactNode }) {
   if (!session?.user) redirect('/');
   return (
     <SessionProvider session={session}>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <AppSidebar />
-        <main className="flex-1 relative z-10 bg-background/20 backdrop-blur-sm">
-          {children}
-        </main>
+        <main className="flex flex-1">{children}</main>
       </SidebarProvider>
     </SessionProvider>
   );
