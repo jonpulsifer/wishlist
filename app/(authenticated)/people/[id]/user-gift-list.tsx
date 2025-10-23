@@ -155,16 +155,12 @@ export function UserGiftList({
         className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_200px] gap-4 p-4 items-center border-t"
       >
         <div className="space-y-1">
-          {isOwner ? (
-            <Link
-              href={`/gifts/${gift.id}`}
-              className="font-medium hover:text-primary transition-colors hover:underline"
-            >
-              {gift.name}
-            </Link>
-          ) : (
-            <div className="font-medium">{gift.name}</div>
-          )}
+          <Link
+            href={`/gifts/${gift.id}`}
+            className="font-medium hover:text-primary transition-colors hover:underline"
+          >
+            {gift.name}
+          </Link>
           {gift.createdBy?.id !== gift.ownerId && (
             <div className="text-sm text-muted-foreground">
               Added by{' '}
