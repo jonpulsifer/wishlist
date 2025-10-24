@@ -72,7 +72,12 @@ export default function GiftList({
           className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_200px_120px] gap-4 p-4 items-center border-t"
         >
           <div className="space-y-1">
-            <div className="font-medium">{gift.name}</div>
+            <Link
+              href={`/gifts/${gift.id}`}
+              className="font-medium hover:text-primary transition-colors hover:underline"
+            >
+              {gift.name}
+            </Link>
             {gift.description && (
               <div className="text-sm text-muted-foreground">
                 {gift.description}
