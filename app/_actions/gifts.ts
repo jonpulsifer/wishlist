@@ -184,7 +184,13 @@ export const unarchiveGift = async (id: string) => {
 
     await db.gift.update({
       where: { id },
-      data: { archived: false },
+      data: {
+        archived: false,
+        claimed: false,
+        claimedBy: {
+          disconnect: true,
+        },
+      },
     });
     revalidateGiftRelatedCaches();
     return { success: true, message: `${gift.name} has been unarchived` };
