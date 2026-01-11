@@ -278,6 +278,11 @@ const getClaimedGiftsForMe = unstable_cache(
     prisma.gift.findMany({
       where: {
         archived: false,
+        wishlists: {
+          some: {
+            members: { some: { id: currentUserId } },
+          },
+        },
         claimedById: {
           equals: currentUserId,
         },
@@ -292,7 +297,7 @@ const getClaimedGiftsForMe = unstable_cache(
     }),
   ['claimedGiftsForMe'],
   {
-    tags: ['gifts', 'users'],
+    tags: ['gifts', 'users', 'wishlists'],
   },
 );
 
@@ -370,6 +375,11 @@ const getLatestVisibleGiftsForUserById = unstable_cache(
     prisma.gift.findMany({
       where: {
         archived: false,
+        wishlists: {
+          some: {
+            members: { some: { id } },
+          },
+        },
         ...currentYearFilter,
         ownerId: { not: id },
         AND: {
@@ -395,7 +405,7 @@ const getLatestVisibleGiftsForUserById = unstable_cache(
       take: 10,
     }),
   ['latestVisibleGiftsForUserById'],
-  { tags: ['gifts', 'users'] },
+  { tags: ['gifts', 'users', 'wishlists'] },
 );
 
 const getSecretSantaEvents = unstable_cache(
