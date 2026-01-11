@@ -66,6 +66,7 @@ model User {
   secretSantaDoNotMatchWith User[]                   @relation("SecretSantaExclusions")
   secretSantaExcludedBy     User[]                   @relation("SecretSantaExclusions")
   roles                     UserRole[]               @relation("UserRoles")
+  createdWishlistInvites    WishlistInvite[]         @relation("WishlistInvitesCreatedBy")
 }
 
 model Role {
@@ -131,8 +132,25 @@ model Wishlist {
   password  String
   members   User[]
   gifts     Gift[]
+  invites   WishlistInvite[]
 
   @@index([createdAt])
+}
+
+model WishlistInvite {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  token       String    @unique
+  wishlistId  String    @db.Uuid
+  wishlist    Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  createdById String?   @db.Uuid
+  createdBy   User?     @relation("WishlistInvitesCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+
+  @@index([wishlistId])
+  @@index([token])
 }
 
 model SecretSantaEvent {

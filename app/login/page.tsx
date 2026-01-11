@@ -8,13 +8,25 @@ import { useState } from 'react';
 import { SnowfallBackground } from '@/components/snowfall-background';
 import { Loading } from '@/components/ui/loading';
 import { useToast } from '@/hooks/use-toast';
+import { WISHLIST_INVITE_COOKIE_NAME } from '@/lib/wishlist-invites';
 
 import santa from '@/public/santaicon.png';
+
+function getCookieValue(name: string) {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${name.replaceAll('.', '\\.')}=([^;]*)`),
+  );
+  return match ? decodeURIComponent(match[1] ?? '') : null;
+}
 
 function LoginPage() {
   const { toast } = useToast();
   const [showLoading, setShowLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [inviteToken] = useState(() =>
+    getCookieValue(WISHLIST_INVITE_COOKIE_NAME),
+  );
 
   if (showLoading) {
     return <Loading message="Signing in..." />;
@@ -23,7 +35,11 @@ function LoginPage() {
   const handleGoogle = (e: React.MouseEvent | React.FormEvent) => {
     setShowLoading(true);
     e.preventDefault();
-    signIn('google', { redirect: true, callbackUrl: '/home' }).finally(() => {
+    const callbackUrl =
+      inviteToken && inviteToken.length > 0
+        ? `/invite/${inviteToken}`
+        : '/home';
+    signIn('google', { redirect: true, callbackUrl }).finally(() => {
       toast({
         title: 'Welcome!',
         description: 'Ho ho ho! Welcome! 🎅',
