@@ -1,4 +1,10 @@
-import { ChevronRightIcon, GiftIcon, Sparkles, UserIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  GiftIcon,
+  SearchIcon,
+  Sparkles,
+  UserIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import { unauthorized } from 'next/navigation';
 import { getSession } from '@/app/auth';
@@ -68,19 +74,6 @@ export default async function HomePage() {
         </Breadcrumb>
       </AppHeader>
       <div className="flex flex-1 flex-col gap-4 p-2 max-w-screen overflow-hidden">
-        <Card className="border-dashed bg-gradient-to-b from-background to-muted/30">
-          <CardHeader>
-            <CardTitle>Search everything</CardTitle>
-            <CardDescription>
-              The fastest way to find people, gifts, and wishlists. Try{' '}
-              <span className="font-medium">Ctrl+K</span> /{' '}
-              <span className="font-medium">⌘K</span>.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <GlobalSearchTrigger variant="hero" />
-          </CardContent>
-        </Card>
         {/* Welcome Header with festive elements */}
         <div className="flex flex-col gap-4 w-full justify-center items-center">
           <div className="flex flex-col gap-4">
@@ -91,6 +84,28 @@ export default async function HomePage() {
               <Sparkles className="h-5 w-5 text-yellow-500/70 flex-shrink-0" />
             </div>
           </div>
+          <Card className="w-full border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SearchIcon className="h-5 w-5 text-primary" />
+                Search everything
+              </CardTitle>
+              <CardDescription>
+                The fastest way to find people, gifts, and wishlists. Try{' '}
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                  Ctrl+K
+                </span>{' '}
+                /{' '}
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                  ⌘K
+                </span>
+                .
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GlobalSearchTrigger variant="hero" />
+            </CardContent>
+          </Card>
           <div className="flex flex-col sm:flex-row gap-2 w-full justify-center items-center">
             <AddGiftDialog currentUser={user} users={addGiftDialogUsers} />
             <Button asChild variant="outline" className="w-full sm:w-auto">
