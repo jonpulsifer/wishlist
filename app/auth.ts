@@ -96,6 +96,14 @@ export const isSecretSantaAdmin = (user: SessionUser) => {
   );
 };
 
+export const isWishlistAdmin = (user: SessionUser) => {
+  return (
+    isGodmode(user) ||
+    user.roles.some((userRole) => userRole.role.name === 'wishlist-manager') ||
+    false
+  );
+};
+
 export const hasRole = (user: SessionUser, roleName: string) => {
   return (
     user.roles.some((userRole) => userRole.role.name === roleName) || false
