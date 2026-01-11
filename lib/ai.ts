@@ -98,7 +98,11 @@ export const getRecommendationsForHomePage = async (
   });
 
   const firstCall = completion.choices[0]?.message?.tool_calls?.[0];
-  if (!firstCall || firstCall.function.name !== 'get_gift_recommendations') {
+  if (
+    !firstCall ||
+    firstCall.type !== 'function' ||
+    firstCall.function.name !== 'get_gift_recommendations'
+  ) {
     return [];
   }
 
