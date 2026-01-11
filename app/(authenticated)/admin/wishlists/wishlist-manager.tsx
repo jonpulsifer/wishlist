@@ -1,10 +1,11 @@
 'use client';
 
-import { KeyRound, Plus, Trash2 } from 'lucide-react';
+import { KeyRound, Link2, Plus, Trash2 } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import {
   createWishlistAdmin,
+  createWishlistInviteAdmin,
   deleteWishlistAdmin,
   updateWishlistPinAdmin,
 } from '@/app/_actions/admin-wishlists';
@@ -39,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { buildInvitePath } from '@/lib/wishlist-invites';
 
 type WishlistRow = {
   id: string;
@@ -117,6 +119,30 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
     });
   };
 
+  const handleCreateInviteLink = (wishlistId: string) => {
+    startTransition(async () => {
+      const result = await createWishlistInviteAdmin({ wishlistId });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      const token = result.token;
+      if (!token) {
+        toast.error('Invite link could not be generated');
+        return;
+      }
+
+      const inviteUrl = `${window.location.origin}${buildInvitePath(token)}`;
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+        toast.success('Invite link copied to clipboard');
+      } catch {
+        toast.message('Invite link', { description: inviteUrl });
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -190,6 +216,17 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
                 <TableCell>{w._count.gifts}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCreateInviteLink(w.id)}
+                      disabled={isPending}
+                      title="Create an invite link (bypasses pin)"
+                    >
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Invite link
+                    </Button>
+
                     <Dialog
                       open={pinDialogWishlistId === w.id}
                       onOpenChange={(open) => {
