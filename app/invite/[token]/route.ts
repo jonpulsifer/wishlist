@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { revalidateGiftRelatedCaches } from '@/app/_actions/gifts';
 import { auth } from '@/app/auth';
 import db from '@/lib/db/client';
@@ -8,10 +8,10 @@ import {
 } from '@/lib/wishlist-invites';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { token: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
 ) {
-  const { token } = params;
+  const { token } = await params;
   const session = await auth();
 
   // Not signed in yet: remember the invite and send them to login.
