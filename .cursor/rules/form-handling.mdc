@@ -1,7 +1,7 @@
 ---
 description: When interacting with forms
-globs: 
-alwaysApply: false
+globs: *.tsx,*.ts
+alwaysApply: true
 ---
 # Form Handling Pattern
 
@@ -29,7 +29,8 @@ async function SecureComponent({ userId }) {
 
 For forms that submit to server actions:
 
-1. Create a dedicated SubmitButton component for proper status handling:
+1. Prefer `useActionState` for form state when possible.
+2. If you need `useFormStatus`, create a dedicated `SubmitButton` component (kept small) for proper pending handling:
 
 ```jsx
 // This component must be a direct child of the form
@@ -50,4 +51,4 @@ function SubmitButton({ label }) {
 </form>
 ```
 
-2. Handle form submissions with proper feedback and error handling
+3. Handle form submissions with proper feedback and error handling

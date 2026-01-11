@@ -1,7 +1,7 @@
 ---
 description: 
 globs: *.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 # Client Component Patterns
 
@@ -17,10 +17,11 @@ Example: [app/(authenticated)/claimed/gift-list.tsx](mdc:app/(authenticated)/cla
 5. Use consistent UI patterns from shadcn/ui
 
 ## Form Handling
-Don't use `useFormStatus` directly. Instead:
+Avoid sprinkling `useFormStatus` throughout large components. Instead:
 
 1. Create dedicated button/form components with their own hooks
 2. Or use optimistic UI patterns with `useOptimistic` and `startTransition`
+3. Prefer `useActionState` for server-action form state when appropriate
 
 ## Data Fetching
 Data should be fetched in server components when possible, then passed to client components as props.
