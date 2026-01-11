@@ -4,6 +4,7 @@ import { unauthorized } from 'next/navigation';
 import { getSession } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
 import { AppHeader } from '@/components/app-header';
+import { GlobalSearchTrigger } from '@/components/global-search/global-search-trigger';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Breadcrumb,
@@ -67,6 +68,19 @@ export default async function HomePage() {
         </Breadcrumb>
       </AppHeader>
       <div className="flex flex-1 flex-col gap-4 p-2 max-w-screen overflow-hidden">
+        <Card className="border-dashed bg-gradient-to-b from-background to-muted/30">
+          <CardHeader>
+            <CardTitle>Search everything</CardTitle>
+            <CardDescription>
+              The fastest way to find people, gifts, and wishlists. Try{' '}
+              <span className="font-medium">Ctrl+K</span> /{' '}
+              <span className="font-medium">⌘K</span>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GlobalSearchTrigger variant="hero" />
+          </CardContent>
+        </Card>
         {/* Welcome Header with festive elements */}
         <div className="flex flex-col gap-4 w-full justify-center items-center">
           <div className="flex flex-col gap-4">
