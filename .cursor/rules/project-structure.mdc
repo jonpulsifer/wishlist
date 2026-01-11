@@ -1,18 +1,20 @@
 ---
 description: 
 globs: *.tsx,*.ts
-alwaysApply: false
+alwaysApply: true
 ---
 # Project Structure
 
-This is a Next.js 15 application with React 19 using the App Router and server components. It uses Prisma as the ORM and auth.js for user and session management
+This is a Next.js App Router application using React 19 and server components by default. It uses Prisma as the ORM and Auth.js/next-auth for user + session management.
+
+Note: the codebase is written to be compatible with modern App Router patterns (including Next.js 16), but check `package.json` for the currently pinned Next.js version.
 
 This project uses Tailwind v4 https://tailwindcss.com/blog/tailwindcss-v4 and shadcn/ui components https://ui.shadcn.com/docs
 
 Key directories:
 - `app/` - Contains the application routes using Next.js App Router
   - `app/(authenticated)/` - Routes that require authentication
-  - `app/actions.ts` - Server actions for data mutations
+  - `app/_actions/` - Server actions for data mutations
 - `components/` - Reusable UI components, including shadcn/ui
 - `lib/` - Utility functions and shared code
 - `prisma/` - Database schema and generated types
@@ -30,7 +32,7 @@ Example for wishlists:
 ```jsx
 // Server component
 async function WishlistContent({ userId }) {
-  const wishlists = await getWishlistsWithMembers();
+  const wishlists = await getWishlists();
   
   return (
     <div>
@@ -61,9 +63,7 @@ export const joinWishlist = async (wishlistId, pin) => {
   
   // Revalidate caches
   revalidateGiftRelatedCaches();
-  revalidateTag('wishlists');
-  revalidateTag('wishlistsWithMembers');
   
-  return { success: true, message: 'Success' };
+  return { success: true, message: 'Successfully joined wishlist' };
 };
 ```

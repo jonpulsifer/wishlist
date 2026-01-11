@@ -1,16 +1,20 @@
 ---
 description: When implementing forms using server actions and optimistic ui changes
-globs: 
-alwaysApply: false
+globs: app/_actions/*.ts,app/**/page.tsx,app/**/*.tsx,components/**/*.tsx
+alwaysApply: true
 ---
 # Server Actions Pattern
 
-Server actions in [app/actions.ts](mdc:app/actions.ts) follow a consistent pattern:
+Server actions in `app/_actions/*.ts` follow a consistent pattern:
 
-1. Actions accept formData that is validated by zod
-2. Return a consistent response shape: `{ success: true, message: string }` or `{ error: string }`
-3. Handle revalidation via `revalidateGiftRelatedCaches()`
-4. Use pre-existing functions, database queries, and other methods instead of inventing new ones.
+1. Actions validate input (often via `zod.safeParse`)
+2. Actions check authorization using `getSession()` (and role helpers if needed)
+3. Actions return a consistent response shape:
+   - Success: `{ success: true, message?: string, ... }`
+   - Error: `{ error: string }`
+   - For forms with field errors: `{ errors: Record<string, string[]>, message: string }`
+4. Actions invalidate caches/tags after successful writes (e.g. `revalidateTag(...)`, `revalidateGiftRelatedCaches()`)
+5. Prefer existing helpers/queries instead of inventing parallel ones.
 
 Examples:
 - `claimGift(id: string)` - Claims a gift for the current user
@@ -49,149 +53,8 @@ function GiftList({ gifts: initialGifts }) {
 }
 ```
 
-# Form Handling Pattern
+## Notes
 
-```md
-# Form Handling Pattern
-
-Forms using server actions should follow these patterns:
-
-## Server Components
-
-Server components handle data fetching and user validation:
-
-```jsx
-// Example pattern for server component wrapper
-async function SecureComponent({ userId }) {
-  // Fetch data on the server
-  const data = await getData();
-  
-  // Server-side validation
-  const isAuthorized = validateAccess(data, userId);
-  
-  // Pass only necessary data to client
-  return <ClientComponent data={data} isAuthorized={isAuthorized} />;
-}
-```
-
-## Client Components with useFormStatus
-
-For forms that submit to server actions:
-
-1. Create a dedicated SubmitButton component for proper status handling:
-
-```jsx
-// This component must be a direct child of the form
-function SubmitButton({ label }) {
-  const { pending } = useFormStatus();
-  
-  return (
-    <Button disabled={pending}>
-      {pending ? 'Submitting...' : label}
-    </Button>
-  );
-}
-
-// Use in form
-<form action={serverAction}>
-  {/* Form fields */}
-  <SubmitButton label="Submit" />
-</form>
-```
-
-2. Handle form submissions with proper feedback and error handling
-```
-
-# Security Pattern
-
-```md
-# Security Pattern
-
-## Data Access Control
-
-1. Always perform server-side validation before sending sensitive data to the client
-2. Use server components to filter data before passing to client components
-3. Never trust client-side state for access control decisions
-
-Example for wishlists:
-
-```jsx
-// Server component
-async function WishlistContent({ userId }) {
-  const wishlists = await getWishlistsWithMembers();
-  
-  return (
-    <div>
-      {wishlists.map((wishlist) => {
-        // Server-side check if user is a member
-        const isMember = wishlist.members.some(m => m.id === userId);
-        
-        // Don't send member details to client if not a member
-        if (!isMember) {
-          wishlist.members = [];
-        }
-        
-        return <WishlistCard wishlist={wishlist} isMember={isMember} />;
-      })}
-    </div>
-  );
-}
-```
-
-## Cache Invalidation
-
-When modifying data, always invalidate relevant caches:
-
-```js
-// Example from action
-export const joinWishlist = async (wishlistId, pin) => {
-  // Update data...
-  
-  // Revalidate caches
-  revalidateGiftRelatedCaches();
-  revalidateTag('wishlists');
-  revalidateTag('wishlistsWithMembers');
-  
-  return { success: true, message: 'Success' };
-};
-```
-```
-
-# UI Patterns
-
-```md
-# UI Patterns
-
-## Link Patterns
-
-For list items with multiple links:
-
-1. Make entire cells clickable for better UX
-2. Use `stopPropagation()` for nested links
-3. Add hover effects for visual feedback
-
-Example from [app/(authenticated)/gifts/gift-list.tsx](mdc:app/(authenticated)/gifts/gift-list.tsx):
-
-```jsx
-<Link href={`/gifts/${gift.id}`} className="space-y-1 hover:opacity-80">
-  <div className="font-medium">{gift.name}</div>
-  {/* Gift details */}
-  
-  {gift.url && (
-    <a
-      href={gift.url}
-      onClick={(e) => e.stopPropagation()}
-      className="text-blue-500 hover:underline"
-    >
-      View Product
-    </a>
-  )}
-</Link>
-```
-
-## List Components
-
-When displaying lists of items:
-1. Use consistent grid layouts with responsive variants
-2. Show/hide columns based on viewport size
-3. Include proper loading states with skeletons
+- **Where actions live**: `app/_actions/*.ts` (not `app/actions.ts`)
+- **Auth/ACL**: always enforce on the server (session + ownership/roles)
+- **Caching**: invalidate tags after successful writes; don’t rely on client refreshes
