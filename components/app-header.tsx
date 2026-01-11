@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import santaIcon from '@/public/santaicon.png';
+import { GlobalSearchTrigger } from './global-search/global-search-trigger';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -48,6 +49,12 @@ export function AppHeader({ children }: AppHeaderProps) {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="min-w-0 flex-1 overflow-hidden">{children}</div>
+      <div className="block sm:hidden">
+        <GlobalSearchTrigger variant="icon" />
+      </div>
+      <div className="hidden sm:block">
+        <GlobalSearchTrigger variant="header" />
+      </div>
     </header>
   );
 }

@@ -86,7 +86,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
   }
 
   return (
-    <Card>
+    <Card id={`wishlist-${wishlist.id}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
