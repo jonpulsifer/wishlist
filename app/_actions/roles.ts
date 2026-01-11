@@ -4,6 +4,12 @@ import { revalidateTag } from 'next/cache';
 import { getSession, isGodmode } from '@/app/auth';
 import db from '@/lib/db/client';
 
+const DEFAULT_ROLES = [
+  'godmode',
+  'secret-santa-manager',
+  'wishlist-manager',
+] as const;
+
 // Role management actions
 export const getAllRoles = async () => {
   try {
@@ -12,6 +18,17 @@ export const getAllRoles = async () => {
     if (!isGodmode(user)) {
       return { error: 'Unauthorized: Admin access required' };
     }
+
+    // Ensure expected built-in roles exist (idempotent).
+    await Promise.all(
+      DEFAULT_ROLES.map((name) =>
+        db.role.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      ),
+    );
 
     const roles = await db.role.findMany({
       include: {
