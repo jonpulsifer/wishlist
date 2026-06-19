@@ -2,10 +2,10 @@
   "name": "wishlist",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.34.4",
   "engines": {
     "node": ">=22",
-    "pnpm": "10.24.0"
+    "pnpm": "10.34.4"
   },
   "scripts": {
     "dev": "next dev --turbopack",
