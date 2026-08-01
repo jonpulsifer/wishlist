@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { revalidateGiftRelatedCaches } from '@/app/_actions/gifts';
-import { auth } from '@/app/auth';
+import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
   WISHLIST_INVITE_COOKIE_MAX_AGE_SECONDS,
@@ -12,10 +12,10 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const session = await auth();
+  const viewer = await currentViewer();
 
   // Not signed in yet: remember the invite and send them to login.
-  if (!session?.user) {
+  if (!viewer) {
     const response = NextResponse.redirect(new URL('/login', request.url));
     response.cookies.set({
       name: WISHLIST_INVITE_COOKIE_NAME,
@@ -54,7 +54,7 @@ export async function GET(
   const alreadyMember = await db.wishlist.findFirst({
     where: {
       id: invite.wishlistId,
-      members: { some: { id: session.user.id } },
+      members: { some: { id: viewer.id } },
     },
     select: { id: true },
   });
@@ -64,7 +64,7 @@ export async function GET(
       where: { id: invite.wishlistId },
       data: {
         members: {
-          connect: { id: session.user.id },
+          connect: { id: viewer.id },
         },
       },
     });

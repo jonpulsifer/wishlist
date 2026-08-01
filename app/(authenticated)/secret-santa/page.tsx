@@ -1,6 +1,5 @@
 import { Archive, CalendarIcon, Gift, PlusIcon, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getSession } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -17,18 +16,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
-import { partitionEventsByYear } from '@/lib/secret-santa/events';
+import { partitionBySeason, yearOf } from '@/lib/season';
 
 export default async function SecretSantaPage() {
-  const { user } = await getSession();
+  const viewer = await requireViewerOrRedirect();
 
-  // Get all assignments for the user and events
+  // Get all assignments for the viewer and events
   const [assignments, events] = await Promise.all([
     db.secretSantaParticipant.findMany({
       where: {
-        userId: user.id,
+        userId: viewer.id,
       },
       include: {
         assignedTo: {
@@ -44,7 +44,7 @@ export default async function SecretSantaPage() {
         event: true,
       },
     }),
-    getSecretSantaEvents(user.id),
+    getSecretSantaEvents(viewer.id),
   ]);
 
   // Create a map of assignments by eventId for easy lookup
@@ -53,8 +53,8 @@ export default async function SecretSantaPage() {
   const {
     current: currentEvents,
     past: pastEvents,
-    currentYear,
-  } = partitionEventsByYear(events);
+    year: currentYear,
+  } = partitionBySeason(events);
 
   return (
     <SidebarInset>
@@ -233,7 +233,7 @@ export default async function SecretSantaPage() {
                 <div className="grid gap-4 opacity-60">
                   {pastEvents.map((event) => {
                     const assignment = assignmentsByEvent.get(event.id);
-                    const eventYear = new Date(event.createdAt).getFullYear();
+                    const eventYear = yearOf(event);
 
                     return (
                       <Card key={event.id} className="bg-muted/30">

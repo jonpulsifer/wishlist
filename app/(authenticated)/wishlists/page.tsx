@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { getSession } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -8,11 +7,12 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
 import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {
-  const { user } = await getSession();
+  const viewer = await requireViewerOrRedirect();
 
   return (
     <SidebarInset>
@@ -36,7 +36,7 @@ export default async function WishlistsPage() {
         </div>
 
         <Suspense fallback={<WishlistsLoading />}>
-          <WishlistsContent userId={user.id} />
+          <WishlistsContent userId={viewer.id} />
         </Suspense>
       </div>
     </SidebarInset>
@@ -74,7 +74,7 @@ async function WishlistsContent({ userId }: { userId: string }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {wishlists.map((wishlist) => {
-        // Determine if the current user is a member of this wishlist
+        // Determine if the current viewer is a member of this wishlist
         const isMember = wishlist.members.some(
           (member) => member.id === userId,
         );

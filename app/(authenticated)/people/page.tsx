@@ -1,7 +1,5 @@
 import { UsersIcon } from 'lucide-react';
 import Link from 'next/link';
-import { unauthorized } from 'next/navigation';
-import { auth } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -20,15 +18,13 @@ import {
 } from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getUsersForPeoplePage } from '@/lib/db/queries-cached';
 import { getInitials } from '@/lib/utils';
 
 export default async function PeoplePage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return unauthorized();
-  }
-  const people = await getUsersForPeoplePage(session.user.id);
+  const viewer = await requireViewerOrRedirect();
+  const people = await getUsersForPeoplePage(viewer.id);
   return (
     <SidebarInset>
       <AppHeader>

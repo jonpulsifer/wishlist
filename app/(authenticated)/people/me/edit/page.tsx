@@ -1,5 +1,4 @@
-import { notFound, unauthorized } from 'next/navigation';
-import { auth } from '@/app/auth';
+import { notFound } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -10,15 +9,13 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getOwnProfile } from '@/lib/db/queries-cached';
 import { UserDetailsForm } from './user-details-form';
 
 export default async function EditUserPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return unauthorized();
-  }
-  const user = await getOwnProfile(session.user.id);
+  const viewer = await requireViewerOrRedirect();
+  const user = await getOwnProfile(viewer.id);
   if (!user) {
     notFound();
   }

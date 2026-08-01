@@ -1,7 +1,6 @@
 import { Mail, MapPin, Pencil, Ruler } from 'lucide-react';
 import Link from 'next/link';
-import { notFound, unauthorized } from 'next/navigation';
-import { auth } from '@/app/auth';
+import { notFound } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
   getVisibleGiftsForUserById,
   getVisibleProfile,
@@ -31,24 +31,21 @@ type Props = {
 };
 
 export default async function UserPage({ params }: Props) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return unauthorized();
-  }
+  const viewer = await requireViewerOrRedirect();
   const { id: rawId } = await params;
 
   // Handle the 'me' vanity route
-  const id = rawId === 'me' ? session.user.id : rawId;
+  const id = rawId === 'me' ? viewer.id : rawId;
 
   // Scoped read: someone the viewer shares no wishlist with is a 404, not a
   // profile page. A bare lookup by id used to expose addresses and sizes.
-  const user = await getVisibleProfile(id, session.user.id);
+  const user = await getVisibleProfile(id, viewer.id);
   if (!user) {
     notFound();
   }
-  const gifts = await getVisibleGiftsForUserById(id, session.user.id);
+  const gifts = await getVisibleGiftsForUserById(id, viewer.id);
 
-  const isOwnProfile = user.id === session.user.id;
+  const isOwnProfile = user.id === viewer.id;
 
   return (
     <SidebarInset>
@@ -150,7 +147,7 @@ export default async function UserPage({ params }: Props) {
                 <Badge variant="secondary">{gifts.length} gifts</Badge>
               </CardHeader>
               <CardContent className="w-full max-w-full">
-                <UserGiftList gifts={gifts} currentUserId={session.user.id} />
+                <UserGiftList gifts={gifts} currentUserId={viewer.id} />
               </CardContent>
             </Card>
           </div>

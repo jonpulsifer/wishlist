@@ -25,6 +25,15 @@ const ROLE_CAPABILITIES: Record<string, readonly Capability[]> = {
   'secret-santa-manager': ['manage:secret-santa', 'view:admin'],
 };
 
+/**
+ * The roles this table knows about, and therefore the only ones that grant
+ * anything. A `Role` row with any other name is inert.
+ *
+ * The bootstrap that creates these rows reads the list from here, so a role
+ * added to the table above cannot be forgotten by the seeder.
+ */
+export const BUILT_IN_ROLES = Object.keys(ROLE_CAPABILITIES);
+
 export function capabilitiesFor(roleNames: readonly string[]): Set<Capability> {
   const granted = new Set<Capability>();
   for (const name of roleNames) {
@@ -33,6 +42,24 @@ export function capabilitiesFor(roleNames: readonly string[]): Set<Capability> {
     }
   }
   return granted;
+}
+
+/**
+ * Refusal, in terms of the capability that was missing.
+ *
+ * It lives here rather than with the `Viewer` because both the viewer and the
+ * server-action prologue raise it, and the prologue must stay free of anything
+ * that reaches NextAuth or Prisma.
+ */
+export class UnauthorizedError extends Error {
+  constructor(readonly capability?: Capability) {
+    super(
+      capability
+        ? `Unauthorized: this action requires ${capability}`
+        : 'Unauthorized: you must be signed in',
+    );
+    this.name = 'UnauthorizedError';
+  }
 }
 
 export function roleNamesGranting(capability: Capability): string[] {
