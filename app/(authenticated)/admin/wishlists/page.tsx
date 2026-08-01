@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation';
-import { getAllWishlistsAdmin } from '@/app/_actions/admin-wishlists';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -10,38 +8,13 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { currentViewer } from '@/lib/auth/viewer';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
+import { getAllWishlists } from '@/lib/db/queries-admin';
 import { WishlistManager } from './wishlist-manager';
 
 export default async function AdminWishlistsPage() {
-  const viewer = await currentViewer();
-  if (!viewer?.can('manage:wishlists')) {
-    redirect('/');
-  }
-
-  const wishlistsResult = await getAllWishlistsAdmin();
-  if (!wishlistsResult.success) {
-    return (
-      <SidebarInset>
-        <AppHeader>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Wishlists</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </AppHeader>
-        <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-          <p className="text-destructive">Error: {wishlistsResult.error}</p>
-        </div>
-      </SidebarInset>
-    );
-  }
+  const viewer = await requireViewerOrRedirect('manage:wishlists');
+  const wishlists = await getAllWishlists(viewer);
 
   return (
     <SidebarInset>
@@ -68,7 +41,7 @@ export default async function AdminWishlistsPage() {
           </p>
         </div>
 
-        <WishlistManager wishlists={wishlistsResult.wishlists} />
+        <WishlistManager wishlists={wishlists} />
       </div>
     </SidebarInset>
   );

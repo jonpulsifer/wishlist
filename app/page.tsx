@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
-import { auth } from './auth';
+import { currentViewer } from '@/lib/auth/viewer';
 import LoginPage from './login/page';
 
 export const metadata: Metadata = {
@@ -10,8 +10,7 @@ export const metadata: Metadata = {
 };
 
 const Home = async () => {
-  const session = await auth();
-  if (session?.user) {
+  if (await currentViewer()) {
     redirect('/home');
   }
   return <LoginPage />;

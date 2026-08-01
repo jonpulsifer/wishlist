@@ -1,8 +1,6 @@
 import { User } from 'lucide-react';
 import Link from 'next/link';
-import { unauthorized } from 'next/navigation';
 import { Suspense } from 'react';
-import { auth } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
 import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
@@ -15,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
   getPeopleForNewGiftModal,
   getSortedVisibleGiftsForUser,
@@ -28,18 +27,15 @@ interface PageProps {
 export default async function GiftsPage({ searchParams }: PageProps) {
   // Pass the initial search params to the client component
   const { q, sort, direction } = await searchParams;
-  const session = await auth();
-  if (!session?.user?.id) {
-    return unauthorized();
-  }
+  const viewer = await requireViewerOrRedirect();
 
   const gifts = await getSortedVisibleGiftsForUser({
-    userId: session.user.id,
+    userId: viewer.id,
     direction: direction as 'asc' | 'desc',
     column: sort as 'name' | 'owner',
   });
 
-  const users = await getPeopleForNewGiftModal(session.user.id);
+  const users = await getPeopleForNewGiftModal(viewer.id);
 
   return (
     <SidebarInset>
@@ -68,7 +64,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
                 View My Gifts
               </Link>
             </Button>
-            <AddGiftDialog users={users} currentUser={session.user} />
+            <AddGiftDialog users={users} currentUser={viewer} />
           </div>
         </div>
         <Suspense fallback={<Skeleton className="h-full w-full" />}>
@@ -77,7 +73,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
             search={q as string}
             sort={sort as 'name' | 'owner'}
             direction={direction as 'asc' | 'desc'}
-            currentUserId={session.user.id}
+            currentUserId={viewer.id}
           />
         </Suspense>
       </AppContent>

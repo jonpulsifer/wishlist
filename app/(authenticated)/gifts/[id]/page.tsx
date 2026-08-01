@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getSession } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -12,6 +11,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getGiftWithAccessCheck } from '@/lib/db/queries-cached';
 import { GiftDetail } from './gift-detail';
 
@@ -22,9 +22,9 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { user } = await getSession();
+  const viewer = await requireViewerOrRedirect();
   const { id } = await params;
-  const gift = await getGiftWithAccessCheck(id, user.id);
+  const gift = await getGiftWithAccessCheck(id, viewer.id);
 
   if (!gift) {
     return {
@@ -38,9 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function GiftPage({ params }: Props) {
-  const { user } = await getSession();
+  const viewer = await requireViewerOrRedirect();
   const { id } = await params;
-  const gift = await getGiftWithAccessCheck(id, user.id);
+  const gift = await getGiftWithAccessCheck(id, viewer.id);
 
   if (!gift) {
     notFound();
@@ -69,7 +69,7 @@ export default async function GiftPage({ params }: Props) {
         <div className="container mx-auto py-6">
           <GiftDetail
             gift={gift}
-            currentUserId={user.id}
+            currentUserId={viewer.id}
             canEdit={gift.canEdit}
           />
         </div>

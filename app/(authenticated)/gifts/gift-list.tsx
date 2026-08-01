@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAction } from '@/hooks/use-action';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useToast } from '@/hooks/use-toast';
 import type { GiftCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
@@ -37,7 +37,6 @@ export function GiftList({
 }: GiftListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const [gifts, setGifts] = useOptimistic(initialGifts);
 
   const updateParams = (params: {
@@ -87,83 +86,35 @@ export function GiftList({
       });
   }, [gifts, search, sort, direction]);
 
-  async function handleClaimToggle(gift: GiftCard) {
-    const toggle = (g: GiftCard) => ({
-      ...g,
-      claimed: !g.claimed,
-      claimedByViewer: !g.claimedByViewer,
-    });
+  // Toggling a claim flips the same two flags whichever direction it goes, so
+  // applying it twice is its own undo.
+  const toggleClaim = (giftId: string) => {
+    const flip = (g: GiftCard) =>
+      g.id === giftId
+        ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
+        : g;
+    startTransition(() => setGifts((prev) => prev.map(flip)));
+  };
 
-    try {
-      // Optimistically update the UI
-      startTransition(() => {
-        setGifts((prev) => prev.map((g) => (g.id === gift.id ? toggle(g) : g)));
-      });
+  const optimisticToggle = (giftId: string) => {
+    toggleClaim(giftId);
+    return () => toggleClaim(giftId);
+  };
 
-      // Perform the server action
-      const result = await (gift.claimedByViewer
-        ? unclaimGift(gift.id)
-        : claimGift(gift.id));
+  const claim = useAction(claimGift, { optimistic: optimisticToggle });
+  const unclaim = useAction(unclaimGift, { optimistic: optimisticToggle });
 
-      if (result.success) {
-        toast({
-          title: 'Gift updated',
-          description: result.message,
-        });
-      } else {
-        // Revert on failure
-        startTransition(() => {
-          setGifts((prev) =>
-            prev.map((g) => (g.id === gift.id ? toggle(g) : g)),
-          );
-        });
-        toast({
-          title: 'Failed to update gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to update gift',
-        variant: 'destructive',
-      });
-    }
-  }
+  const { run: handleDelete } = useAction(deleteGift, {
+    optimistic: (giftId) => {
+      startTransition(() =>
+        setGifts((prev) => prev.filter((g) => g.id !== giftId)),
+      );
+      return () => startTransition(() => setGifts(initialGifts));
+    },
+  });
 
-  async function handleDelete(giftId: string) {
-    try {
-      startTransition(() => {
-        setGifts((prev) => prev.filter((g) => g.id !== giftId));
-      });
-
-      const result = await deleteGift(giftId);
-
-      if (result.success) {
-        toast({
-          title: 'Gift deleted',
-          description: result.message,
-        });
-      } else {
-        // Revert on failure
-        startTransition(() => {
-          setGifts(gifts);
-        });
-        toast({
-          title: 'Failed to delete gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to delete gift',
-        variant: 'destructive',
-      });
-    }
-  }
+  const handleClaimToggle = (gift: GiftCard) =>
+    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
 
   return (
     <div className="space-y-4">

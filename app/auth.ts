@@ -1,7 +1,18 @@
+/**
+ * NextAuth wiring, and nothing else.
+ *
+ * `auth()` is exported for the two places that genuinely need a `Session`: the
+ * catch-all route handler and the `SessionProvider` in the authenticated layout.
+ * Everything that wants to know *who is asking* goes through `lib/auth/viewer`.
+ *
+ * The session callback resolves roles into capabilities here, on the server, so
+ * role names never reach the browser and no caller can gate on one.
+ */
+
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import { redirect } from 'next/navigation';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
+import { type Capability, capabilitiesFor } from '@/lib/auth/capabilities';
 import prisma from '@/lib/db/client';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -29,18 +40,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
     async session({ session, user }) {
-      const userWithRoles = await prisma.user.findUnique({
+      // Select, don't include: the previous version assigned the whole `User`
+      // row — shipping address, sizes, onboarding flags — onto the session, and
+      // `SessionProvider` serialises that straight into the page source.
+      const record = await prisma.user.findUnique({
         where: { id: user.id },
-        include: {
-          roles: {
-            include: {
-              role: true,
-            },
-          },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          // Required by the NextAuth adapter's user shape.
+          emailVerified: true,
+          roles: { select: { role: { select: { name: true } } } },
         },
       });
 
-      session.user = userWithRoles as SessionUser;
+      if (record) {
+        const { roles, ...person } = record;
+        session.user = {
+          ...person,
+          capabilities: [...capabilitiesFor(roles.map((r) => r.role.name))],
+        };
+      }
       return session;
     },
   },
@@ -51,29 +73,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
+/**
+ * What the browser is allowed to know about the signed-in person.
+ *
+ * Capabilities, not roles: the sidebar needs to decide whether to draw the admin
+ * link, and that is the only authorization question a client may ask.
+ */
 type SessionUser = {
   id: string;
   image: string | null;
   name: string | null;
   email: string;
-  roles: Array<{ role: { name: string } }>;
   emailVerified: Date | null;
-};
-
-export const getSession = async () => {
-  const session = await auth();
-  if (!session || !session.user) {
-    console.error(
-      'could not get session or user from session, redirecting to login',
-    );
-    return redirect('/login');
-  }
-  return session;
+  capabilities: Capability[];
 };
 
 declare module 'next-auth' {
   /**
-   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   * Returned by `useSession` and received as a prop on the `SessionProvider`
+   * React Context.
    */
   interface Session {
     user: SessionUser & DefaultSession['user'];

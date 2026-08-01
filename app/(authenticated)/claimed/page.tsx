@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getSession } from '@/app/auth';
 import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import {
@@ -10,12 +9,13 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
 import GiftList from './gift-list';
 
 export default async function ClaimedPage() {
-  const { user } = await getSession();
-  const claimedGifts = await getClaimedGiftsForMe(user.id);
+  const viewer = await requireViewerOrRedirect();
+  const claimedGifts = await getClaimedGiftsForMe(viewer.id);
 
   return (
     <SidebarInset>

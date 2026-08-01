@@ -14,6 +14,12 @@ Every mutation in `app/_actions/*.ts` is built with `defineAction` from
 zod parsing, `NEXT_REDIRECT` passthrough, error normalisation and cache
 invalidation. **Do not re-derive any of it inside a handler.**
 
+`app/_actions/` holds mutations only. A read that a server component needs is a
+query in `lib/db/` — see the `data-access` skill. The behaviour of the combinator
+lives in `lib/actions/prologue.ts`, which takes its two dependencies as
+parameters so it can be asserted without NextAuth or `next/cache`; `define.ts` is
+the wiring. Change the prologue, extend `prologue.test.ts`.
+
 ```ts
 export const claimGift = defineAction(
   {
@@ -69,13 +75,30 @@ Reach for the raw APIs only outside an action, and pick deliberately:
 
 ## Calling from a client component
 
-Call the action directly inside `useTransition`, then branch on
-`result.success`:
+**Always through `useAction` (`hooks/use-action.ts`).** It is the only module
+that reads `ActionResult`. Never narrow on `result.success` in a component, and
+never call `toast` for an action result.
 
-- **Never toast success before checking `result.success`.**
-- For optimistic list updates, `useOptimistic` + `startTransition`.
-- If you need pending state on a form, put it in a small `SubmitButton` that is
-  a **direct child** of the `<form>`.
+```ts
+const { run, isPending } = useAction(claimGift, {
+  optimistic: (giftId) => { apply(giftId); return () => undo(giftId); },
+  onSuccess: () => setOpen(false),
+});
+await run(gift.id); // payload on success, null on failure
+```
+
+- The success message defaults to the action's own `message` — the one the
+  handler already wrote. Pass `success` to override, `false` to stay silent.
+- `optimistic` receives the same arguments `run` did and returns the undo, which
+  runs only on failure. Make the undo a real inverse; re-applying a toggle is
+  not one when the toggle can fire twice.
+- `isPending` comes from the hook. Combine several with `||` when one screen
+  drives more than one action.
+- If you need pending state inside a `<form action={…}>`, `useFormStatus` still
+  needs a small `SubmitButton` that is a **direct child** of the `<form>`.
+
+Notifications are `sonner`, mounted once as `<Toaster />` in `app/layout.tsx`.
+There is one queue: a second one meant three screens toasted into nothing.
 
 Route handlers in `app/api/` and `app/invite/` are for API-shaped endpoints.
 UI-driven mutations are actions.

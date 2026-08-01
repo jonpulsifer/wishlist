@@ -2,9 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 import * as z from 'zod';
 import { updateUser } from '@/app/_actions/user';
 import { Button } from '@/components/ui/button';
@@ -27,6 +25,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { useAction } from '@/hooks/use-action';
+import type { Profile } from '@/lib/db/projections';
 
 const formSchema = z.object({
   name: z.string().optional(),
@@ -40,9 +40,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function UserDetailsForm({ user }: { user: any }) {
+export function UserDetailsForm({ user }: { user: Profile }) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -57,30 +56,12 @@ export function UserDetailsForm({ user }: { user: any }) {
     },
   });
 
-  async function onSubmit(data: FormValues) {
-    setIsLoading(true);
-    try {
-      const result = await updateUser(data);
-
-      if (!result.success) {
-        toast.error('Failed to update profile', {
-          description: result.error,
-        });
-        return;
-      }
-
-      toast.success('Profile updated successfully!');
+  const { run: onSubmit, isPending } = useAction(updateUser, {
+    onSuccess: () => {
       router.push(`/people/${user.id}`);
       router.refresh();
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to update profile', {
-        description: 'An unexpected error occurred',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+    },
+  });
 
   return (
     <Form {...form}>
@@ -182,8 +163,8 @@ export function UserDetailsForm({ user }: { user: any }) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </CardFooter>
         </Card>

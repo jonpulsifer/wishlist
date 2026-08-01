@@ -1,6 +1,4 @@
 import { Bot } from 'lucide-react';
-import { unauthorized } from 'next/navigation';
-import { getSession } from '@/app/auth';
 import { AppContent } from '@/components/app-content';
 import { AppHeader } from '@/components/app-header';
 import {
@@ -12,16 +10,14 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getPeopleForNewGiftModal } from '@/lib/db/queries-cached';
 import { AIRecommendations } from './ai-recommendations';
 
 export default async function AIPage() {
-  const { user } = await getSession();
-  if (!user?.id) {
-    return unauthorized();
-  }
+  const viewer = await requireViewerOrRedirect();
 
-  const people = await getPeopleForNewGiftModal(user.id);
+  const people = await getPeopleForNewGiftModal(viewer.id);
 
   return (
     <SidebarInset>

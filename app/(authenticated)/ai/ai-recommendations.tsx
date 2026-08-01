@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { GiftRecommendation } from '@/lib/ai';
 import { getInitials } from '@/lib/utils';
 import type { User } from '@/prisma/generated/client';
@@ -41,70 +41,52 @@ export function AIRecommendations({ people }: Props) {
   const [recommendations, setRecommendations] = React.useState<
     Recommendation[]
   >([]);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [targetUser, setTargetUser] = React.useState<{
     id: string;
     name: string | null;
     email: string;
   } | null>(null);
-  const { toast } = useToast();
 
-  const handleGetRecommendations = async () => {
-    if (!selectedPersonId) {
-      toast({
-        title: 'Please select a person',
-        description: 'Choose who you want gift recommendations for',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const { run: fetchRecommendations, isPending: isLoading } = useAction(
+    getAIRecommendationsForUser,
+    {
+      success: ({ recommendations, targetUser }) =>
+        `Found ${recommendations.length} gift ideas for ${targetUser.name || targetUser.email}`,
+      onSuccess: ({ recommendations, targetUser }) => {
+        setRecommendations(recommendations);
+        setTargetUser(targetUser);
+      },
+    },
+  );
 
-    setIsLoading(true);
-    try {
-      const result: Awaited<ReturnType<typeof getAIRecommendationsForUser>> =
-        await getAIRecommendationsForUser(selectedPersonId);
+  const addingIndex = React.useRef<number | null>(null);
+  const markAdding = (index: number, isAdding: boolean) =>
+    setRecommendations((prev) =>
+      prev.map((rec, i) => (i === index ? { ...rec, isAdding } : rec)),
+    );
 
-      if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        });
-        return;
+  const { run: submitGift } = useAction(addGift, {
+    onSuccess: () => {
+      const index = addingIndex.current;
+      if (index !== null) {
+        setRecommendations((prev) => prev.filter((_, i) => i !== index));
       }
+    },
+    onError: () => {
+      if (addingIndex.current !== null) markAdding(addingIndex.current, false);
+    },
+  });
 
-      if (result.success && result.recommendations) {
-        setRecommendations(result.recommendations);
-        setTargetUser(result.targetUser);
-        toast({
-          title: '✨ Recommendations Ready!',
-          description: `Found ${result.recommendations.length} gift ideas for ${result.targetUser.name || result.targetUser.email}`,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to get recommendations',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGetRecommendations = () => {
+    if (!selectedPersonId) return;
+    return fetchRecommendations(selectedPersonId);
   };
 
-  const handleAddGift = async (
-    recommendation: Recommendation,
-    index: number,
-  ) => {
+  const handleAddGift = (recommendation: Recommendation, index: number) => {
     if (!targetUser) return;
 
-    // Mark this recommendation as being added
-    setRecommendations((prev) =>
-      prev.map((rec, i) => (i === index ? { ...rec, isAdding: true } : rec)),
-    );
+    addingIndex.current = index;
+    markAdding(index, true);
 
     const formData: GiftFormData = {
       recipientId: targetUser.id,
@@ -112,30 +94,7 @@ export function AIRecommendations({ people }: Props) {
       description: recommendation.description || '',
       url: '',
     };
-
-    const result = await addGift(formData);
-
-    if (!result.success) {
-      toast({
-        title: 'Error adding gift',
-        description: result.error,
-        variant: 'destructive',
-      });
-      setRecommendations((prev) =>
-        prev.map((rec, i) => (i === index ? { ...rec, isAdding: false } : rec)),
-      );
-    } else if ('success' in result) {
-      toast({
-        title: 'Gift added!',
-        description: result.message,
-      });
-      // Remove the added recommendation from the list
-      setRecommendations((prev) => prev.filter((_, i) => i !== index));
-    } else {
-      setRecommendations((prev) =>
-        prev.map((rec, i) => (i === index ? { ...rec, isAdding: false } : rec)),
-      );
-    }
+    return submitGift(formData);
   };
 
   return (

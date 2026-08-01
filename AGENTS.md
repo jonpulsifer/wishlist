@@ -20,10 +20,17 @@ after the fact is too late. Every one exists because the opposite shipped.
   addresses and clothing sizes to anyone holding a uuid. Scope it.
 - **Never name a role.** Ask `viewer.can('manage:secret-santa')`. The
   role → capability table is `lib/auth/capabilities.ts`; roles are its
-  implementation detail.
+  implementation detail, and the session carries capabilities so a role name
+  never reaches the browser.
+- **Never resolve identity from the session.** `lib/auth/viewer.ts` is the only
+  front door — `currentViewer` for route handlers, `requireViewer` for actions,
+  `requireViewerOrRedirect` for pages.
 - **Never return a bare `{ error }` from a server action.** Actions are built
   with `defineAction`; failures are `throw new ActionError(...)`. There is one
-  return shape, and callers narrow on `result.success`.
+  return shape, and only `useAction` reads it — client components never narrow
+  on `result.success` themselves.
+- **Never put a read in `app/_actions/`.** Actions are mutations. A read a
+  server component needs is a query in `lib/db/`.
 - **Never trust client state for access control**, and filter before you
   serialize — only the minimum crosses from a server component to a client one.
   `lib/db/projections.ts` is that boundary.
@@ -64,20 +71,24 @@ does not list contents.
 
 ## Where depth lives
 
-`lib/` is the part worth reading before you write. Four modules carry rules the
+`lib/` is the part worth reading before you write. These modules carry rules the
 rest of the codebase is not allowed to re-derive:
 
 | Module | Owns |
 | --- | --- |
-| `lib/actions/define.ts` | The server-action prologue — session, capability gate, zod parsing, error normalisation, cache invalidation. |
+| `lib/actions/define.ts` | The server-action prologue — session, capability gate, zod parsing, error normalisation, cache invalidation. Behaviour is in `prologue.ts`, which takes its dependencies as parameters and is tested. |
+| `hooks/use-action.ts` | The browser half of that seam — the unwrap, the notification, the optimistic revert. |
 | `lib/db/visibility.ts` | Who may see what, as Prisma `where` builders. |
 | `lib/db/projections.ts` | What may cross to the browser. |
+| `lib/auth/viewer.ts` | Who is asking. One interface, three adapters. |
 | `lib/auth/capabilities.ts` | Role → capability. Pure, and covered by tests. |
+| `lib/season.ts` | Which year is in play, and every window measured against it. |
 
 Business rules that do not need a database live in plain modules with no
 `'use server'` and no Prisma import, so they can be tested directly.
 `lib/secret-santa/draw.ts` takes its randomness as a parameter, which is why
-draws are reproducible under a seeded generator.
+draws are reproducible under a seeded generator; `lib/season.ts` takes `now` for
+the same reason, and `lib/ai.ts` takes its completion client.
 
 ## Agent skills
 

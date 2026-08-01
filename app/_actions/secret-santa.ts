@@ -3,8 +3,7 @@
 import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
-import { personRefSelect } from '@/lib/db/projections';
-import { visiblePeopleWhere } from '@/lib/db/visibility';
+import { currentSeason } from '@/lib/season';
 import {
   drawAssignments,
   toExclusionMap,
@@ -15,16 +14,6 @@ import {
   exclusionPairSchema,
   openEventSchema,
 } from '@/lib/secret-santa/schema';
-
-/** People the viewer may put in an event — anyone they share a Wishlist with. */
-export const getPeopleForSecretSanta = defineAction({}, async ({ viewer }) => {
-  const people = await db.user.findMany({
-    select: personRefSelect,
-    where: visiblePeopleWhere(viewer.id),
-    orderBy: { name: 'asc' },
-  });
-  return { people };
-});
 
 /**
  * Create an Event and its Participants in one transaction.
@@ -79,10 +68,7 @@ export const assignSecretSantaParticipants = defineAction(
     }
 
     const participantIds = event.participants.map((p) => p.userId);
-
-    // Only the previous year and this one count as "recent" for the soft
-    // constraint.
-    const historyFrom = new Date(new Date().getFullYear() - 1, 0, 1);
+    const { drawHistoryWindow } = currentSeason();
 
     const [exclusionRows, historyRows] = await Promise.all([
       db.user.findMany({
@@ -96,7 +82,7 @@ export const assignSecretSantaParticipants = defineAction(
         where: {
           userId: { in: participantIds },
           assignedToId: { not: null },
-          event: { createdAt: { gte: historyFrom }, id: { not: eventId } },
+          event: { createdAt: drawHistoryWindow, id: { not: eventId } },
         },
         select: { userId: true, assignedToId: true },
       }),
@@ -125,45 +111,6 @@ export const assignSecretSantaParticipants = defineAction(
     );
 
     return { message: 'Secret Santa assignments completed!' };
-  },
-);
-
-/** Exclusion pairs, collapsed to one row per pair. */
-export const getSecretSantaExclusions = defineAction(
-  { capability: 'manage:secret-santa' },
-  async () => {
-    const users = await db.user.findMany({
-      where: { secretSantaDoNotMatchWith: { some: {} } },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        secretSantaDoNotMatchWith: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-
-    const seen = new Set<string>();
-    const exclusions: Array<{
-      user1: { id: string; name: string | null; email: string };
-      user2: { id: string; name: string | null; email: string };
-    }> = [];
-
-    for (const user of users) {
-      for (const other of user.secretSantaDoNotMatchWith) {
-        const pairKey = [user.id, other.id].sort().join('-');
-        if (seen.has(pairKey)) continue;
-        seen.add(pairKey);
-        exclusions.push({
-          user1: { id: user.id, name: user.name, email: user.email },
-          user2: { id: other.id, name: other.name, email: other.email },
-        });
-      }
-    }
-
-    return { exclusions };
   },
 );
 
@@ -221,17 +168,6 @@ export const deleteSecretSantaExclusion = defineAction(
   },
 );
 
-export const getAllUsersForExclusions = defineAction(
-  { capability: 'manage:secret-santa' },
-  async () => {
-    const users = await db.user.findMany({
-      select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
-    });
-    return { users };
-  },
-);
-
 export const deleteSecretSantaEvent = defineAction(
   {
     capability: 'manage:secret-santa',
@@ -244,28 +180,5 @@ export const deleteSecretSantaEvent = defineAction(
       db.secretSantaEvent.delete({ where: { id: eventId } }),
     ]);
     return { message: 'Secret Santa event deleted successfully' };
-  },
-);
-
-export const getAllSecretSantaEventsAdmin = defineAction(
-  { capability: 'manage:secret-santa' },
-  async () => {
-    const events = await db.secretSantaEvent.findMany({
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-        createdBy: { select: { id: true, name: true, email: true } },
-        participants: {
-          select: {
-            id: true,
-            user: { select: { id: true, name: true, email: true } },
-            assignedTo: { select: { id: true, name: true, email: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { events };
   },
 );

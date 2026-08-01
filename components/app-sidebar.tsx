@@ -48,7 +48,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
-import { capabilitiesFor } from '@/lib/auth/capabilities';
+import { daysUntilChristmas } from '@/lib/season';
 import { getInitials } from '@/lib/utils';
 import santaIcon from '@/public/santaicon.png';
 
@@ -91,14 +91,6 @@ const items = [
   },
 ];
 
-const getNextChristmas = () => {
-  const today = new Date();
-  const thisChristmas = new Date(today.getFullYear(), 11, 25); // month is 0-based
-  return today > thisChristmas
-    ? new Date(today.getFullYear() + 1, 11, 25)
-    : thisChristmas;
-};
-
 function UserSection() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
@@ -107,14 +99,11 @@ function UserSection() {
     return null;
   }
 
-  const daysUntilChristmas = Math.floor(
-    (getNextChristmas().getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-  );
-
   const getChristmasEmoji = () => {
-    if (daysUntilChristmas <= 0) return '🎄';
-    if (daysUntilChristmas <= 7) return '🎁';
-    if (daysUntilChristmas <= 30) return '⛄';
+    const days = daysUntilChristmas();
+    if (days <= 0) return '🎄';
+    if (days <= 7) return '🎁';
+    if (days <= 30) return '⛄';
     return '🎅';
   };
 
@@ -227,10 +216,9 @@ function UserSection() {
 
 export function AppSidebar() {
   const { data: session } = useSession();
-  // Same table the server gates on, so the link and the page agree.
-  const showAdminButton = capabilitiesFor(
-    (session?.user?.roles ?? []).map((r) => r.role.name),
-  ).has('view:admin');
+  // The session carries capabilities, not roles — resolved server-side against
+  // the same table the pages gate on, so the link and the page agree.
+  const showAdminButton = session?.user?.capabilities?.includes('view:admin');
 
   return (
     <Sidebar collapsible="icon">

@@ -22,7 +22,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
+import { partitionBySeason } from '@/lib/season';
 
 type SecretSantaEvent = {
   id: string;
@@ -53,33 +54,17 @@ type EventListProps = {
 };
 
 export function SecretSantaEventList({ events }: EventListProps) {
-  const { toast } = useToast();
   const [optimisticEvents, setOptimisticEvents] = useOptimistic(events);
 
-  const handleDelete = async (eventId: string, eventName: string) => {
-    // Optimistically remove the event from the list
-    startTransition(() => {
-      setOptimisticEvents(
-        optimisticEvents.filter((event) => event.id !== eventId),
+  const { run: handleDelete } = useAction(deleteSecretSantaEvent, {
+    optimistic: (eventId) => {
+      const before = optimisticEvents;
+      startTransition(() =>
+        setOptimisticEvents(before.filter((event) => event.id !== eventId)),
       );
-    });
-
-    const result = await deleteSecretSantaEvent(eventId);
-
-    if (!result.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-      // Revert will happen automatically on next render
-    } else {
-      toast({
-        title: 'Success',
-        description: `"${eventName}" has been deleted.`,
-      });
-    }
-  };
+      return () => startTransition(() => setOptimisticEvents(before));
+    },
+  });
 
   if (optimisticEvents.length === 0) {
     return (
@@ -89,14 +74,11 @@ export function SecretSantaEventList({ events }: EventListProps) {
     );
   }
 
-  // Separate current and past events
-  const currentYear = new Date().getFullYear();
-  const currentEvents = optimisticEvents.filter(
-    (event) => new Date(event.createdAt).getFullYear() === currentYear,
-  );
-  const pastEvents = optimisticEvents.filter(
-    (event) => new Date(event.createdAt).getFullYear() < currentYear,
-  );
+  const {
+    current: currentEvents,
+    past: pastEvents,
+    year: currentYear,
+  } = partitionBySeason(optimisticEvents);
 
   return (
     <div className="space-y-8">
@@ -146,7 +128,7 @@ function EventCard({
   isPast,
 }: {
   event: SecretSantaEvent;
-  onDelete: (eventId: string, eventName: string) => void;
+  onDelete: (eventId: string) => void;
   isPast: boolean;
 }) {
   const hasAssignments = event.participants.some((p) => p.assignedTo);
@@ -202,7 +184,7 @@ function EventCard({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => onDelete(event.id, event.name)}
+                    onClick={() => onDelete(event.id)}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     Delete

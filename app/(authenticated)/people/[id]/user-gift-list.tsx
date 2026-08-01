@@ -12,7 +12,7 @@ import {
   unclaimGift,
 } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { GiftCard } from '@/lib/db/projections';
 
 interface UserGiftListProps {
@@ -24,7 +24,6 @@ export function UserGiftList({
   gifts: initialGifts,
   currentUserId,
 }: UserGiftListProps) {
-  const { toast } = useToast();
   const [gifts, setGifts] = useOptimistic(initialGifts);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -34,116 +33,51 @@ export function UserGiftList({
     (g) => g.archived && g.ownerId === currentUserId,
   );
 
-  async function handleClaimToggle(gift: GiftCard) {
-    const toggle = (g: GiftCard) => ({
-      ...g,
-      claimed: !g.claimed,
-      claimedByViewer: !g.claimedByViewer,
-    });
+  // Both toggles are their own undo: applying the same flip twice restores the
+  // original row.
+  const flipClaim = (giftId: string) => {
+    startTransition(() =>
+      setGifts((prev) =>
+        prev.map((g) =>
+          g.id === giftId
+            ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
+            : g,
+        ),
+      ),
+    );
+    return () => flipClaim(giftId);
+  };
 
-    try {
-      startTransition(() => {
-        setGifts((prev) => prev.map((g) => (g.id === gift.id ? toggle(g) : g)));
-      });
+  const flipArchived = (giftId: string) => {
+    startTransition(() =>
+      setGifts((prev) =>
+        prev.map((g) =>
+          g.id === giftId ? { ...g, archived: !g.archived } : g,
+        ),
+      ),
+    );
+    return () => flipArchived(giftId);
+  };
 
-      const result = await (gift.claimedByViewer
-        ? unclaimGift(gift.id)
-        : claimGift(gift.id));
+  const claim = useAction(claimGift, { optimistic: flipClaim });
+  const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
+  const archive = useAction(archiveGift, { optimistic: flipArchived });
+  const unarchive = useAction(unarchiveGift, { optimistic: flipArchived });
 
-      if (result.success) {
-        toast({
-          title: 'Gift updated',
-          description: result.message,
-        });
-      } else {
-        startTransition(() => {
-          setGifts((prev) =>
-            prev.map((g) => (g.id === gift.id ? toggle(g) : g)),
-          );
-        });
-        toast({
-          title: 'Failed to update gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to update gift',
-        variant: 'destructive',
-      });
-    }
-  }
+  const { run: handleDelete } = useAction(deleteGift, {
+    optimistic: (giftId) => {
+      startTransition(() =>
+        setGifts((prev) => prev.filter((g) => g.id !== giftId)),
+      );
+      return () => startTransition(() => setGifts(initialGifts));
+    },
+  });
 
-  async function handleDelete(giftId: string) {
-    try {
-      startTransition(() => {
-        setGifts((prev) => prev.filter((g) => g.id !== giftId));
-      });
+  const handleClaimToggle = (gift: GiftCard) =>
+    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
 
-      const result = await deleteGift(giftId);
-
-      if (!result.success) {
-        startTransition(() => {
-          setGifts(initialGifts);
-        });
-        toast({
-          title: 'Failed to delete gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to delete gift',
-        variant: 'destructive',
-      });
-    }
-  }
-
-  async function handleArchiveToggle(gift: GiftCard) {
-    try {
-      startTransition(() => {
-        setGifts((prev) =>
-          prev.map((g) =>
-            g.id === gift.id ? { ...g, archived: !g.archived } : g,
-          ),
-        );
-      });
-
-      const result = await (gift.archived
-        ? unarchiveGift(gift.id)
-        : archiveGift(gift.id));
-
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
-      } else {
-        startTransition(() => {
-          setGifts((prev) =>
-            prev.map((g) =>
-              g.id === gift.id ? { ...g, archived: !g.archived } : g,
-            ),
-          );
-        });
-        toast({
-          title: 'Failed to update gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to archive gift',
-        variant: 'destructive',
-      });
-    }
-  }
+  const handleArchiveToggle = (gift: GiftCard) =>
+    gift.archived ? unarchive.run(gift.id) : archive.run(gift.id);
 
   const renderGiftRow = (gift: GiftCard) => {
     const isOwner = gift.ownerId === currentUserId;

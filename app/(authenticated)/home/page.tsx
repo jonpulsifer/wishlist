@@ -6,8 +6,6 @@ import {
   UserIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { unauthorized } from 'next/navigation';
-import { getSession } from '@/app/auth';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
 import { AppHeader } from '@/components/app-header';
 import { GlobalSearchTrigger } from '@/components/global-search/global-search-trigger';
@@ -27,32 +25,26 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
   getLatestVisibleGiftsForUserById,
   getPeopleForNewGiftModal,
 } from '@/lib/db/queries-cached';
+import { currentSeason } from '@/lib/season';
 
 export default async function HomePage() {
-  const { user } = await getSession();
-  if (!user?.id) {
-    return unauthorized();
-  }
+  const viewer = await requireViewerOrRedirect();
 
   // Fetch data for the dashboard
   const [addGiftDialogUsers, latestGifts, secretSantaParticipations] =
     await Promise.all([
-      getPeopleForNewGiftModal(user.id),
-      getLatestVisibleGiftsForUserById(user.id),
+      getPeopleForNewGiftModal(viewer.id),
+      getLatestVisibleGiftsForUserById(viewer.id),
       db.secretSantaParticipant.findMany({
         where: {
-          userId: user.id,
-          event: {
-            createdAt: {
-              gte: new Date(new Date().getFullYear(), 0, 1),
-              lt: new Date(new Date().getFullYear() + 1, 0, 1),
-            },
-          },
+          userId: viewer.id,
+          event: { createdAt: currentSeason().eventWindow },
         },
         include: {
           event: { select: { id: true, name: true } },
@@ -79,7 +71,7 @@ export default async function HomePage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold break-words min-w-0">
-                Welcome back, {user.name || user.email}
+                Welcome back, {viewer.name || viewer.email}
               </h1>
               <Sparkles className="h-5 w-5 text-yellow-500/70 flex-shrink-0" />
             </div>
@@ -107,7 +99,7 @@ export default async function HomePage() {
             </CardContent>
           </Card>
           <div className="flex flex-col sm:flex-row gap-2 w-full justify-center items-center">
-            <AddGiftDialog currentUser={user} users={addGiftDialogUsers} />
+            <AddGiftDialog currentUser={viewer} users={addGiftDialogUsers} />
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/claimed">
                 <GiftIcon className="h-4 w-4" />

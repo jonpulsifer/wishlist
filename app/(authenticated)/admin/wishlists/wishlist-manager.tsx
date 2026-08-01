@@ -1,7 +1,7 @@
 'use client';
 
 import { KeyRound, Link2, Plus, Trash2 } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   createWishlistAdmin,
@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAction } from '@/hooks/use-action';
 import { buildInvitePath } from '@/lib/wishlist-invites';
 
 type WishlistRow = {
@@ -52,8 +53,6 @@ type WishlistRow = {
 };
 
 export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
-  const [isPending, startTransition] = useTransition();
-
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -62,6 +61,44 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
     null,
   );
   const [pinDialogPin, setPinDialogPin] = useState('');
+
+  const create = useAction(createWishlistAdmin, {
+    onSuccess: () => {
+      setNewName('');
+      setNewPin('');
+      setIsCreateDialogOpen(false);
+    },
+  });
+
+  const updatePin = useAction(updateWishlistPinAdmin, {
+    onSuccess: () => {
+      setPinDialogPin('');
+      setPinDialogWishlistId(null);
+    },
+  });
+
+  const destroy = useAction(deleteWishlistAdmin);
+
+  // The invite link is copied rather than announced, so this one replaces the
+  // action's own message.
+  const invite = useAction(createWishlistInviteAdmin, {
+    success: false,
+    onSuccess: async ({ token }) => {
+      const url = `${window.location.origin}${buildInvitePath(token)}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success('Invite link copied to clipboard');
+      } catch {
+        toast.message('Invite link', { description: url });
+      }
+    },
+  });
+
+  const isPending =
+    create.isPending ||
+    updatePin.isPending ||
+    destroy.isPending ||
+    invite.isPending;
 
   const handleCreate = () => {
     const name = newName.trim();
@@ -73,18 +110,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
       toast.error('Pin must be 4 digits');
       return;
     }
-
-    startTransition(async () => {
-      const result = await createWishlistAdmin({ name, pin: newPin });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(result.message ?? 'Wishlist created');
-      setNewName('');
-      setNewPin('');
-      setIsCreateDialogOpen(false);
-    });
+    create.run({ name, pin: newPin });
   };
 
   const handleUpdatePin = (wishlistId: string) => {
@@ -92,56 +118,13 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
       toast.error('Pin must be 4 digits');
       return;
     }
-
-    startTransition(async () => {
-      const result = await updateWishlistPinAdmin({
-        wishlistId,
-        pin: pinDialogPin,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(result.message ?? 'Pin updated');
-      setPinDialogPin('');
-      setPinDialogWishlistId(null);
-    });
+    updatePin.run({ wishlistId, pin: pinDialogPin });
   };
 
-  const handleDelete = (wishlistId: string) => {
-    startTransition(async () => {
-      const result = await deleteWishlistAdmin({ wishlistId });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(result.message ?? 'Wishlist deleted');
-    });
-  };
+  const handleDelete = (wishlistId: string) => destroy.run({ wishlistId });
 
-  const handleCreateInviteLink = (wishlistId: string) => {
-    startTransition(async () => {
-      const result = await createWishlistInviteAdmin({ wishlistId });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-
-      const token = result.token;
-      if (!token) {
-        toast.error('Invite link could not be generated');
-        return;
-      }
-
-      const inviteUrl = `${window.location.origin}${buildInvitePath(token)}`;
-      try {
-        await navigator.clipboard.writeText(inviteUrl);
-        toast.success('Invite link copied to clipboard');
-      } catch {
-        toast.message('Invite link', { description: inviteUrl });
-      }
-    });
-  };
+  const handleCreateInviteLink = (wishlistId: string) =>
+    invite.run({ wishlistId });
 
   return (
     <div className="space-y-4">

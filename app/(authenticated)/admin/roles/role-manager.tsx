@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, Shield, Trash2, Users } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   assignRoleToUser,
@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useAction } from '@/hooks/use-action';
 
 interface User {
   id: string;
@@ -77,29 +78,42 @@ interface RoleManagerProps {
 }
 
 export function RoleManager({ roles, users }: RoleManagerProps) {
-  const [isPending, startTransition] = useTransition();
   const [newRoleName, setNewRoleName] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
 
+  const create = useAction(createRole, {
+    onSuccess: () => {
+      setNewRoleName('');
+      setIsCreateDialogOpen(false);
+    },
+  });
+
+  const assign = useAction(assignRoleToUser, {
+    onSuccess: () => {
+      setSelectedUser('');
+      setSelectedRole('');
+      setIsAssignDialogOpen(false);
+    },
+  });
+
+  const remove = useAction(removeRoleFromUser);
+  const destroy = useAction(deleteRole);
+
+  const isPending =
+    create.isPending ||
+    assign.isPending ||
+    remove.isPending ||
+    destroy.isPending;
+
   const handleCreateRole = () => {
     if (!newRoleName.trim()) {
       toast.error('Role name is required');
       return;
     }
-
-    startTransition(async () => {
-      const result = await createRole(newRoleName.trim());
-      if (!result.success) {
-        toast.error(result.error);
-      } else {
-        toast.success('Role created successfully');
-        setNewRoleName('');
-        setIsCreateDialogOpen(false);
-      }
-    });
+    create.run(newRoleName.trim());
   };
 
   const handleAssignRole = () => {
@@ -107,44 +121,13 @@ export function RoleManager({ roles, users }: RoleManagerProps) {
       toast.error('Please select both user and role');
       return;
     }
-
-    startTransition(async () => {
-      const result = await assignRoleToUser({
-        userId: selectedUser,
-        roleId: selectedRole,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-      } else {
-        toast.success('Role assigned successfully');
-        setSelectedUser('');
-        setSelectedRole('');
-        setIsAssignDialogOpen(false);
-      }
-    });
+    assign.run({ userId: selectedUser, roleId: selectedRole });
   };
 
-  const handleRemoveRole = (userId: string, roleId: string) => {
-    startTransition(async () => {
-      const result = await removeRoleFromUser({ userId, roleId });
-      if (!result.success) {
-        toast.error(result.error);
-      } else {
-        toast.success('Role removed successfully');
-      }
-    });
-  };
+  const handleRemoveRole = (userId: string, roleId: string) =>
+    remove.run({ userId, roleId });
 
-  const handleDeleteRole = (roleId: string) => {
-    startTransition(async () => {
-      const result = await deleteRole(roleId);
-      if (!result.success) {
-        toast.error(result.error);
-      } else {
-        toast.success('Role deleted successfully');
-      }
-    });
-  };
+  const handleDeleteRole = (roleId: string) => destroy.run(roleId);
 
   return (
     <div className="space-y-6">

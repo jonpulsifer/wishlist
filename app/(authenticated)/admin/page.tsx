@@ -1,6 +1,5 @@
 import { CandyCane, ListPlus, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -17,15 +16,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { currentViewer } from '@/lib/auth/viewer';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 
 export default async function AdminPage() {
   // `if (!user.roles)` never fired — `roles` is always an array, so every
   // signed-in viewer reached this page.
-  const viewer = await currentViewer();
-  if (!viewer?.can('view:admin')) {
-    redirect('/');
-  }
+  await requireViewerOrRedirect('view:admin');
 
   return (
     <SidebarInset>

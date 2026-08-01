@@ -13,21 +13,6 @@ const wishlistIdSchema = z.object({
   wishlistId: z.string().min(1, 'Wishlist ID is required'),
 });
 
-export const getAllWishlistsAdmin = defineAction(
-  { capability: 'manage:wishlists' },
-  async () => {
-    const wishlists = await db.wishlist.findMany({
-      select: {
-        id: true,
-        name: true,
-        _count: { select: { members: true, gifts: true } },
-      },
-      orderBy: { name: 'asc' },
-    });
-    return { wishlists };
-  },
-);
-
 export const createWishlistAdmin = defineAction(
   {
     capability: 'manage:wishlists',
