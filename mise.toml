@@ -1,0 +1,147 @@
+# mise is the command source of truth for this repo.
+# `mise tasks ls` lists what exists; `mise run <task>` runs it.
+#
+# Entering the directory is enough to get a working toolchain: mise pins bun and
+# node, and .mise/nix-env.sh exports the Prisma engine paths from the pinned
+# flake. Nothing here needs a `nix develop` wrapper.
+
+[tools]
+bun = "1.3.14"
+node = "24"
+
+[env]
+# Prisma engines + $PGBIN, resolved from flake.nix on NixOS. No-op elsewhere.
+_.source = ".mise/nix-env.sh"
+
+# The local Postgres the db:* tasks manage. Matches .env.example, so
+# DATABASE_URL and these agree.
+PGDATA = "{{config_root}}/.pgdata"
+PGHOST = "127.0.0.1"
+PGPORT = "5432"
+PGUSER = "postgres"
+PGDATABASE = "wishlist"
+
+# ─── Setup ───────────────────────────────────────────────────────────────────
+
+[tasks.setup]
+description = "First run: install deps, write .env, start and seed the database"
+depends = ["install"]
+run = '''
+set -euo pipefail
+[ -f .env ] || { cp .env.example .env; echo "wrote .env from .env.example"; }
+mise run db:up
+mise run db:push
+echo "ready — 'mise run dev' to start"
+'''
+
+[tasks.install]
+description = "Install dependencies"
+run = "bun install"
+
+# ─── Develop ─────────────────────────────────────────────────────────────────
+
+[tasks.dev]
+description = "Run the dev server (Turbopack) on :3000"
+run = "bun run dev"
+
+[tasks.generate]
+description = "Regenerate the Prisma client into prisma/generated"
+run = "bunx prisma generate --no-hints"
+
+# ─── Validate ────────────────────────────────────────────────────────────────
+
+[tasks.lint]
+description = "Biome check (read-only)"
+run = "bun run lint"
+
+[tasks."lint:fix"]
+description = "Biome check with autofixes applied"
+run = "bun run lint:fix"
+
+[tasks.test]
+description = "Run the lib/ unit tests"
+run = "bun run test"
+
+[tasks.typecheck]
+description = "Type-check without emitting"
+run = "bunx tsc --noEmit"
+
+[tasks.check]
+description = "Everything CI runs except the build — lint, types, tests"
+depends = ["lint", "typecheck", "test"]
+
+[tasks.build]
+description = "Full production build (generate + db push + next build; needs a database)"
+run = "bun run build"
+
+[tasks."build:next"]
+description = "next build only — no database needed, every data route is dynamic"
+run = "bun run --bun next build"
+
+# ─── Database ────────────────────────────────────────────────────────────────
+# A local Postgres out of the nix store, in $PGDATA. Docker is not available on
+# NixOS WSL, so there is no compose file to run instead.
+
+[tasks."db:up"]
+description = "Start the local Postgres, creating the cluster and database if needed"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+: "${PGBIN:?nix is required for the db:* tasks — Postgres comes from flake.nix}"
+
+if [ ! -d "$PGDATA" ]; then
+  echo "==> initdb $PGDATA"
+  "$PGBIN/initdb" --username="$PGUSER" --auth=trust --pgdata="$PGDATA" >/dev/null
+fi
+
+if "$PGBIN/pg_ctl" --pgdata="$PGDATA" status >/dev/null 2>&1; then
+  echo "==> postgres already running on $PGHOST:$PGPORT"
+else
+  "$PGBIN/pg_ctl" --pgdata="$PGDATA" --log="$PGDATA/server.log" --wait --options="-p $PGPORT -k $PGDATA -c listen_addresses=$PGHOST" start
+fi
+
+if ! PGDATABASE=postgres "$PGBIN/psql" -lqt | cut -d'|' -f1 | grep -qw "$PGDATABASE"; then
+  PGDATABASE=postgres "$PGBIN/createdb" "$PGDATABASE"
+  echo "==> created database $PGDATABASE"
+fi
+'''
+
+[tasks."db:down"]
+description = "Stop the local Postgres"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+: "${PGBIN:?nix is required for the db:* tasks — Postgres comes from flake.nix}"
+if "$PGBIN/pg_ctl" --pgdata="$PGDATA" status >/dev/null 2>&1; then
+  "$PGBIN/pg_ctl" --pgdata="$PGDATA" --wait stop
+else
+  echo "==> postgres is not running"
+fi
+'''
+
+[tasks."db:push"]
+description = "Push prisma/schema.prisma into the database (no migrations in this repo)"
+run = "bunx prisma db push"
+
+[tasks."db:seed"]
+description = "Fill the database with faker data"
+run = "bun prisma/seed.ts"
+
+[tasks."db:studio"]
+description = "Open Prisma Studio against the local database"
+run = "bunx prisma studio"
+
+[tasks."db:psql"]
+description = "psql shell on the local database"
+run = "$PGBIN/psql"
+
+[tasks."db:reset"]
+description = "Destroy the local cluster and rebuild it from schema.prisma"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+mise run db:down || true
+rm -rf "$PGDATA"
+mise run db:up
+mise run db:push
+'''
