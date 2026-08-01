@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   claimedByViewerWhere,
-  giftYearWindow,
   visibleGiftCountWhere,
   visibleGiftsWhere,
   visiblePeopleWhere,
@@ -16,22 +15,6 @@ const OTHER = 'other-1';
 const MEMBERSHIP = {
   wishlists: { some: { members: { some: { id: VIEWER } } } },
 };
-
-describe('giftYearWindow', () => {
-  it('spans this year and the two before it', () => {
-    const window = giftYearWindow(new Date('2026-08-01T12:00:00Z'));
-    assert.deepEqual(window.gte, new Date('2024-01-01'));
-    assert.deepEqual(window.lt, new Date('2027-01-01'));
-  });
-
-  it('is evaluated per call, not once at import', () => {
-    // The old module-level constant meant a process alive across New Year kept
-    // serving the previous window.
-    const before = giftYearWindow(new Date('2026-12-31T23:59:59Z'));
-    const after = giftYearWindow(new Date('2027-01-01T00:00:01Z'));
-    assert.notDeepEqual(before.gte, after.gte);
-  });
-});
 
 describe('visibleGiftsWhere', () => {
   const now = new Date('2026-08-01T00:00:00Z');

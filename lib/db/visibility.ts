@@ -15,25 +15,20 @@
  *   2. Claim secrecy — you see a Gift if it is unclaimed, or you claimed it, or
  *      you created it. You never learn that someone else claimed something.
  *   3. Archived Gifts are hidden, except on your own profile.
- *   4. Only Gifts from the current gift year window are in scope.
+ *   4. Only Gifts from the current Season's gift window are in scope.
  *   5. Your own profile shows only the Gifts you added yourself, so Gifts other
  *      people added for you stay a surprise.
+ *
+ * Which year is in play is not decided here — `lib/season` owns that, and every
+ * window in the app is measured against the same Season.
  */
 
+import { currentSeason } from '@/lib/season';
 import type { Prisma } from '@/prisma/generated/client';
 
-/**
- * The window of Gifts considered "current": this year and the two before it.
- *
- * Computed per call. The previous module-level constant was evaluated at import
- * time, so a server process alive across New Year kept serving the old window.
- */
-export function giftYearWindow(now: Date = new Date()): Prisma.DateTimeFilter {
-  const year = now.getFullYear();
-  return {
-    gte: new Date(`${year - 2}-01-01`),
-    lt: new Date(`${year + 1}-01-01`),
-  };
+/** The Season's gift window, as a Prisma filter. Computed per call. */
+function giftWindow(now?: Date): Prisma.DateTimeFilter {
+  return currentSeason(now).giftWindow;
 }
 
 /** Gifts sitting on at least one Wishlist the viewer belongs to. */
@@ -74,7 +69,7 @@ export function visibleGiftsWhere(
   scope: GiftScope = {},
 ): Prisma.GiftWhereInput {
   const { ownerId, excludeOwn, now } = scope;
-  const createdAt = giftYearWindow(now);
+  const createdAt = giftWindow(now);
 
   if (ownerId && ownerId === viewerId) {
     return {
@@ -102,7 +97,7 @@ export function claimedByViewerWhere(
   return {
     archived: false,
     claimedById: viewerId,
-    createdAt: giftYearWindow(now),
+    createdAt: giftWindow(now),
     ...onAWishlistWithViewer(viewerId),
   };
 }
@@ -158,7 +153,7 @@ export function visibleGiftCountWhere(
 ): Prisma.GiftWhereInput {
   return {
     archived: false,
-    createdAt: giftYearWindow(now),
+    createdAt: giftWindow(now),
     OR: claimVisibleToViewer(viewerId),
   };
 }
