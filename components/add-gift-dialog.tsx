@@ -2,7 +2,6 @@
 
 import { Loader2, Plus } from 'lucide-react';
 import * as React from 'react';
-import { useActionState } from 'react';
 import type { GiftFormData } from '@/app/_actions/gifts';
 import { addGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
@@ -56,12 +55,12 @@ export function AddGiftDialog({ users, currentUser }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  const [state, action, isPending] = useActionState(addGift, {
-    errors: {},
-    message: '',
-  });
+  const [isPending, startTransition] = React.useTransition();
+  const [fieldErrors, setFieldErrors] = React.useState<
+    Record<string, string[] | undefined>
+  >({});
 
-  const handleAction = async (formData: FormData) => {
+  const handleAction = (formData: FormData) => {
     const data: GiftFormData = {
       recipientId: formData.get('recipientId') as string,
       name: formData.get('name') as string,
@@ -69,13 +68,31 @@ export function AddGiftDialog({ users, currentUser }: Props) {
       description: formData.get('description') as string,
     };
 
-    await action(data);
-    setOpen(false);
-    formRef.current?.reset();
-    toast({
-      title: 'Gift added successfully!',
-      description: `${data.name} has been added to the wishlist.`,
-      action: <ToastAction altText="View wishlist">View wishlist</ToastAction>,
+    startTransition(async () => {
+      const result = await addGift(data);
+
+      // The dialog used to close and toast "added successfully" whether or not
+      // the action had succeeded.
+      if (!result.success) {
+        setFieldErrors(result.fieldErrors ?? {});
+        toast({
+          title: 'Failed to add gift',
+          description: result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setFieldErrors({});
+      setOpen(false);
+      formRef.current?.reset();
+      toast({
+        title: 'Gift added successfully!',
+        description: result.message,
+        action: (
+          <ToastAction altText="View wishlist">View wishlist</ToastAction>
+        ),
+      });
     });
   };
 
@@ -124,8 +141,8 @@ export function AddGiftDialog({ users, currentUser }: Props) {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {state.errors?.recipientId && (
-              <p className="text-sm text-red-500">{state.errors.recipientId}</p>
+            {fieldErrors.recipientId && (
+              <p className="text-sm text-red-500">{fieldErrors.recipientId}</p>
             )}
             <Label
               htmlFor="recipientId"
@@ -139,8 +156,8 @@ export function AddGiftDialog({ users, currentUser }: Props) {
               Gift Name
             </Label>
             <Input id="name" name="name" placeholder="Enter gift name" />
-            {state.errors?.name && (
-              <p className="text-sm text-red-500">{state.errors.name}</p>
+            {fieldErrors.name && (
+              <p className="text-sm text-red-500">{fieldErrors.name}</p>
             )}
           </div>
           <div className="grid gap-2">
@@ -154,8 +171,8 @@ export function AddGiftDialog({ users, currentUser }: Props) {
               placeholder="https://amazon.ca/your-gift-link"
               type="url"
             />
-            {state.errors?.url && (
-              <p className="text-sm text-red-500">{state.errors.url}</p>
+            {fieldErrors.url && (
+              <p className="text-sm text-red-500">{fieldErrors.url}</p>
             )}
             <Label htmlFor="url" className="text-xs text-muted-foreground">
               Remember that Amazon is also available in Canada
@@ -171,8 +188,8 @@ export function AddGiftDialog({ users, currentUser }: Props) {
               placeholder="Add any additional notes..."
               className="min-h-[100px]"
             />
-            {state.errors?.description && (
-              <p className="text-sm text-red-500">{state.errors.description}</p>
+            {fieldErrors.description && (
+              <p className="text-sm text-red-500">{fieldErrors.description}</p>
             )}
           </div>
           <DialogFooter>

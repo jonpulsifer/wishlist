@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { getAllWishlistsAdmin } from '@/app/_actions/admin-wishlists';
-import { getSession, isWishlistAdmin } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -11,16 +10,17 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { currentViewer } from '@/lib/auth/viewer';
 import { WishlistManager } from './wishlist-manager';
 
 export default async function AdminWishlistsPage() {
-  const { user } = await getSession();
-  if (!isWishlistAdmin(user)) {
+  const viewer = await currentViewer();
+  if (!viewer?.can('manage:wishlists')) {
     redirect('/');
   }
 
   const wishlistsResult = await getAllWishlistsAdmin();
-  if (wishlistsResult.error || !wishlistsResult.wishlists) {
+  if (!wishlistsResult.success) {
     return (
       <SidebarInset>
         <AppHeader>

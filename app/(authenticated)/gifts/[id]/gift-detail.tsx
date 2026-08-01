@@ -28,16 +28,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import type { GiftDetail as GiftDetailData } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
-import type { Gift, User, Wishlist } from '@/prisma/generated/client';
 
 interface GiftDetailProps {
-  gift: Gift & {
-    owner: User;
-    claimedBy: User | null;
-    createdBy: User | null;
-    wishlists: Pick<Wishlist, 'id' | 'name'>[];
-  };
+  gift: GiftDetailData;
   currentUserId: string;
   canEdit: boolean;
 }
@@ -68,7 +63,7 @@ export function GiftDetail({
         url,
       });
 
-      if (result?.error) {
+      if (!result.success) {
         toast({
           title: 'Failed to update gift',
           description: result.error,
@@ -106,7 +101,7 @@ export function GiftDetail({
   async function handleClaimToggle() {
     try {
       setIsPending(true);
-      const result = await (gift.claimed
+      const result = await (gift.claimedByViewer
         ? unclaimGift(gift.id)
         : claimGift(gift.id));
 
@@ -115,7 +110,7 @@ export function GiftDetail({
           setGift({
             ...gift,
             claimed: !gift.claimed,
-            claimedBy: gift.claimed ? null : ({ id: currentUserId } as User),
+            claimedByViewer: !gift.claimedByViewer,
           });
         });
         toast({
@@ -337,14 +332,18 @@ export function GiftDetail({
               </div>
               {!canEdit && (
                 <Button
-                  variant={gift.claimed ? 'destructive' : 'default'}
+                  variant={gift.claimedByViewer ? 'destructive' : 'default'}
                   onClick={handleClaimToggle}
                   disabled={isPending}
                 >
                   {isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  {gift.claimed ? 'Unclaim' : 'Claim'}
+                  {gift.claimedByViewer
+                    ? 'Unclaim'
+                    : gift.claimed
+                      ? 'Claimed'
+                      : 'Claim'}
                 </Button>
               )}
             </div>

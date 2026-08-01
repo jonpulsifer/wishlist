@@ -48,6 +48,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
+import { capabilitiesFor } from '@/lib/auth/capabilities';
 import { getInitials } from '@/lib/utils';
 import santaIcon from '@/public/santaicon.png';
 
@@ -226,7 +227,10 @@ function UserSection() {
 
 export function AppSidebar() {
   const { data: session } = useSession();
-  const showAdminButton = (session?.user?.roles?.length ?? 0) > 0;
+  // Same table the server gates on, so the link and the page agree.
+  const showAdminButton = capabilitiesFor(
+    (session?.user?.roles ?? []).map((r) => r.role.name),
+  ).has('view:admin');
 
   return (
     <Sidebar collapsible="icon">

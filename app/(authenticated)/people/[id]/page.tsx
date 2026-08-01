@@ -18,8 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset } from '@/components/ui/sidebar';
 import {
-  getUserById,
   getVisibleGiftsForUserById,
+  getVisibleProfile,
 } from '@/lib/db/queries-cached';
 import { getInitials } from '@/lib/utils';
 import { UserGiftList } from './user-gift-list';
@@ -40,11 +40,13 @@ export default async function UserPage({ params }: Props) {
   // Handle the 'me' vanity route
   const id = rawId === 'me' ? session.user.id : rawId;
 
-  const user = await getUserById(id);
-  const gifts = await getVisibleGiftsForUserById(id, session.user.id);
+  // Scoped read: someone the viewer shares no wishlist with is a 404, not a
+  // profile page. A bare lookup by id used to expose addresses and sizes.
+  const user = await getVisibleProfile(id, session.user.id);
   if (!user) {
     notFound();
   }
+  const gifts = await getVisibleGiftsForUserById(id, session.user.id);
 
   const isOwnProfile = user.id === session.user.id;
 

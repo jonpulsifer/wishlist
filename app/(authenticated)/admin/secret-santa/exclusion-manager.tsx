@@ -72,9 +72,12 @@ export function ExclusionManager({ exclusions, users }: ExclusionManagerProps) {
       );
     });
 
-    const result = await deleteSecretSantaExclusion(user1.id, user2.id);
+    const result = await deleteSecretSantaExclusion({
+      user1Id: user1.id,
+      user2Id: user2.id,
+    });
 
-    if (result.error) {
+    if (!result.success) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -122,9 +125,9 @@ export function ExclusionManager({ exclusions, users }: ExclusionManagerProps) {
       setOptimisticExclusions([...optimisticExclusions, { user1, user2 }]);
     });
 
-    const result = await createSecretSantaExclusion(user1Id, user2Id);
+    const result = await createSecretSantaExclusion({ user1Id, user2Id });
 
-    if (result.error) {
+    if (!result.success) {
       toast({
         variant: 'destructive',
         title: 'Error',

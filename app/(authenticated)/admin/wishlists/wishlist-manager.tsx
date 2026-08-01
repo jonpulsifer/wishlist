@@ -76,7 +76,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
 
     startTransition(async () => {
       const result = await createWishlistAdmin({ name, pin: newPin });
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
         return;
       }
@@ -98,7 +98,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
         wishlistId,
         pin: pinDialogPin,
       });
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
         return;
       }
@@ -111,7 +111,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
   const handleDelete = (wishlistId: string) => {
     startTransition(async () => {
       const result = await deleteWishlistAdmin({ wishlistId });
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
         return;
       }
@@ -122,7 +122,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
   const handleCreateInviteLink = (wishlistId: string) => {
     startTransition(async () => {
       const result = await createWishlistInviteAdmin({ wishlistId });
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
         return;
       }

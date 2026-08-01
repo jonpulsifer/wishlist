@@ -10,7 +10,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { getUserById } from '@/lib/db/queries-cached';
+import { getOwnProfile } from '@/lib/db/queries-cached';
 import { UserDetailsForm } from './user-details-form';
 
 export default async function EditUserPage() {
@@ -18,7 +18,7 @@ export default async function EditUserPage() {
   if (!session?.user?.id) {
     return unauthorized();
   }
-  const user = await getUserById(session.user.id);
+  const user = await getOwnProfile(session.user.id);
   if (!user) {
     notFound();
   }
