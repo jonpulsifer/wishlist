@@ -29,8 +29,11 @@ the builders express, add a builder there — do not inline one at the call site
 treating one as an authorization token exposes the profile to anyone holding it.
 Scope the lookup with `visibleProfileWhere`.
 
-`giftYearWindow` decides which season a gift belongs to. Take it from the
-module rather than reimplementing date maths.
+The year window comes from `lib/season.ts`, not from date maths written here or
+anywhere else. `currentSeason(now?)` returns `year`, `giftWindow`, `eventWindow`
+and `drawHistoryWindow`; `partitionBySeason` splits a list into this year and
+past. Every window takes `now` as a parameter, so they are assertable and a
+process alive across New Year cannot keep serving the old Season.
 
 ## Capabilities: `lib/auth/capabilities.ts`
 
@@ -49,8 +52,26 @@ Server actions do not check capabilities by hand either; they declare
 `capability:` in `defineAction` and the combinator calls `requireViewer`. See
 the `server-actions` skill.
 
-Viewer resolution is `lib/auth/viewer.ts`: `currentViewer()` returns `null` when
-signed out, `requireViewer(capability?)` throws `UnauthorizedError`.
+**Viewer resolution is `lib/auth/viewer.ts`, and nothing else.** Three adapters,
+one per caller shape — the only thing that varies is what "no" looks like:
+
+| Adapter | Says no by | Used by |
+| --- | --- | --- |
+| `currentViewer()` | returning `null` | route handlers, which reply 401 |
+| `requireViewer(cap?)` | throwing `UnauthorizedError` | `defineAction` |
+| `requireViewerOrRedirect(cap?)` | redirecting | pages |
+
+`auth()` from `app/auth.ts` is NextAuth's own handle. Only the authenticated
+layout (for `SessionProvider`) and the catch-all route handler may touch it —
+never to work out who is asking. The session carries `capabilities`, never role
+names, so a client component cannot gate on a role even if it wants to.
+
+## Admin reads: `lib/db/queries-admin.ts`
+
+Reads that need a capability are queries, not actions. Each takes the `Viewer`
+the page already resolved and asserts what it needs, so the gate travels with the
+query and a page with no `Viewer` cannot call one. Pages gate with
+`requireViewerOrRedirect(capability)` and pass the result straight in.
 
 ## Projections: `lib/db/projections.ts`
 
