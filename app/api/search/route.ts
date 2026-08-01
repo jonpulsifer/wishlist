@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/auth';
+import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
+import { visibleGiftsWhere, visiblePeopleWhere } from '@/lib/db/visibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,19 +13,9 @@ type SearchItem = {
   href: string;
 };
 
-function currentYearFilter() {
-  const year = new Date().getFullYear();
-  return {
-    createdAt: {
-      gte: new Date(`${year - 2}-01-01`),
-      lt: new Date(`${year + 1}-01-01`),
-    },
-  } as const;
-}
-
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const viewer = await currentViewer();
+  if (!viewer) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -33,71 +24,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ users: [], gifts: [], wishlists: [] });
   }
 
-  const userId = session.user.id;
-  const yearFilter = currentYearFilter();
+  const userId = viewer.id;
+  const contains = { contains: q, mode: 'insensitive' } as const;
 
   const [users, gifts, wishlists] = await Promise.all([
     db.user.findMany({
       select: { id: true, name: true, email: true },
       where: {
         AND: [
-          {
-            OR: [
-              { id: userId },
-              {
-                wishlists: {
-                  some: {
-                    members: { some: { id: userId } },
-                  },
-                },
-              },
-            ],
-          },
-          {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { email: { contains: q, mode: 'insensitive' } },
-            ],
-          },
+          // Search used to restate both the membership rule and the year
+          // window; both now come from the policy module.
+          { OR: [{ id: userId }, visiblePeopleWhere(userId)] },
+          { OR: [{ name: contains }, { email: contains }] },
         ],
       },
       orderBy: [{ name: 'asc' }],
-      take: 10,
+      take: 12,
     }),
     db.gift.findMany({
       select: {
         id: true,
         name: true,
         claimed: true,
+        claimedById: true,
         owner: { select: { id: true, name: true, email: true } },
       },
       where: {
-        archived: false,
-        ...yearFilter,
-        wishlists: {
-          some: {
-            members: { some: { id: userId } },
-          },
-        },
-        OR: [
-          { claimed: false },
-          { claimedById: userId },
-          { createdById: userId },
-        ],
         AND: [
+          visibleGiftsWhere(userId),
           {
             OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { description: { contains: q, mode: 'insensitive' } },
-              { url: { contains: q, mode: 'insensitive' } },
-              {
-                owner: {
-                  OR: [
-                    { name: { contains: q, mode: 'insensitive' } },
-                    { email: { contains: q, mode: 'insensitive' } },
-                  ],
-                },
-              },
+              { name: contains },
+              { description: contains },
+              { url: contains },
+              { owner: { OR: [{ name: contains }, { email: contains }] } },
             ],
           },
         ],
@@ -105,6 +65,9 @@ export async function GET(req: NextRequest) {
       orderBy: [{ updatedAt: 'desc' }],
       take: 12,
     }),
+    // Wishlists are deliberately discoverable by name: the app lets you find a
+    // list you are not in and join it with its PIN, which is also what
+    // `/wishlists` shows. Membership only controls the subtitle.
     db.wishlist.findMany({
       select: {
         id: true,
@@ -112,9 +75,7 @@ export async function GET(req: NextRequest) {
         _count: { select: { members: true } },
         members: { where: { id: userId }, select: { id: true } },
       },
-      where: {
-        name: { contains: q, mode: 'insensitive' },
-      },
+      where: { name: contains },
       orderBy: [{ name: 'asc' }],
       take: 10,
     }),
@@ -137,7 +98,11 @@ export async function GET(req: NextRequest) {
     id: g.id,
     type: 'gift',
     title: g.name,
-    subtitle: `For ${g.owner.name || g.owner.email}${g.claimed ? ' • claimed' : ''}`,
+    // Only surface "claimed" for the viewer's own claim; whether someone else
+    // claimed a gift is not theirs to know.
+    subtitle: `For ${g.owner.name || g.owner.email}${
+      g.claimedById === userId ? ' • claimed by you' : ''
+    }`,
     href: `/gifts/${g.id}`,
   }));
 
