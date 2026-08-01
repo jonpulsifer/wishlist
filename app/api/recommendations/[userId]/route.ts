@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getRecommendations } from '@/lib/ai';
+import { recommendGiftsAsProse } from '@/lib/ai';
 import { currentViewer } from '@/lib/auth/viewer';
 
 export async function POST(
@@ -19,7 +19,10 @@ export async function POST(
   try {
     // Scoped to the viewer: this route used to accept any user id and return
     // that person's gifts to anyone who was merely signed in.
-    const recommendations = await getRecommendations(userId, viewer.id);
+    const recommendations = await recommendGiftsAsProse({
+      personId: userId,
+      viewerId: viewer.id,
+    });
     if (recommendations === null) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }

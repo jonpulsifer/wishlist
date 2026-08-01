@@ -60,11 +60,11 @@ export const getAIRecommendationsForUser = defineAction(
     }
 
     // Imported lazily so the OpenAI client isn't pulled into every request.
-    const { getRecommendationsForHomePage } = await import('@/lib/ai');
-    const recommendations = await getRecommendationsForHomePage(
-      targetUserId,
-      viewer.id,
-    );
+    const { recommendGiftsAsList } = await import('@/lib/ai');
+    const recommendations = await recommendGiftsAsList({
+      personId: targetUserId,
+      viewerId: viewer.id,
+    });
 
     return { recommendations, targetUser };
   },
