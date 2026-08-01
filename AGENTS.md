@@ -6,7 +6,7 @@ The Cursor rule files live in `.cursor/rules/*.mdc`. Some of them are scoped (gl
 
 ## Quick commands
 
-- **Install**: `pnpm install` (Node **>= 22**, pnpm per `package.json`)
+- **Install**: `pnpm install` (Node **>= 24**, pnpm per `package.json`)
 - **Dev**: `pnpm dev` (Turbopack)
 - **Lint/format**: `pnpm lint` (Biome), `pnpm lint:fix`
 - **Build**: `pnpm build` (runs Prisma generate/db push, then `next build`)

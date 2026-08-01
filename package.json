@@ -2,10 +2,10 @@
   "name": "wishlist",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.34.4",
   "engines": {
-    "node": ">=22",
-    "pnpm": "10.24.0"
+    "node": ">=24",
+    "pnpm": "10.34.4"
   },
   "scripts": {
     "dev": "next dev",
@@ -54,7 +54,7 @@
     "@biomejs/biome": "2.3.11",
     "@faker-js/faker": "10.1.0",
     "@tailwindcss/postcss": "4.1.18",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "postcss": "8.5.6",
