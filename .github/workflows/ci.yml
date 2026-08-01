@@ -38,14 +38,10 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
-
-      - name: Setup Node.js environment
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          cache: pnpm
-          node-version: 24
+          bun-version-file: package.json
 
       - name: Prepare db & env files
         env:
@@ -58,10 +54,16 @@ jobs:
           find . -type f -name '.env.example' -execdir cp -v {} .env \;
 
       - name: Install dependencies
-        run: pnpm install
+        run: bun install --frozen-lockfile
 
       - name: Run linting
-        run: pnpm lint
+        run: bun run lint
 
+      - name: Run tests
+        run: bun run test
+
+      # `--bun` forces bun to execute node-shebang binaries (next, prisma) on the
+      # bun runtime, matching the Docker image. Without it the runner's ambient
+      # Node would serve the build and the runtime half would go untested.
       - name: Build
-        run: pnpm build
+        run: bun --bun run build

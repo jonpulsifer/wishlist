@@ -9,10 +9,10 @@ This directory contains GitHub Actions workflows for automated CI/CD.
 - **Purpose**: Build and test the application
 - **Features**:
   - Sets up PostgreSQL database
-  - Installs dependencies with pnpm 10.34.4
+  - Installs dependencies with bun 1.3.14
   - Runs build process
   - Executes tests
-  - Uses Node.js >=24
+  - Runs on the bun runtime (`bun --bun`)
 
 ### Lint and Type Check (`lint.yml`)
 - **Triggers**: Push to main branch, Pull requests
@@ -45,7 +45,7 @@ Set up these secrets in your GitHub repository settings:
 The workflows automatically:
 1. Create PostgreSQL databases for testing
 2. Copy `.env.example` to `.env` files
-3. Set up Node.js >=24 environment with pnpm 10.34.4
+3. Set up a bun 1.3.14 environment
 
 ## Database Setup
 
