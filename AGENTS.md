@@ -1,110 +1,109 @@
 # AGENTS.md
 
-This repo is a festive wishlist + Secret Santa app built with **Next.js App Router**, **React 19**, **Prisma**, **Auth.js / next-auth v5**, **shadcn/ui**, and **Tailwind CSS v4**.
+A festive wishlist and Secret Santa app. Next.js App Router, React 19, Prisma,
+Auth.js (next-auth v5), shadcn/ui, Tailwind v4, deployed on Vercel.
 
-The Cursor rule files live in `.cursor/rules/*.mdc`. Some of them are scoped (globs) and may not always be applied automatically, so this file restates the working conventions agents should follow.
+This file is a **router**, not a manual. It holds the rules you must know before
+you touch anything, and pointers to where the depth lives. Depth lives in
+`.agents/skills/` and in the modules themselves — several of them carry a header
+comment explaining what they exist to prevent.
 
-## Quick commands
+## Hard rules
 
-- **Install**: `bun install` (bun version pinned in `.bun-version`, floor in `engines.bun`)
-- **Dev**: `bun run dev` (Turbopack)
-- **Lint/format**: `bun run lint` (Biome), `bun run lint:fix`
-- **Build**: `bun run build` (runs Prisma generate/db push, then `next build`)
+Read these before your first edit. They are prohibitions — routing you to them
+after the fact is too late. Every one exists because the opposite shipped.
 
-## Project layout (high-level)
+- **Never hand-write a visibility `where` clause.** "Which gifts or people may
+  this viewer see" lives in `lib/db/visibility.ts`. Compose from its builders.
+  Six hand-written copies had drifted into three real disclosure defects.
+- **Never look a person up by id alone.** A bare `findUnique` hands shipping
+  addresses and clothing sizes to anyone holding a uuid. Scope it.
+- **Never name a role.** Ask `viewer.can('manage:secret-santa')`. The
+  role → capability table is `lib/auth/capabilities.ts`; roles are its
+  implementation detail.
+- **Never return a bare `{ error }` from a server action.** Actions are built
+  with `defineAction`; failures are `throw new ActionError(...)`. There is one
+  return shape, and callers narrow on `result.success`.
+- **Never trust client state for access control**, and filter before you
+  serialize — only the minimum crosses from a server component to a client one.
+  `lib/db/projections.ts` is that boundary.
+- **Never commit to `main`.** Branch, PR, let CI do its job.
 
-- **`app/`**: Next.js App Router routes (server components by default)
-  - **`app/(authenticated)/`**: routes that require auth
-  - **`app/_actions/`**: server actions for mutations (see patterns below)
-  - **`app/api/`**: route handlers
-  - **`app/auth.ts`**: session helpers (`getSession`, role checks, etc.)
-- **`components/`**: UI and app components
-  - **`components/ui/`**: shadcn/ui primitives (don’t fork unless necessary)
-- **`lib/`**: shared utilities + DB
-  - **`lib/db/client.ts`**: Prisma client
-- **`prisma/`**: Prisma schema + seed
+## Commands
 
-## Next.js 16 (and App Router) guidance
+**`mise` is the command source of truth.** Run `mise tasks ls` to see what
+exists, then `mise run <task>`. The tasks encode the correct binary and flags.
 
-This codebase uses App Router + React Server Components. Keep changes compatible with **Next.js 16** conventions:
+Entering the directory is enough to get a working environment. mise pins bun and
+node, and `.mise/nix-env.sh` exports the Prisma engine paths out of the pinned
+flake — so `bunx prisma`, `bun run build` and the `db:*` tasks work in a plain
+shell. There is no `nix develop` wrapper to remember and no docker-compose to
+start; `mise run db:up` runs Postgres out of the nix store.
 
-- **Server-first**: components in `app/` are server components unless you add `'use client'`.
-- **Prefer server data fetching**: fetch and filter data on the server, pass minimal props to client components.
-- **Route handlers vs server actions**: use **server actions** for UI-driven mutations; use **route handlers** for API-style endpoints.
-- **Caching**: when mutating, invalidate relevant caches. Prefer `defineAction`'s `invalidates` list — it calls `updateTag` for you. Reach for the raw APIs only outside an action, and pick deliberately:
-  - **`updateTag(tag)`** — Server Actions only. Expires *and* refreshes in the same request, so the viewer sees their own write immediately. This is what `defineAction` uses.
-  - **`revalidateTag(tag, profile)`** — anywhere, but stale-while-revalidate, so the next reader may still get the old value. Next 16 makes the profile argument mandatory; we pass `'max'`. Used by `revalidateGiftRelatedCaches()`, which the invite route handler calls.
-  - Calling `updateTag` outside a Server Action throws — that is why the two helpers differ.
+`package.json` scripts stay the source of truth for what Vercel and CI run. The
+mise tasks delegate to them, and add what `package.json` cannot express — the
+local database, the no-database build.
 
-## Security + data access control (non-negotiable)
+New clone: `mise run setup`.
 
-- **Never trust client state** for access control.
-- **Validate authorization on the server** before returning sensitive data or executing mutations.
-- **Filter before serialize**: only pass the minimum necessary data from server components to client components.
-- **Never hand-write a visibility `where` clause.** "Which gifts / people may this viewer see" lives in `lib/db/visibility.ts`. Compose from `visibleGiftsWhere`, `visiblePeopleWhere`, `visibleProfileWhere`, `claimedByViewerWhere`. Six hand-written copies had drifted into three real defects; the module exists so that cannot happen again.
-- **Never look a person up by id alone.** A bare `findUnique` exposes shipping addresses and sizes to anyone holding a uuid.
-- **Never ask about a role name.** Ask `viewer.can('manage:secret-santa')`. The role → capability table is `lib/auth/capabilities.ts`; it is pure and covered by tests.
+## Repo map
 
-## Server actions (`app/_actions/*.ts`)
+One line per top-level directory. Look in the tree for what is inside; this file
+does not list contents.
 
-Actions are built with `defineAction` from `lib/actions/define.ts`. It owns the session, the capability gate, zod parsing, `NEXT_REDIRECT` passthrough, error normalisation and cache invalidation — do not re-derive any of it inside a handler.
+| Path | What lives here |
+| --- | --- |
+| `app/` | App Router routes. Server components by default. `(authenticated)/` requires a session, `_actions/` holds the server actions, `api/` the route handlers, `auth.ts` the session helpers. |
+| `components/` | App components, with the shadcn/ui primitives under `ui/`. |
+| `lib/` | The domain. Database access, auth, the Secret Santa draw, the action combinator. |
+| `hooks/` | Client-side React hooks. |
+| `prisma/` | Schema and seed. The generated client lands in `prisma/generated/` and is not committed. |
+| `types/` | Ambient and shared type declarations. |
+| `.agents/skills/` | Repo-local agent skills. Tool-agnostic source; `.claude/skills` is a symlink to it. |
 
-```ts
-export const claimGift = defineAction(
-  {
-    capability: 'manage:wishlists', // omit for "any signed-in viewer"
-    input: z.string().min(1, 'Gift ID is required'),
-    invalidates: ['gifts', 'users'],
-  },
-  async ({ viewer, input: id }) => {
-    // ...work...
-    return { message: `You claimed ${gift.name}` }; // becomes { success: true, message }
-  },
-);
-```
+## Where depth lives
 
-- **File header**: still `'use server';`. Because that directive only allows async function exports, the combinator itself lives outside `app/_actions/`.
-- **Failing**: `throw new ActionError('...')`. Never return a bare `{ error }`.
-- **One return shape**, always:
-  - Success: `{ success: true, message?: string, ...payload }`
-  - Failure: `{ success: false, error: string, message: string, fieldErrors?: Record<string, string[]> }`
-- **Callers must narrow on `result.success`**, not on `result.error`.
-- **Cache tags** are the `CacheTag` union — `gifts | users | wishlists | secretSanta`. There is no `roles` tag; nothing declares one.
-- **Multi-row writes go in `db.$transaction`**, not `Promise.all`.
-- **Reuse existing helpers/queries** instead of inventing parallel ones.
+`lib/` is the part worth reading before you write. Four modules carry rules the
+rest of the codebase is not allowed to re-derive:
 
-## Domain modules (`lib/`)
+| Module | Owns |
+| --- | --- |
+| `lib/actions/define.ts` | The server-action prologue — session, capability gate, zod parsing, error normalisation, cache invalidation. |
+| `lib/db/visibility.ts` | Who may see what, as Prisma `where` builders. |
+| `lib/db/projections.ts` | What may cross to the browser. |
+| `lib/auth/capabilities.ts` | Role → capability. Pure, and covered by tests. |
 
-Business rules that do not need the database live in plain modules with no `'use server'` and no Prisma import, so they can be tested directly:
+Business rules that do not need a database live in plain modules with no
+`'use server'` and no Prisma import, so they can be tested directly.
+`lib/secret-santa/draw.ts` takes its randomness as a parameter, which is why
+draws are reproducible under a seeded generator.
 
-- `lib/secret-santa/draw.ts` — the draw. Takes participants, exclusions and history; returns pairings or a typed failure. Randomness is a parameter, so draws are reproducible under a seeded generator.
-- `lib/secret-santa/schema.ts` — intake rules, shared by the create form and the action.
-- `lib/db/visibility.ts` — the visibility rules, as Prisma `where` builders.
-- `lib/db/projections.ts` — what may cross to the browser. Client components import types from here, never from `@/prisma/generated/client`.
+## Agent skills
 
-## Tests
+| Skill | Use when |
+| --- | --- |
+| `local-dev` | Running the app, the local database, or anything Prisma on this machine. |
+| `data-access` | Reading or returning user data — the visibility, capability and projection rules. |
+| `server-actions` | Writing or changing anything in `app/_actions/`. |
+| `schema-change` | Editing `prisma/schema.prisma`. |
+| `validate-build` | Before a commit or a PR. |
 
-`bun run test` runs `bun test` over `lib/**/*.test.ts`. The tests are written against `node:test` + `node:assert/strict`, which bun implements, so there is still no test framework dependency. Test files import with an explicit `.ts` extension. Cover the pure modules; there is no database in the test run.
+## UI conventions
 
-## Client components (`'use client'`)
+Reach for `components/ui/*` before introducing a new pattern, and Tailwind
+utilities for layout. Festive but accessible: high contrast, respect reduced
+motion, keep typography clean. Don't add a dependency where `clsx`,
+`tailwind-merge` or `cva` will do. Biome is the source of truth for style —
+`mise run lint`.
 
-Use client components only when necessary (interactivity, hooks). Prefer these patterns:
+## Writing rule for these docs
 
-- **Optimistic UI**: `useOptimistic` + `startTransition` for list updates (e.g. claim/unclaim flows)
-- **Server action forms**: `useTransition` + call the action directly, then branch on `result.success`. (`useActionState` does not fit `defineAction`, whose actions take their parsed input as the only argument rather than `(prevState, formData)`.)
-  - If you need pending state, encapsulate it in a small `SubmitButton` that is a **direct child** of the `<form>`
-- **Never toast success before checking `result.success`**
-- **UX**: use shadcn components and consistent interaction patterns (hover states, disabled states, toasts)
+1. **Present tense, today only.** Describe what is. No "formerly", "used to",
+   "migrated from", "no longer". If a thing is gone, it does not appear — git
+   history is the archaeology record.
+2. **Point, don't restate.** Never enumerate what the tree enumerates. Name the
+   directory. A list of components in prose is a list that will be wrong.
+3. **Verify before you write.** Every path must exist, every command must match
+   what the repo runs.
 
-## UI system (shadcn + Tailwind v4 + “festive dream”)
-
-- **Use Tailwind utility classes** for layout/spacing; keep things readable and consistent.
-- **Use `components/ui/*` primitives** (Button, Card, Dialog, etc.) before introducing new patterns.
-- **Festive, but accessible**: high contrast, sensible motion (avoid nausea), respect reduced motion, and keep typography clean.
-- **Don’t add dependencies casually**: prefer existing utilities (`clsx`, `tailwind-merge`, `cva`).
-
-## Code style
-
-- **Biome is the source of truth** for lint/format (`bun run lint`).
-- Use TypeScript types from Prisma where possible; avoid `any` unless you’re forced (and document why).
-
+The reason a rule exists is worth a sentence; the story of the incident is not.

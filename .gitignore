@@ -31,6 +31,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -41,3 +42,23 @@ next-env.d.ts
 
 # prisma
 prisma/generated
+
+# ─── Local dev services ──────────────────────────────────────────────────────
+# The Postgres cluster mise run db:up manages, and the resolved nix store paths.
+.pgdata/
+.mise/.cache/
+
+# ─── Agent / AI tooling ──────────────────────────────────────────────────────
+# Track the shared bits — settings and skills — and ignore personal config and
+# agent worktrees. Biome honours this file (vcs.useIgnoreFile), so an agent
+# worktree under .claude/ no longer breaks lint with a nested root config.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+# Claude Code only discovers skills in .claude/skills; .agents/skills is the
+# tool-agnostic source and .claude/skills is a symlink to it.
+!.claude/skills
+.claude/settings.local.json
+.agents/*
+!.agents/skills/
+!.agents/skills/**

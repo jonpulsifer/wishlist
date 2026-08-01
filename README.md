@@ -1,30 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# wishlist
 
-## Getting Started
+A festive wishlist and Secret Santa app. Family and friends sign in, add the
+things they want, claim each other's gifts without spoiling the surprise, and
+draw names with exclusions so spouses never get matched.
 
-First, run the development server:
+Next.js App Router, React 19, Prisma on Postgres, Auth.js, shadcn/ui and
+Tailwind v4. Deployed on Vercel.
+
+## Getting started
+
+Requires [mise](https://mise.jdx.dev). Nix is required only on NixOS, where it
+supplies the Prisma engines and Postgres.
 
 ```bash
-bun run dev
+mise run setup   # install deps, write .env, start and migrate a local database
+mise run dev     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`mise tasks ls` lists everything else — `db:reset`, `db:seed`, `check`, `build`.
+Off NixOS, point `DATABASE_URL` in `.env` at any Postgres you like and skip the
+`db:*` tasks.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Working on it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`mise run check` — lint, types and tests — before every commit. CI runs the same
+plus a full build against a throwaway Postgres.
 
-## Learn More
+Conventions, architecture and the rules that matter live in
+[AGENTS.md](AGENTS.md), with task-scoped depth in `.agents/skills/`. Both are
+written for coding agents and are the fastest way for a human to get oriented
+too.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT. See [LICENSE](LICENSE).
