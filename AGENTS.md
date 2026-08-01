@@ -6,7 +6,7 @@ The Cursor rule files live in `.cursor/rules/*.mdc`. Some of them are scoped (gl
 
 ## Quick commands
 
-- **Install**: `bun install` (bun **>= 1.3.14**, per `package.json`)
+- **Install**: `bun install` (bun version pinned in `.bun-version`, floor in `engines.bun`)
 - **Dev**: `bun run dev` (Turbopack)
 - **Lint/format**: `bun run lint` (Biome), `bun run lint:fix`
 - **Build**: `bun run build` (runs Prisma generate/db push, then `next build`)

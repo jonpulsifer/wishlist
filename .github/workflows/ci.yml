@@ -41,7 +41,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version-file: package.json
+          bun-version-file: .bun-version
 
       - name: Prepare db & env files
         env:
@@ -62,8 +62,5 @@ jobs:
       - name: Run tests
         run: bun run test
 
-      # `--bun` forces bun to execute node-shebang binaries (next, prisma) on the
-      # bun runtime, matching the Docker image. Without it the runner's ambient
-      # Node would serve the build and the runtime half would go untested.
       - name: Build
-        run: bun --bun run build
+        run: bun run build
