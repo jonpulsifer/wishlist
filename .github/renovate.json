@@ -6,7 +6,7 @@
   "pinDigests": true,
   "packageRules": [
     {
-      "matchPackageNames": ["pnpm"],
+      "matchPackageNames": ["bun", "oven/bun"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     }

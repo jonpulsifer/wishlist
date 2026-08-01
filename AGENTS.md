@@ -6,10 +6,10 @@ The Cursor rule files live in `.cursor/rules/*.mdc`. Some of them are scoped (gl
 
 ## Quick commands
 
-- **Install**: `pnpm install` (Node **>= 24**, pnpm per `package.json`)
-- **Dev**: `pnpm dev` (Turbopack)
-- **Lint/format**: `pnpm lint` (Biome), `pnpm lint:fix`
-- **Build**: `pnpm build` (runs Prisma generate/db push, then `next build`)
+- **Install**: `bun install` (bun version pinned in `.bun-version`, floor in `engines.bun`)
+- **Dev**: `bun run dev` (Turbopack)
+- **Lint/format**: `bun run lint` (Biome), `bun run lint:fix`
+- **Build**: `bun run build` (runs Prisma generate/db push, then `next build`)
 
 ## Project layout (high-level)
 
@@ -84,7 +84,7 @@ Business rules that do not need the database live in plain modules with no `'use
 
 ## Tests
 
-`pnpm test` runs `node --test` over `lib/**/*.test.ts` using Node's native TypeScript support — no test framework dependency. Test files import with an explicit `.ts` extension. Cover the pure modules; there is no database in the test run.
+`bun run test` runs `bun test` over `lib/**/*.test.ts`. The tests are written against `node:test` + `node:assert/strict`, which bun implements, so there is still no test framework dependency. Test files import with an explicit `.ts` extension. Cover the pure modules; there is no database in the test run.
 
 ## Client components (`'use client'`)
 
@@ -105,6 +105,6 @@ Use client components only when necessary (interactivity, hooks). Prefer these p
 
 ## Code style
 
-- **Biome is the source of truth** for lint/format (`pnpm lint`).
+- **Biome is the source of truth** for lint/format (`bun run lint`).
 - Use TypeScript types from Prisma where possible; avoid `any` unless you’re forced (and document why).
 
