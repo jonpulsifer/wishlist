@@ -31,7 +31,10 @@ This codebase uses App Router + React Server Components. Keep changes compatible
 - **Server-first**: components in `app/` are server components unless you add `'use client'`.
 - **Prefer server data fetching**: fetch and filter data on the server, pass minimal props to client components.
 - **Route handlers vs server actions**: use **server actions** for UI-driven mutations; use **route handlers** for API-style endpoints.
-- **Caching**: when mutating, invalidate relevant caches (typically via `revalidateTag(...)` or helpers like `revalidateGiftRelatedCaches()`).
+- **Caching**: when mutating, invalidate relevant caches. Prefer `defineAction`'s `invalidates` list — it calls `updateTag` for you. Reach for the raw APIs only outside an action, and pick deliberately:
+  - **`updateTag(tag)`** — Server Actions only. Expires *and* refreshes in the same request, so the viewer sees their own write immediately. This is what `defineAction` uses.
+  - **`revalidateTag(tag, profile)`** — anywhere, but stale-while-revalidate, so the next reader may still get the old value. Next 16 makes the profile argument mandatory; we pass `'max'`. Used by `revalidateGiftRelatedCaches()`, which the invite route handler calls.
+  - Calling `updateTag` outside a Server Action throws — that is why the two helpers differ.
 
 ## Security + data access control (non-negotiable)
 
