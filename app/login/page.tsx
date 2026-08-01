@@ -1,7 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';

@@ -2,9 +2,14 @@ import OpenAI from 'openai';
 
 import { getFullUserForRecommendations } from './db/queries-cached';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY ?? '',
-});
+// Constructed lazily: the OpenAI client throws on a missing key at construction
+// time, and this module is imported by routes that are evaluated during
+// `next build`, where OPENAI_API_KEY is not necessarily present.
+let client: OpenAI | undefined;
+const getClient = () => {
+  client ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return client;
+};
 
 export type GiftRecommendation = {
   name: string;
@@ -22,7 +27,7 @@ export const getRecommendations = async (userId: string, viewerId: string) => {
   const preferences = allGifts.map((gift) => gift.name).join(', ');
   const name = user.name?.split(' ')[0] || 'someone mysterious';
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
@@ -56,7 +61,7 @@ export const getRecommendationsForHomePage = async (
     return []; // Return empty if user has no gifts
   }
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     tools: [
       {
