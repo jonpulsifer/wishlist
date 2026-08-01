@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 
 type User = {
   id: string;
@@ -51,98 +51,57 @@ type ExclusionManagerProps = {
 };
 
 export function ExclusionManager({ exclusions, users }: ExclusionManagerProps) {
-  const { toast } = useToast();
   const [optimisticExclusions, setOptimisticExclusions] =
     useOptimistic(exclusions);
   const [user1Id, setUser1Id] = useState<string>('');
   const [user2Id, setUser2Id] = useState<string>('');
-  const [isCreating, setIsCreating] = useState(false);
 
-  const handleDelete = async (user1: User, user2: User) => {
-    // Optimistically remove the exclusion
-    startTransition(() => {
-      setOptimisticExclusions(
-        optimisticExclusions.filter(
-          (e) =>
-            !(
-              (e.user1.id === user1.id && e.user2.id === user2.id) ||
-              (e.user1.id === user2.id && e.user2.id === user1.id)
-            ),
+  const remove = useAction(deleteSecretSantaExclusion, {
+    optimistic: ({ user1Id, user2Id }) => {
+      const before = optimisticExclusions;
+      startTransition(() =>
+        setOptimisticExclusions(
+          before.filter(
+            (e) =>
+              !(
+                (e.user1.id === user1Id && e.user2.id === user2Id) ||
+                (e.user1.id === user2Id && e.user2.id === user1Id)
+              ),
+          ),
         ),
       );
-    });
+      return () => startTransition(() => setOptimisticExclusions(before));
+    },
+  });
 
-    const result = await deleteSecretSantaExclusion({
-      user1Id: user1.id,
-      user2Id: user2.id,
-    });
-
-    if (!result.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-    } else {
-      toast({
-        title: 'Success',
-        description: result.message,
-      });
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!user1Id || !user2Id) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please select both users',
-      });
-      return;
-    }
-
-    if (user1Id === user2Id) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Cannot exclude a user from themselves',
-      });
-      return;
-    }
-
-    setIsCreating(true);
-
-    const user1 = users.find((u) => u.id === user1Id);
-    const user2 = users.find((u) => u.id === user2Id);
-
-    if (!user1 || !user2) {
-      setIsCreating(false);
-      return;
-    }
-
-    // Optimistically add the exclusion
-    startTransition(() => {
-      setOptimisticExclusions([...optimisticExclusions, { user1, user2 }]);
-    });
-
-    const result = await createSecretSantaExclusion({ user1Id, user2Id });
-
-    if (!result.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
-    } else {
-      toast({
-        title: 'Success',
-        description: result.message,
-      });
+  const create = useAction(createSecretSantaExclusion, {
+    optimistic: ({ user1Id, user2Id }) => {
+      const before = optimisticExclusions;
+      const user1 = users.find((u) => u.id === user1Id);
+      const user2 = users.find((u) => u.id === user2Id);
+      if (!user1 || !user2) return;
+      startTransition(() =>
+        setOptimisticExclusions([...before, { user1, user2 }]),
+      );
+      return () => startTransition(() => setOptimisticExclusions(before));
+    },
+    onSuccess: () => {
       setUser1Id('');
       setUser2Id('');
-    }
+    },
+  });
 
-    setIsCreating(false);
+  const handleDelete = (user1: User, user2: User) =>
+    remove.run({ user1Id: user1.id, user2Id: user2.id });
+
+  // "Both selected" and "not the same person" are the schema's rules too; these
+  // just keep the round-trip out of the way of an obviously incomplete form.
+  const canCreate = Boolean(user1Id && user2Id && user1Id !== user2Id);
+  const isCreating = create.isPending;
+
+  const handleCreate = () => {
+    if (!canCreate) return;
+    create.run({ user1Id, user2Id });
   };
 
   return (
@@ -193,7 +152,7 @@ export function ExclusionManager({ exclusions, users }: ExclusionManagerProps) {
 
               <Button
                 onClick={handleCreate}
-                disabled={isCreating || !user1Id || !user2Id}
+                disabled={isCreating || !canCreate}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add

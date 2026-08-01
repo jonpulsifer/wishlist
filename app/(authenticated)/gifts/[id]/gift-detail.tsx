@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { GiftDetail as GiftDetailData } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
@@ -42,127 +42,53 @@ export function GiftDetail({
   currentUserId,
   canEdit,
 }: GiftDetailProps) {
-  const { toast } = useToast();
   const router = useRouter();
   const [gift, setGift] = useOptimistic(initialGift);
   const [isEditing, setIsEditing] = useState(false);
-  const [isPending, setIsPending] = useState(false);
 
   // Form state
   const [name, setName] = useState(gift.name);
   const [description, setDescription] = useState(gift.description || '');
   const [url, setUrl] = useState(gift.url || '');
 
-  async function handleSave() {
-    try {
-      setIsPending(true);
-      const result = await updateGift({
-        id: gift.id,
-        name,
-        description,
-        url,
-      });
+  const update = useAction(updateGift, {
+    optimistic: ({ name, description, url }) => {
+      startTransition(() => setGift({ ...gift, name, description, url }));
+      return () => startTransition(() => setGift(initialGift));
+    },
+    onSuccess: () => setIsEditing(false),
+  });
 
-      if (!result.success) {
-        toast({
-          title: 'Failed to update gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-        return;
-      }
+  const flipClaim = () => {
+    startTransition(() =>
+      setGift((g) => ({
+        ...g,
+        claimed: !g.claimed,
+        claimedByViewer: !g.claimedByViewer,
+      })),
+    );
+    return flipClaim;
+  };
 
-      // Optimistically update the UI
-      startTransition(() => {
-        setGift({
-          ...gift,
-          name,
-          description,
-          url,
-        });
-      });
+  const claim = useAction(claimGift, { optimistic: flipClaim });
+  const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
 
-      setIsEditing(false);
-      toast({
-        title: 'Gift updated',
-        description: 'Your changes have been saved.',
-      });
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to update gift',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPending(false);
-    }
-  }
+  const destroy = useAction(deleteGift, {
+    onSuccess: () => router.push('/gifts'),
+  });
 
-  async function handleClaimToggle() {
-    try {
-      setIsPending(true);
-      const result = await (gift.claimedByViewer
-        ? unclaimGift(gift.id)
-        : claimGift(gift.id));
+  const isPending =
+    update.isPending ||
+    claim.isPending ||
+    unclaim.isPending ||
+    destroy.isPending;
 
-      if (result.success) {
-        startTransition(() => {
-          setGift({
-            ...gift,
-            claimed: !gift.claimed,
-            claimedByViewer: !gift.claimedByViewer,
-          });
-        });
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to update gift',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPending(false);
-    }
-  }
+  const handleSave = () => update.run({ id: gift.id, name, description, url });
 
-  async function handleDelete() {
-    try {
-      setIsPending(true);
-      const result = await deleteGift(gift.id);
+  const handleClaimToggle = () =>
+    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
 
-      if (result.success) {
-        toast({
-          title: 'Gift deleted',
-          description: result.message,
-        });
-        router.push('/gifts');
-      } else {
-        toast({
-          title: 'Failed to delete gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to delete gift',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPending(false);
-    }
-  }
+  const handleDelete = () => destroy.run(gift.id);
 
   return (
     <div className="space-y-6">

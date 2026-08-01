@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { startTransition, useOptimistic } from 'react';
 import { unclaimGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { GiftCard } from '@/lib/db/projections';
 
 export default function GiftList({
@@ -11,47 +11,16 @@ export default function GiftList({
 }: {
   gifts: GiftCard[];
 }) {
-  const { toast } = useToast();
   const [gifts, setGifts] = useOptimistic(initialGifts);
 
-  async function handleUnclaim(giftId: string) {
-    try {
-      // Optimistically update the UI
+  const { run: handleUnclaim } = useAction(unclaimGift, {
+    optimistic: (giftId) => {
       startTransition(() => {
         setGifts((prev) => prev.filter((gift) => gift.id !== giftId));
       });
-
-      // Perform the server action
-      const result = await unclaimGift(giftId);
-
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
-      } else {
-        // Revert on failure
-        startTransition(() => {
-          setGifts(initialGifts);
-        });
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-    } catch (_error) {
-      // Revert on error
-      startTransition(() => {
-        setGifts(initialGifts);
-      });
-      toast({
-        title: 'An error occurred',
-        description: 'Failed to unclaim gift',
-        variant: 'destructive',
-      });
-    }
-  }
+      return () => startTransition(() => setGifts(initialGifts));
+    },
+  });
 
   return (
     <div className="rounded-md border">

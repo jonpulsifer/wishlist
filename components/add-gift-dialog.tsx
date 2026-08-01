@@ -26,8 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ToastAction } from '@/components/ui/toast';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { User } from '@/prisma/generated/client';
 
 function SubmitButton({ isPending }: { isPending: boolean }) {
@@ -53,12 +52,15 @@ type Props = {
 export function AddGiftDialog({ users, currentUser }: Props) {
   const [open, setOpen] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
-  const { toast } = useToast();
 
-  const [isPending, startTransition] = React.useTransition();
-  const [fieldErrors, setFieldErrors] = React.useState<
-    Record<string, string[] | undefined>
-  >({});
+  // The dialog used to close and report "added successfully" whether or not the
+  // action had succeeded; `onSuccess` only fires on the success branch.
+  const { run, isPending, fieldErrors } = useAction(addGift, {
+    onSuccess: () => {
+      setOpen(false);
+      formRef.current?.reset();
+    },
+  });
 
   const handleAction = (formData: FormData) => {
     const data: GiftFormData = {
@@ -67,33 +69,7 @@ export function AddGiftDialog({ users, currentUser }: Props) {
       url: formData.get('url') as string,
       description: formData.get('description') as string,
     };
-
-    startTransition(async () => {
-      const result = await addGift(data);
-
-      // The dialog used to close and toast "added successfully" whether or not
-      // the action had succeeded.
-      if (!result.success) {
-        setFieldErrors(result.fieldErrors ?? {});
-        toast({
-          title: 'Failed to add gift',
-          description: result.error,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setFieldErrors({});
-      setOpen(false);
-      formRef.current?.reset();
-      toast({
-        title: 'Gift added successfully!',
-        description: result.message,
-        action: (
-          <ToastAction altText="View wishlist">View wishlist</ToastAction>
-        ),
-      });
-    });
+    run(data);
   };
 
   const usersOptions = users.map((user) => {

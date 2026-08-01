@@ -2,7 +2,7 @@
 
 import { Loader2, LockIcon, UsersIcon } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
-import { handleWishlistAction } from '@/app/_actions/wishlists';
+import { joinWishlist, leaveWishlist } from '@/app/_actions/wishlists';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useAction } from '@/hooks/use-action';
 import type { Prisma } from '@/prisma/generated/client';
 
 interface WishlistCardProps {
@@ -57,32 +57,20 @@ function SubmitButton({ isMember }: { isMember: boolean }) {
 }
 
 export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
-  const { toast } = useToast();
+  const join = useAction(joinWishlist);
+  const leave = useAction(leaveWishlist);
 
+  // Which of the two runs is decided here, from the membership the server
+  // rendered — not sent to the server as a flag for it to branch on.
   async function handleWishlistSubmit(formData: FormData) {
-    try {
-      const result = await handleWishlistAction(
-        wishlist.id,
-        isMember,
-        formData.get('pin') as string,
-      );
-
-      if (!result.success) {
-        toast({
-          variant: 'destructive',
-          description: result.error,
-        });
-      } else if (result.message) {
-        toast({
-          description: result.message,
-        });
-      }
-    } catch (_error) {
-      toast({
-        variant: 'destructive',
-        description: 'Something went wrong. Please try again.',
-      });
+    if (isMember) {
+      await leave.run(wishlist.id);
+      return;
     }
+    await join.run({
+      wishlistId: wishlist.id,
+      pin: formData.get('pin') as string,
+    });
   }
 
   return (

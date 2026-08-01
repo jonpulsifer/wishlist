@@ -7,7 +7,6 @@ import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { SnowfallBackground } from '@/components/snowfall-background';
 import { Loading } from '@/components/ui/loading';
-import { useToast } from '@/hooks/use-toast';
 import { WISHLIST_INVITE_COOKIE_NAME } from '@/lib/wishlist-invites';
 
 import santa from '@/public/santaicon.png';
@@ -21,7 +20,6 @@ function getCookieValue(name: string) {
 }
 
 function LoginPage() {
-  const { toast } = useToast();
   const [showLoading, setShowLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [inviteToken] = useState(() =>
@@ -39,12 +37,9 @@ function LoginPage() {
       inviteToken && inviteToken.length > 0
         ? `/invite/${inviteToken}`
         : '/home';
-    signIn('google', { redirect: true, callbackUrl }).finally(() => {
-      toast({
-        title: 'Welcome!',
-        description: 'Ho ho ho! Welcome! 🎅',
-      });
-    });
+    // No toast here: `redirect: true` navigates away, so anything raised on the
+    // way out is unmounted before it can be shown.
+    signIn('google', { redirect: true, callbackUrl });
   };
 
   return (
