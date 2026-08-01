@@ -59,6 +59,7 @@ does not list contents.
 | `hooks/` | Client-side React hooks. |
 | `prisma/` | Schema and seed. The generated client lands in `prisma/generated/` and is not committed. |
 | `types/` | Ambient and shared type declarations. |
+| `docs/` | Domain docs and ADRs, plus `agents/` — the tracker, label and domain-doc config the agent skills read. |
 | `.agents/skills/` | Repo-local agent skills. Tool-agnostic source; `.claude/skills` is a symlink to it. |
 
 ## Where depth lives
@@ -87,6 +88,21 @@ draws are reproducible under a seeded generator.
 | `server-actions` | Writing or changing anything in `app/_actions/`. |
 | `schema-change` | Editing `prisma/schema.prisma`. |
 | `validate-build` | Before a commit or a PR. |
+
+### Issue tracker
+
+Issues live in the `jonpulsifer/wishlist` GitHub Issues, reached with the `gh`
+CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles, each label string equal to its name. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` and `docs/adr/` at the repo root. See
+`docs/agents/domain.md`.
 
 ## UI conventions
 
