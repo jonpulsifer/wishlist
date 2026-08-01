@@ -1,722 +1,271 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
-import { getSession, isGodmode } from '@/app/auth';
+import { z } from 'zod';
+import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
+import { personRefSelect } from '@/lib/db/projections';
+import { visiblePeopleWhere } from '@/lib/db/visibility';
+import {
+  drawAssignments,
+  toExclusionMap,
+  toHistoryMap,
+} from '@/lib/secret-santa/draw';
+import {
+  eventIdSchema,
+  exclusionPairSchema,
+  openEventSchema,
+} from '@/lib/secret-santa/schema';
 
-// Secret Santa actions
-export const getPeopleForSecretSanta = async () => {
-  try {
-    const { user } = await getSession();
+/** People the viewer may put in an event — anyone they share a Wishlist with. */
+export const getPeopleForSecretSanta = defineAction({}, async ({ viewer }) => {
+  const people = await db.user.findMany({
+    select: personRefSelect,
+    where: visiblePeopleWhere(viewer.id),
+    orderBy: { name: 'asc' },
+  });
+  return { people };
+});
 
-    // Fetch all users in the same wishlists as the current user, including the current user
-    const people = await db.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-      },
-      where: {
-        wishlists: {
-          some: {
-            members: { some: { id: user.id } },
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
+/**
+ * Create an Event and its Participants in one transaction.
+ *
+ * Replaces the previous three-call wizard, which created the Event on step one
+ * and added Participants on step two — so abandoning the flow left an Event
+ * with no Participants and nothing to clean it up.
+ */
+export const openSecretSantaEvent = defineAction(
+  { input: openEventSchema, invalidates: ['secretSanta'] },
+  async ({ viewer, input }) => {
+    const event = await db.$transaction(async (tx) => {
+      const created = await tx.secretSantaEvent.create({
+        data: { name: input.name, createdBy: { connect: { id: viewer.id } } },
+      });
+      await tx.secretSantaParticipant.createMany({
+        data: input.participantIds.map((userId) => ({
+          eventId: created.id,
+          userId,
+        })),
+      });
+      return created;
     });
-    return { success: true, people };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching people' };
-  }
-};
 
-export const createSecretSantaEvent = async (name: string) => {
-  try {
-    const { user } = await getSession();
-    const event = await db.secretSantaEvent.create({
-      data: {
-        name,
-        createdBy: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
-    });
-    revalidateTag('secretSanta');
-    return {
-      success: true,
-      id: event.id,
-      message: `${name} has been created.`,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong creating the Secret Santa event' };
-  }
-};
+    return { id: event.id, message: `${input.name} has been created.` };
+  },
+);
 
-export const addParticipantsToSecretSantaEvent = async (
-  eventId: string,
-  participantIds: string[],
-) => {
-  try {
-    const { user } = await getSession();
-
-    // Check if the event exists and is created by the current user
+/**
+ * Make the draw and record it.
+ *
+ * The draw itself lives in `lib/secret-santa/draw` and knows nothing about the
+ * database; this action loads its inputs, calls it, and persists the result in
+ * a single transaction.
+ */
+export const assignSecretSantaParticipants = defineAction(
+  { input: eventIdSchema, invalidates: ['secretSanta'] },
+  async ({ viewer, input: { eventId } }) => {
     const event = await db.secretSantaEvent.findUnique({
       where: { id: eventId },
       include: { participants: true },
     });
 
-    if (!event) {
-      return { error: 'Secret Santa event not found' };
+    if (!event) throw new ActionError('Secret Santa event not found');
+    if (event.createdById !== viewer.id) {
+      throw new ActionError(
+        'You do not have permission to modify this Secret Santa event',
+      );
     }
-
-    if (event.createdById !== user.id) {
-      return {
-        error: 'You do not have permission to modify this Secret Santa event',
-      };
-    }
-
-    // Make sure participants aren't already assigned
     if (event.participants.some((p) => p.assignedToId !== null)) {
-      return {
-        error: 'Cannot add participants after assignments have been made',
-      };
+      throw new ActionError('Participants have already been assigned');
     }
 
-    // Add participants
-    const _participantData = participantIds.map((userId) => ({
-      userId,
-      eventId,
-    }));
-
-    await db.$transaction(
-      participantIds.map((userId) =>
-        db.secretSantaParticipant.upsert({
-          where: {
-            eventId_userId: {
-              eventId,
-              userId,
-            },
-          },
-          update: {},
-          create: {
-            event: {
-              connect: {
-                id: eventId,
-              },
-            },
-            user: {
-              connect: {
-                id: userId,
-              },
-            },
-          },
-        }),
-      ),
-    );
-
-    revalidateTag('secretSanta');
-    return { success: true, message: 'Participants added successfully' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong adding participants' };
-  }
-};
-
-export const removeParticipantFromSecretSantaEvent = async (
-  eventId: string,
-  participantId: string,
-) => {
-  try {
-    const { user } = await getSession();
-
-    // Check if the event exists and is created by the current user
-    const event = await db.secretSantaEvent.findUnique({
-      where: { id: eventId },
-      include: { participants: true },
-    });
-
-    if (!event) {
-      return { error: 'Secret Santa event not found' };
-    }
-
-    if (event.createdById !== user.id) {
-      return {
-        error: 'You do not have permission to modify this Secret Santa event',
-      };
-    }
-
-    // Make sure participants aren't already assigned
-    if (event.participants.some((p) => p.assignedToId !== null)) {
-      return {
-        error: 'Cannot remove participants after assignments have been made',
-      };
-    }
-
-    await db.secretSantaParticipant.delete({
-      where: {
-        eventId_userId: {
-          eventId,
-          userId: participantId,
-        },
-      },
-    });
-
-    revalidateTag('secretSanta');
-    return { success: true, message: 'Participant removed successfully' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong removing the participant' };
-  }
-};
-
-export const assignSecretSantaParticipants = async (eventId: string) => {
-  try {
-    const { user } = await getSession();
-
-    // Check if the event exists and is created by the current user
-    const event = await db.secretSantaEvent.findUnique({
-      where: { id: eventId },
-      include: { participants: true },
-    });
-
-    if (!event) {
-      return { error: 'Secret Santa event not found' };
-    }
-
-    if (event.createdById !== user.id) {
-      return {
-        error: 'You do not have permission to modify this Secret Santa event',
-      };
-    }
-
-    // Make sure we have enough participants
-    if (event.participants.length < 3) {
-      return { error: 'Need at least 3 participants for Secret Santa' };
-    }
-
-    // Make sure participants aren't already assigned
-    if (event.participants.some((p) => p.assignedToId !== null)) {
-      return { error: 'Participants have already been assigned' };
-    }
-
-    // Get all participant IDs
     const participantIds = event.participants.map((p) => p.userId);
 
-    // Fetch exclusion pairs for all participants
-    const participantsWithExclusions = await db.user.findMany({
-      where: {
-        id: { in: participantIds },
-      },
-      select: {
-        id: true,
-        secretSantaDoNotMatchWith: {
-          select: {
-            id: true,
-          },
+    // Only the previous year and this one count as "recent" for the soft
+    // constraint.
+    const historyFrom = new Date(new Date().getFullYear() - 1, 0, 1);
+
+    const [exclusionRows, historyRows] = await Promise.all([
+      db.user.findMany({
+        where: { id: { in: participantIds } },
+        select: {
+          id: true,
+          secretSantaDoNotMatchWith: { select: { id: true } },
         },
-      },
-    });
-
-    const exclusionMap = new Map<string, Set<string>>();
-    participantsWithExclusions.forEach((p) => {
-      const excludedIds = new Set(p.secretSantaDoNotMatchWith.map((e) => e.id));
-      exclusionMap.set(p.id, excludedIds);
-    });
-
-    // Fetch historical assignments from previous events (current year and previous year)
-    const currentYear = new Date().getFullYear();
-    const previousYearStart = new Date(currentYear - 1, 0, 1);
-
-    const historicalAssignments = await db.secretSantaParticipant.findMany({
-      where: {
-        userId: { in: participantIds },
-        assignedToId: { not: null },
-        event: {
-          createdAt: { gte: previousYearStart },
-          id: { not: eventId },
+      }),
+      db.secretSantaParticipant.findMany({
+        where: {
+          userId: { in: participantIds },
+          assignedToId: { not: null },
+          event: { createdAt: { gte: historyFrom }, id: { not: eventId } },
         },
-      },
-      select: {
-        userId: true,
-        assignedToId: true,
-      },
-    });
+        select: { userId: true, assignedToId: true },
+      }),
+    ]);
 
-    const historicalMap = new Map<string, Set<string>>();
-    historicalAssignments.forEach((assignment) => {
-      if (!assignment.assignedToId) return;
-      if (!historicalMap.has(assignment.userId)) {
-        historicalMap.set(assignment.userId, new Set());
-      }
-      historicalMap.get(assignment.userId)!.add(assignment.assignedToId);
-    });
-
-    // Try to create valid assignments with constraints
-    const assignments = createSecretSantaAssignments(
+    const result = drawAssignments({
       participantIds,
-      exclusionMap,
-      historicalMap,
-    );
-
-    if (!assignments) {
-      return {
-        error:
-          'Could not create valid assignments with current exclusions. Please review exclusion pairs.',
-      };
-    }
-
-    // Validate assignments before saving
-    const givers = new Set(assignments.map((a) => a.userId));
-    const receivers = new Set(assignments.map((a) => a.assignedToId));
-
-    console.log('Assignment validation:', {
-      totalParticipants: participantIds.length,
-      totalAssignments: assignments.length,
-      uniqueGivers: givers.size,
-      uniqueReceivers: receivers.size,
-      participantIds: participantIds.sort(),
-      giverIds: Array.from(givers).sort(),
-      receiverIds: Array.from(receivers).sort(),
-      assignments: assignments.map((a) => `${a.userId} -> ${a.assignedToId}`),
+      exclusions: toExclusionMap(exclusionRows),
+      history: toHistoryMap(historyRows),
     });
 
-    // Check if everyone is accounted for
-    const missingGivers = participantIds.filter((id) => !givers.has(id));
-    const missingReceivers = participantIds.filter((id) => !receivers.has(id));
+    if (!result.ok) throw new ActionError(result.message);
 
-    if (missingGivers.length > 0 || missingReceivers.length > 0) {
-      console.error('VALIDATION FAILED:', {
-        missingGivers,
-        missingReceivers,
-      });
-      return {
-        error: `Assignment validation failed. Missing givers: ${missingGivers.length}, Missing receivers: ${missingReceivers.length}`,
-      };
-    }
-
-    // Update each participant with their assignment
-    await Promise.all(
-      assignments.map(({ userId, assignedToId }) =>
+    // One transaction: a partial write used to leave the event half-assigned,
+    // which the "already been assigned" guard above then blocked forever.
+    await db.$transaction(
+      result.pairings.map(({ userId, assignedToId }) =>
         db.secretSantaParticipant.update({
-          where: {
-            eventId_userId: {
-              eventId,
-              userId,
-            },
-          },
+          where: { eventId_userId: { eventId, userId } },
           data: {
-            assignedTo: {
-              connect: {
-                id: assignedToId,
-              },
-            },
-            assignedBy: {
-              connect: {
-                id: user.id,
-              },
-            },
+            assignedTo: { connect: { id: assignedToId } },
+            assignedBy: { connect: { id: viewer.id } },
           },
         }),
       ),
     );
 
-    revalidateTag('secretSanta');
-    return { success: true, message: 'Secret Santa assignments completed!' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong making the assignments' };
-  }
-};
+    return { message: 'Secret Santa assignments completed!' };
+  },
+);
 
-// Helper function to create Secret Santa assignments with constraints
-function createSecretSantaAssignments(
-  participantIds: string[],
-  exclusionMap: Map<string, Set<string>>,
-  historicalMap: Map<string, Set<string>>,
-): Array<{ userId: string; assignedToId: string }> | null {
-  const n = participantIds.length;
-  const maxAttempts = 1000;
-
-  console.log('Creating Secret Santa assignments:', {
-    participantCount: n,
-    participantIds: participantIds.sort(),
-    exclusions: Array.from(exclusionMap.entries()).map(([id, excluded]) => ({
-      userId: id,
-      excludedIds: Array.from(excluded),
-    })),
-  });
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    // Shuffle participant order for randomness
-    const shuffledIds = [...participantIds].sort(() => Math.random() - 0.5);
-
-    // Try to find a valid assignment using backtracking
-    const result = backtrackAssignment(
-      shuffledIds,
-      [],
-      new Set(participantIds),
-      exclusionMap,
-      historicalMap,
-    );
-
-    if (result) {
-      console.log(`Found valid assignment on attempt ${attempt + 1}`);
-      return result;
-    }
-  }
-
-  console.error(
-    'Failed to find valid assignment after',
-    maxAttempts,
-    'attempts',
-  );
-  return null; // Could not find valid assignment
-}
-
-// Backtracking helper to find valid Secret Santa assignments
-function backtrackAssignment(
-  remainingGivers: string[],
-  currentAssignments: Array<{ userId: string; assignedToId: string }>,
-  availableReceivers: Set<string>,
-  exclusionMap: Map<string, Set<string>>,
-  historicalMap: Map<string, Set<string>>,
-): Array<{ userId: string; assignedToId: string }> | null {
-  // Base case: all givers have been assigned
-  if (remainingGivers.length === 0) {
-    return currentAssignments;
-  }
-
-  const giverId = remainingGivers[0];
-  const excluded = exclusionMap.get(giverId) || new Set();
-  const historical = historicalMap.get(giverId) || new Set();
-
-  // Get all valid candidates for this giver
-  const candidates = Array.from(availableReceivers).filter(
-    (id) => id !== giverId && !excluded.has(id),
-  );
-
-  if (candidates.length === 0) {
-    return null; // Dead end, backtrack
-  }
-
-  // Prefer non-historical matches but keep historical as backup
-  const nonHistoricalCandidates = candidates.filter(
-    (id) => !historical.has(id),
-  );
-  const historicalCandidates = candidates.filter((id) => historical.has(id));
-
-  // Shuffle both lists for randomness
-  const shuffledNonHistorical = nonHistoricalCandidates.sort(
-    () => Math.random() - 0.5,
-  );
-  const shuffledHistorical = historicalCandidates.sort(
-    () => Math.random() - 0.5,
-  );
-
-  // Try non-historical first, then historical
-  const orderedCandidates = [...shuffledNonHistorical, ...shuffledHistorical];
-
-  // Try each candidate
-  for (const recipientId of orderedCandidates) {
-    // Make the assignment
-    const newAssignments = [
-      ...currentAssignments,
-      { userId: giverId, assignedToId: recipientId },
-    ];
-    const newAvailable = new Set(availableReceivers);
-    newAvailable.delete(recipientId);
-
-    // Recurse
-    const result = backtrackAssignment(
-      remainingGivers.slice(1),
-      newAssignments,
-      newAvailable,
-      exclusionMap,
-      historicalMap,
-    );
-
-    if (result) {
-      return result; // Found a valid complete assignment
-    }
-
-    // If result is null, try next candidate (backtrack)
-  }
-
-  return null; // No valid assignment found with this giver
-}
-
-export const getSecretSantaExclusions = async () => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
+/** Exclusion pairs, collapsed to one row per pair. */
+export const getSecretSantaExclusions = defineAction(
+  { capability: 'manage:secret-santa' },
+  async () => {
     const users = await db.user.findMany({
-      where: {
-        secretSantaDoNotMatchWith: {
-          some: {},
-        },
-      },
+      where: { secretSantaDoNotMatchWith: { some: {} } },
       select: {
         id: true,
         name: true,
         email: true,
         secretSantaDoNotMatchWith: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          select: { id: true, name: true, email: true },
         },
       },
-      orderBy: {
-        name: 'asc',
-      },
+      orderBy: { name: 'asc' },
     });
 
-    // Convert to exclusion pair format for easier UI handling
+    const seen = new Set<string>();
     const exclusions: Array<{
       user1: { id: string; name: string | null; email: string };
       user2: { id: string; name: string | null; email: string };
     }> = [];
 
-    const processedPairs = new Set<string>();
-
-    users.forEach((user) => {
-      user.secretSantaDoNotMatchWith.forEach((excludedUser) => {
-        const pairKey = [user.id, excludedUser.id].sort().join('-');
-        if (!processedPairs.has(pairKey)) {
-          processedPairs.add(pairKey);
-          exclusions.push({
-            user1: { id: user.id, name: user.name, email: user.email },
-            user2: {
-              id: excludedUser.id,
-              name: excludedUser.name,
-              email: excludedUser.email,
-            },
-          });
-        }
-      });
-    });
+    for (const user of users) {
+      for (const other of user.secretSantaDoNotMatchWith) {
+        const pairKey = [user.id, other.id].sort().join('-');
+        if (seen.has(pairKey)) continue;
+        seen.add(pairKey);
+        exclusions.push({
+          user1: { id: user.id, name: user.name, email: user.email },
+          user2: { id: other.id, name: other.name, email: other.email },
+        });
+      }
+    }
 
     return { exclusions };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching exclusions' };
-  }
-};
+  },
+);
 
-export const createSecretSantaExclusion = async (
-  user1Id: string,
-  user2Id: string,
-) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    if (user1Id === user2Id) {
-      return { error: 'Cannot exclude a user from themselves' };
-    }
-
-    // Check if exclusion already exists (in either direction)
-    const existingExclusion = await db.user.findFirst({
+export const createSecretSantaExclusion = defineAction(
+  {
+    capability: 'manage:secret-santa',
+    input: exclusionPairSchema,
+    invalidates: ['secretSanta'],
+  },
+  async ({ input: { user1Id, user2Id } }) => {
+    const existing = await db.user.findFirst({
       where: {
         id: user1Id,
-        secretSantaDoNotMatchWith: {
-          some: {
-            id: user2Id,
-          },
-        },
+        secretSantaDoNotMatchWith: { some: { id: user2Id } },
       },
+      select: { id: true },
     });
+    if (existing) throw new ActionError('This exclusion already exists');
 
-    if (existingExclusion) {
-      return { error: 'This exclusion already exists' };
-    }
-
-    // Create bidirectional exclusion
+    // Both directions, so the draw sees the pair whichever side it reads.
     await db.$transaction([
       db.user.update({
         where: { id: user1Id },
-        data: {
-          secretSantaDoNotMatchWith: {
-            connect: { id: user2Id },
-          },
-        },
+        data: { secretSantaDoNotMatchWith: { connect: { id: user2Id } } },
       }),
       db.user.update({
         where: { id: user2Id },
-        data: {
-          secretSantaDoNotMatchWith: {
-            connect: { id: user1Id },
-          },
-        },
+        data: { secretSantaDoNotMatchWith: { connect: { id: user1Id } } },
       }),
     ]);
 
-    revalidateTag('secretSanta');
-    return { success: true, message: 'Exclusion created successfully' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong creating the exclusion' };
-  }
-};
+    return { message: 'Exclusion created successfully' };
+  },
+);
 
-export const deleteSecretSantaExclusion = async (
-  user1Id: string,
-  user2Id: string,
-) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    // Remove bidirectional exclusion
+export const deleteSecretSantaExclusion = defineAction(
+  {
+    capability: 'manage:secret-santa',
+    input: exclusionPairSchema,
+    invalidates: ['secretSanta'],
+  },
+  async ({ input: { user1Id, user2Id } }) => {
     await db.$transaction([
       db.user.update({
         where: { id: user1Id },
-        data: {
-          secretSantaDoNotMatchWith: {
-            disconnect: { id: user2Id },
-          },
-        },
+        data: { secretSantaDoNotMatchWith: { disconnect: { id: user2Id } } },
       }),
       db.user.update({
         where: { id: user2Id },
-        data: {
-          secretSantaDoNotMatchWith: {
-            disconnect: { id: user1Id },
-          },
-        },
+        data: { secretSantaDoNotMatchWith: { disconnect: { id: user1Id } } },
       }),
     ]);
 
-    revalidateTag('secretSanta');
-    return { success: true, message: 'Exclusion removed successfully' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong removing the exclusion' };
-  }
-};
+    return { message: 'Exclusion removed successfully' };
+  },
+);
 
-export const getAllUsersForExclusions = async () => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
+export const getAllUsersForExclusions = defineAction(
+  { capability: 'manage:secret-santa' },
+  async () => {
     const users = await db.user.findMany({
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    });
+    return { users };
+  },
+);
+
+export const deleteSecretSantaEvent = defineAction(
+  {
+    capability: 'manage:secret-santa',
+    input: z.string().uuid('Invalid event'),
+    invalidates: ['secretSanta'],
+  },
+  async ({ input: eventId }) => {
+    await db.$transaction([
+      db.secretSantaParticipant.deleteMany({ where: { eventId } }),
+      db.secretSantaEvent.delete({ where: { id: eventId } }),
+    ]);
+    return { message: 'Secret Santa event deleted successfully' };
+  },
+);
+
+export const getAllSecretSantaEventsAdmin = defineAction(
+  { capability: 'manage:secret-santa' },
+  async () => {
+    const events = await db.secretSantaEvent.findMany({
       select: {
         id: true,
         name: true,
-        email: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-
-    return { users };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching users' };
-  }
-};
-
-export const deleteSecretSantaEvent = async (eventId: string) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    // Delete all participants first (cascade should handle this, but being explicit)
-    await db.secretSantaParticipant.deleteMany({
-      where: { eventId },
-    });
-
-    // Delete the event
-    await db.secretSantaEvent.delete({
-      where: { id: eventId },
-    });
-
-    revalidateTag('secretSanta');
-    return {
-      success: true,
-      message: 'Secret Santa event deleted successfully',
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong deleting the Secret Santa event' };
-  }
-};
-
-export const getAllSecretSantaEventsAdmin = async () => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    const events = await db.secretSantaEvent.findMany({
-      include: {
+        createdAt: true,
+        createdBy: { select: { id: true, name: true, email: true } },
         participants: {
-          include: {
-            user: true,
-            assignedTo: true,
+          select: {
+            id: true,
+            user: { select: { id: true, name: true, email: true } },
+            assignedTo: { select: { id: true, name: true, email: true } },
           },
         },
-        createdBy: true,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
-
     return { events };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching Secret Santa events' };
-  }
-};
+  },
+);

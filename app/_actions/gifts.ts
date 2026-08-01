@@ -2,7 +2,7 @@
 
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
-import { getSession } from '@/app/auth';
+import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
 
 export const revalidateGiftRelatedCaches = async () => {
@@ -11,338 +11,171 @@ export const revalidateGiftRelatedCaches = async () => {
   revalidateTag('wishlists');
 };
 
+const GIFT_CACHES = ['gifts', 'users', 'wishlists'] as const;
+
 const GiftSchema = z.object({
   recipientId: z.string().min(1, 'Recipient is required'),
   name: z.string().min(1, 'Gift name is required'),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.url().optional().or(z.literal('')),
   description: z.string().optional(),
 });
 
 export type GiftFormData = z.infer<typeof GiftSchema>;
 
-export const addGift = async (_state: unknown, formData: GiftFormData) => {
-  const validatedFields = GiftSchema.safeParse(formData);
+const giftIdSchema = z.object({ id: z.string().min(1, 'Gift ID is required') });
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Failed to add gift. Please check the form for errors.',
-    };
+/**
+ * Load a Gift the viewer is allowed to change, or throw.
+ *
+ * Owner-or-creator was written out four times across this file, each with its
+ * own copy of the same message.
+ */
+async function loadEditableGift(giftId: string, viewerId: string) {
+  const gift = await db.gift.findUnique({
+    where: { id: giftId },
+    select: {
+      id: true,
+      name: true,
+      archived: true,
+      claimed: true,
+      claimedById: true,
+      ownerId: true,
+      createdById: true,
+    },
+  });
+
+  if (!gift) throw new ActionError('Gift not found');
+  if (gift.ownerId !== viewerId && gift.createdById !== viewerId) {
+    throw new ActionError('You are not the owner or creator of this gift');
   }
+  return gift;
+}
 
-  try {
-    const { user } = await getSession();
+export const addGift = defineAction(
+  { input: GiftSchema, invalidates: GIFT_CACHES },
+  async ({ viewer, input }) => {
     const wishlists = await db.wishlist.findMany({
-      select: {
-        id: true,
-      },
-      where: {
-        members: {
-          some: {
-            id: user.id,
-          },
-        },
-      },
+      select: { id: true },
+      where: { members: { some: { id: viewer.id } } },
     });
 
-    const wishlistIds = wishlists.map((wishlist) => ({ id: wishlist.id }));
     await db.gift.create({
       data: {
-        name: validatedFields.data.name,
-        url: validatedFields.data.url,
-        description: validatedFields.data.description,
-        owner: {
-          connect: {
-            id: validatedFields.data.recipientId,
-          },
-        },
-        createdBy: {
-          connect: {
-            id: user.id,
-          },
-        },
-        wishlists: {
-          connect: wishlistIds,
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return {
-      success: true,
-      message: `${validatedFields.data.name} has been added to the wishlist.`,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const deleteGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
+        name: input.name,
+        url: input.url,
+        description: input.description,
+        owner: { connect: { id: input.recipientId } },
+        createdBy: { connect: { id: viewer.id } },
+        wishlists: { connect: wishlists.map(({ id }) => ({ id })) },
       },
     });
 
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
+    return { message: `${input.name} has been added to the wishlist.` };
+  },
+);
 
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
+export const deleteGift = defineAction(
+  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  async ({ viewer, input: id }) => {
+    const gift = await loadEditableGift(id, viewer.id);
+    await db.gift.delete({ where: { id } });
+    return { message: `${gift.name} has been deleted` };
+  },
+);
 
-    await db.gift.delete({
-      where: { id },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been deleted` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
+export const archiveGift = defineAction(
+  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  async ({ viewer, input: id }) => {
+    const gift = await loadEditableGift(id, viewer.id);
+    if (gift.archived) throw new ActionError('Gift is already archived');
 
-export const archiveGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
-        archived: true,
-      },
-    });
+    await db.gift.update({ where: { id }, data: { archived: true } });
+    return { message: `${gift.name} has been archived` };
+  },
+);
 
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
+export const unarchiveGift = defineAction(
+  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  async ({ viewer, input: id }) => {
+    const gift = await loadEditableGift(id, viewer.id);
+    if (!gift.archived) throw new ActionError('Gift is not archived');
 
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-
-    if (gift.archived) {
-      return { error: 'Gift is already archived' };
-    }
-
-    await db.gift.update({
-      where: { id },
-      data: { archived: true },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been archived` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const unarchiveGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const gift = await db.gift.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        createdById: true,
-        name: true,
-        archived: true,
-      },
-    });
-
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    const isOwner = gift.ownerId === user.id;
-    const isCreator = gift.createdById === user.id;
-    if (!isOwner && !isCreator) {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-
-    if (!gift.archived) {
-      return { error: 'Gift is not archived' };
-    }
-
+    // Unarchiving also releases any claim: the gift is going back on the list
+    // as available.
     await db.gift.update({
       where: { id },
       data: {
         archived: false,
         claimed: false,
-        claimedBy: {
-          disconnect: true,
-        },
+        claimedBy: { disconnect: true },
       },
     });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `${gift.name} has been unarchived` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
+    return { message: `${gift.name} has been unarchived` };
+  },
+);
 
-export const updateGift = async ({
-  id,
-  name,
-  description,
-  url,
-}: {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-}) => {
-  try {
-    const { user } = await getSession();
+export const updateGift = defineAction(
+  {
+    input: giftIdSchema.extend({
+      name: z.string().min(1, 'Gift name is required'),
+      description: z.string(),
+      url: z.string(),
+    }),
+    invalidates: GIFT_CACHES,
+  },
+  async ({ viewer, input }) => {
+    await loadEditableGift(input.id, viewer.id);
+    await db.gift.update({
+      where: { id: input.id },
+      data: {
+        name: input.name,
+        url: input.url,
+        description: input.description,
+      },
+    });
+    return { message: `${input.name} has been updated` };
+  },
+);
+
+export const claimGift = defineAction(
+  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  async ({ viewer, input: id }) => {
     const gift = await db.gift.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        ownerId: true,
-        createdById: true,
-      },
+      where: { id },
+      select: { name: true, ownerId: true, claimedById: true },
     });
-    const isOwner = gift?.ownerId === user.id;
-    const isCreator = gift?.createdById === user.id;
-    if (isOwner || isCreator) {
-      await db.gift.update({
-        where: {
-          id,
-        },
-        data: {
-          name,
-          url,
-          description,
-        },
-      });
-    } else {
-      return { error: 'You are not the owner or creator of this gift' };
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-  revalidateGiftRelatedCaches();
-};
 
-export const claimGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
+    if (!gift) throw new ActionError('Gift not found');
+    if (gift.claimedById)
+      throw new ActionError('This gift has already been claimed');
+    if (gift.ownerId === viewer.id)
+      throw new ActionError('You cannot claim your own gift');
+
+    await db.gift.update({
+      where: { id },
+      data: { claimed: true, claimedBy: { connect: { id: viewer.id } } },
+    });
+    return { message: `You claimed ${gift.name}` };
+  },
+);
+
+export const unclaimGift = defineAction(
+  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  async ({ viewer, input: id }) => {
     const gift = await db.gift.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        claimedBy: true,
-        ownerId: true,
-        name: true,
-      },
+      where: { id },
+      select: { name: true, claimedById: true },
     });
 
-    if (!gift) {
-      return { error: 'Gift not found' };
-    }
-
-    // determine if the gift has been claimed by someone else
-    const isClaimed = Boolean(gift?.claimedBy);
-    if (isClaimed) {
-      return { error: 'This gift has already been claimed' };
-    }
-
-    // determine if the gift is owned by the current user
-    const isOwner = gift?.ownerId === user.id;
-    if (isOwner) {
-      return { error: 'You cannot claim your own gift' };
+    if (!gift) throw new ActionError('Gift not found');
+    if (gift.claimedById !== viewer.id) {
+      throw new ActionError('You have not claimed this gift');
     }
 
     await db.gift.update({
-      where: {
-        id,
-      },
-      data: {
-        claimed: true,
-        claimedBy: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
+      where: { id },
+      data: { claimed: false, claimedBy: { disconnect: true } },
     });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `You claimed ${gift?.name}` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-export const unclaimGift = async (id: string) => {
-  try {
-    const { user } = await getSession();
-    const giftId = id;
-
-    if (!giftId) {
-      return { error: 'Gift ID is required' };
-    }
-
-    const gift = await db.gift.findUnique({
-      where: {
-        id: giftId,
-      },
-      select: {
-        claimedById: true,
-        name: true,
-      },
-    });
-
-    const isClaimed = gift?.claimedById === user.id;
-    if (!isClaimed) {
-      return { error: 'You have not claimed this gift' };
-    }
-
-    await db.gift.update({
-      where: {
-        id: giftId,
-      },
-      data: {
-        claimed: false,
-        claimedBy: {
-          disconnect: true,
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: `You unclaimed ${gift?.name}` };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
+    return { message: `You unclaimed ${gift.name}` };
+  },
+);

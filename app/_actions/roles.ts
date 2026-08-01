@@ -1,7 +1,7 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
-import { getSession, isGodmode } from '@/app/auth';
+import { z } from 'zod';
+import { defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
 
 const DEFAULT_ROLES = [
@@ -10,189 +10,109 @@ const DEFAULT_ROLES = [
   'wishlist-manager',
 ] as const;
 
-// Role management actions
-export const getAllRoles = async () => {
-  try {
-    const { user } = await getSession();
+const userRoleSchema = z.object({
+  userId: z.string().min(1, 'User is required'),
+  roleId: z.string().min(1, 'Role is required'),
+});
 
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    // Ensure expected built-in roles exist (idempotent).
-    await Promise.all(
+/**
+ * All roles, seeding the built-in ones on the way through.
+ *
+ * Note the caches invalidated by the role mutations below are `users`, not
+ * `roles` — no cache has ever declared a `roles` tag, so the four
+ * `revalidateTag('roles')` calls this file used to make were no-ops.
+ */
+export const getAllRoles = defineAction(
+  { capability: 'manage:roles' },
+  async () => {
+    await db.$transaction(
       DEFAULT_ROLES.map((name) =>
-        db.role.upsert({
-          where: { name },
-          update: {},
-          create: { name },
-        }),
+        db.role.upsert({ where: { name }, update: {}, create: { name } }),
       ),
     );
 
     const roles = await db.role.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
         users: {
-          include: {
-            user: true,
+          select: {
+            id: true,
+            user: { select: { id: true, name: true, email: true } },
           },
         },
       },
-      orderBy: {
-        name: 'asc',
-      },
+      orderBy: { name: 'asc' },
     });
 
     return { roles };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching roles' };
-  }
-};
+  },
+);
 
-export const getAllUsersForRoles = async () => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
+export const getAllUsersForRoles = defineAction(
+  { capability: 'manage:roles' },
+  async () => {
     const users = await db.user.findMany({
       select: {
         id: true,
         name: true,
         email: true,
         roles: {
-          include: {
-            role: true,
-          },
+          select: { id: true, role: { select: { id: true, name: true } } },
         },
       },
-      orderBy: {
-        name: 'asc',
-      },
+      orderBy: { name: 'asc' },
     });
-
     return { users };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong fetching users' };
-  }
-};
+  },
+);
 
-export const createRole = async (name: string) => {
-  try {
-    const { user } = await getSession();
+export const createRole = defineAction(
+  {
+    capability: 'manage:roles',
+    input: z.string().trim().min(1, 'Role name is required').max(64),
+    invalidates: ['users'],
+  },
+  async ({ input: name }) => {
+    const role = await db.role.create({ data: { name } });
+    return { role, message: `${name} created` };
+  },
+);
 
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    const role = await db.role.create({
-      data: {
-        name,
-      },
-    });
-
-    revalidateTag('roles');
-    return { role };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong creating role' };
-  }
-};
-
-export const assignRoleToUser = async (userId: string, roleId: string) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
+export const assignRoleToUser = defineAction(
+  { capability: 'manage:roles', input: userRoleSchema, invalidates: ['users'] },
+  async ({ input: { userId, roleId } }) => {
     const userRole = await db.userRole.create({
-      data: {
-        userId,
-        roleId,
-      },
-      include: {
-        user: true,
-        role: true,
+      data: { userId, roleId },
+      select: {
+        id: true,
+        user: { select: { id: true, name: true, email: true } },
+        role: { select: { id: true, name: true } },
       },
     });
+    return { userRole, message: 'Role assigned' };
+  },
+);
 
-    revalidateTag('roles');
-    revalidateTag('users');
-    return { userRole };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong assigning role' };
-  }
-};
+export const removeRoleFromUser = defineAction(
+  { capability: 'manage:roles', input: userRoleSchema, invalidates: ['users'] },
+  async ({ input: { userId, roleId } }) => {
+    await db.userRole.deleteMany({ where: { userId, roleId } });
+    return { message: 'Role removed' };
+  },
+);
 
-export const removeRoleFromUser = async (userId: string, roleId: string) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    await db.userRole.deleteMany({
-      where: {
-        userId,
-        roleId,
-      },
-    });
-
-    revalidateTag('roles');
-    revalidateTag('users');
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong removing role' };
-  }
-};
-
-export const deleteRole = async (roleId: string) => {
-  try {
-    const { user } = await getSession();
-
-    if (!isGodmode(user)) {
-      return { error: 'Unauthorized: Admin access required' };
-    }
-
-    // First remove all user assignments for this role
-    await db.userRole.deleteMany({
-      where: {
-        roleId,
-      },
-    });
-
-    // Then delete the role
-    await db.role.delete({
-      where: {
-        id: roleId,
-      },
-    });
-
-    revalidateTag('roles');
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong deleting role' };
-  }
-};
+export const deleteRole = defineAction(
+  {
+    capability: 'manage:roles',
+    input: z.string().min(1, 'Role is required'),
+    invalidates: ['users'],
+  },
+  async ({ input: roleId }) => {
+    await db.$transaction([
+      db.userRole.deleteMany({ where: { roleId } }),
+      db.role.delete({ where: { id: roleId } }),
+    ]);
+    return { message: 'Role deleted' };
+  },
+);
