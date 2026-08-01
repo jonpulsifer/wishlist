@@ -5,10 +5,12 @@ import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
 
+// Reached from the invite route handler as well as from actions, so this stays
+// on `revalidateTag` — `updateTag` is only legal inside a Server Action.
 export const revalidateGiftRelatedCaches = async () => {
-  revalidateTag('gifts');
-  revalidateTag('users');
-  revalidateTag('wishlists');
+  revalidateTag('gifts', 'max');
+  revalidateTag('users', 'max');
+  revalidateTag('wishlists', 'max');
 };
 
 const GIFT_CACHES = ['gifts', 'users', 'wishlists'] as const;

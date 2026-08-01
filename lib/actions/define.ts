@@ -11,7 +11,7 @@
  * files in `app/_actions/`.
  */
 
-import { revalidateTag } from 'next/cache';
+import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import type { Capability } from '@/lib/auth/capabilities';
 import {
@@ -138,7 +138,10 @@ export function defineAction<
       const payload = await handler({ viewer, input });
 
       for (const tag of config.invalidates ?? []) {
-        revalidateTag(tag);
+        // `updateTag` (not `revalidateTag`) so the viewer sees their own write
+        // immediately instead of the stale-while-revalidate copy. Safe because
+        // every `defineAction` consumer is a 'use server' action.
+        updateTag(tag);
       }
 
       return { success: true, ...payload } as ActionSuccess<Payload>;
