@@ -14,6 +14,7 @@ import {
   type GiftDetail,
   giftRowSelect,
   type PersonCard,
+  type PersonRef,
   type Profile,
   personRefSelect,
   profileSelect,
@@ -36,6 +37,18 @@ const getPeopleForNewGiftModal = unstable_cache(
       orderBy: { name: 'asc' },
     }),
   ['peopleForNewGiftModal'],
+  { tags: ['users', 'wishlists'] },
+);
+
+/** People the viewer may name — the Secret Santa participant picker. */
+const getVisiblePeopleRefs = unstable_cache(
+  async (viewerId: string): Promise<PersonRef[]> =>
+    prisma.user.findMany({
+      select: personRefSelect,
+      where: visiblePeopleWhere(viewerId),
+      orderBy: { name: 'asc' },
+    }),
+  ['visiblePeopleRefs'],
   { tags: ['users', 'wishlists'] },
 );
 
@@ -276,6 +289,7 @@ export {
   getSortedVisibleGiftsForUser,
   getUsersForPeoplePage,
   getVisibleGiftsForUserById,
+  getVisiblePeopleRefs,
   getVisibleProfile,
   getWishlistsWithMembers,
 };

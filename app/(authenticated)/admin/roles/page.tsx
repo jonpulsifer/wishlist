@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation';
-import { getAllRoles, getAllUsersForRoles } from '@/app/_actions/roles';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -10,45 +8,25 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { currentViewer } from '@/lib/auth/viewer';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
+import {
+  ensureBuiltInRoles,
+  getAllRoles,
+  getAllUsersForRoles,
+} from '@/lib/db/queries-admin';
 import { RoleManager } from './role-manager';
 
 export default async function AdminRolesPage() {
-  const viewer = await currentViewer();
-  if (!viewer?.can('manage:roles')) {
-    redirect('/');
-  }
+  const viewer = await requireViewerOrRedirect('manage:roles');
 
-  const [rolesResult, usersResult] = await Promise.all([
-    getAllRoles(),
-    getAllUsersForRoles(),
+  // The built-in roles are created here rather than inside the read, which is
+  // where this upsert used to hide.
+  await ensureBuiltInRoles(viewer);
+
+  const [roles, users] = await Promise.all([
+    getAllRoles(viewer),
+    getAllUsersForRoles(viewer),
   ]);
-
-  if (!rolesResult.success) {
-    return (
-      <SidebarInset>
-        <AppHeader>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Roles</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </AppHeader>
-        <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-          <p className="text-destructive">Error: {rolesResult.error}</p>
-        </div>
-      </SidebarInset>
-    );
-  }
-
-  const roles = rolesResult.roles;
-  const users = usersResult.success ? usersResult.users : [];
 
   return (
     <SidebarInset>

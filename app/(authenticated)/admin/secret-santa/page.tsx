@@ -1,9 +1,3 @@
-import { redirect } from 'next/navigation';
-import {
-  getAllSecretSantaEventsAdmin,
-  getAllUsersForExclusions,
-  getSecretSantaExclusions,
-} from '@/app/_actions/secret-santa';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -14,52 +8,26 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { currentViewer } from '@/lib/auth/viewer';
+import { requireViewerOrRedirect } from '@/lib/auth/viewer';
+import {
+  getAllPeople,
+  getAllSecretSantaEvents,
+  getSecretSantaExclusions,
+} from '@/lib/db/queries-admin';
 import { SecretSantaEventList } from './event-list';
 import { ExclusionManager } from './exclusion-manager';
 
 export default async function AdminSecretSantaPage() {
-  // Same capability the actions below require, so a role that reaches this page
-  // can actually use it. This page used to admit `secret-santa-manager` while
-  // every action it calls demanded `godmode`.
-  const viewer = await currentViewer();
-  if (!viewer?.can('manage:secret-santa')) {
-    redirect('/');
-  }
+  // Same capability the mutations on this screen require, so a role that reaches
+  // the page can actually use it. This page used to admit `secret-santa-manager`
+  // while every action it called demanded `godmode`.
+  const viewer = await requireViewerOrRedirect('manage:secret-santa');
 
-  const [eventsResult, exclusionsResult, usersResult] = await Promise.all([
-    getAllSecretSantaEventsAdmin(),
-    getSecretSantaExclusions(),
-    getAllUsersForExclusions(),
+  const [events, exclusions, people] = await Promise.all([
+    getAllSecretSantaEvents(viewer),
+    getSecretSantaExclusions(viewer),
+    getAllPeople(viewer, 'manage:secret-santa'),
   ]);
-
-  if (!eventsResult.success) {
-    return (
-      <SidebarInset>
-        <AppHeader>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Secret Santa</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </AppHeader>
-        <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-          <p className="text-destructive">Error: {eventsResult.error}</p>
-        </div>
-      </SidebarInset>
-    );
-  }
-
-  const exclusions = exclusionsResult.success
-    ? exclusionsResult.exclusions
-    : [];
-  const users = usersResult.success ? usersResult.users : [];
 
   return (
     <SidebarInset>
@@ -86,9 +54,9 @@ export default async function AdminSecretSantaPage() {
           </p>
         </div>
 
-        <ExclusionManager exclusions={exclusions} users={users} />
+        <ExclusionManager exclusions={exclusions} users={people} />
 
-        <SecretSantaEventList events={eventsResult.events} />
+        <SecretSantaEventList events={events} />
       </div>
     </SidebarInset>
   );

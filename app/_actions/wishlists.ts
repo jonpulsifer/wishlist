@@ -48,12 +48,3 @@ export const leaveWishlist = defineAction(
     return { message: 'Successfully left wishlist' };
   },
 );
-
-export const handleWishlistAction = async (
-  wishlistId: string,
-  isMember: boolean,
-  pin?: string,
-) => {
-  if (isMember) return leaveWishlist(wishlistId);
-  return joinWishlist({ wishlistId, pin });
-};
