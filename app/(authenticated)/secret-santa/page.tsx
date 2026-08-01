@@ -19,6 +19,7 @@ import {
 import { SidebarInset } from '@/components/ui/sidebar';
 import db from '@/lib/db/client';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
+import { partitionEventsByYear } from '@/lib/secret-santa/events';
 
 export default async function SecretSantaPage() {
   const { user } = await getSession();
@@ -49,18 +50,11 @@ export default async function SecretSantaPage() {
   // Create a map of assignments by eventId for easy lookup
   const assignmentsByEvent = new Map(assignments.map((a) => [a.eventId, a]));
 
-  // Sort events by createdAt (newest first) and separate by year
-  const currentYear = new Date().getFullYear();
-  const sortedEvents = [...events].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
-
-  const currentEvents = sortedEvents.filter(
-    (event) => new Date(event.createdAt).getFullYear() === currentYear,
-  );
-  const pastEvents = sortedEvents.filter(
-    (event) => new Date(event.createdAt).getFullYear() < currentYear,
-  );
+  const {
+    current: currentEvents,
+    past: pastEvents,
+    currentYear,
+  } = partitionEventsByYear(events);
 
   return (
     <SidebarInset>
@@ -111,9 +105,7 @@ export default async function SecretSantaPage() {
                 <div className="grid gap-4">
                   {currentEvents.map((event) => {
                     const assignment = assignmentsByEvent.get(event.id);
-                    const hasAssignments = event.participants.some(
-                      (p) => p.assignedToId,
-                    );
+                    const { hasAssignments } = event;
 
                     return (
                       <Card key={event.id}>
@@ -124,7 +116,7 @@ export default async function SecretSantaPage() {
                               <CardDescription className="flex items-center gap-4 mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3.5 w-3.5" />
-                                  {event.participants.length} participants
+                                  {event.participantCount} participants
                                 </span>
                                 {event.isParticipating && (
                                   <span className="text-green-600 dark:text-green-400 font-medium">
@@ -254,7 +246,7 @@ export default async function SecretSantaPage() {
                               <CardDescription className="flex items-center gap-4 mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3.5 w-3.5" />
-                                  {event.participants.length} participants
+                                  {event.participantCount} participants
                                 </span>
                                 <span>{eventYear}</span>
                               </CardDescription>

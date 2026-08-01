@@ -66,7 +66,7 @@ export function SecretSantaEventList({ events }: EventListProps) {
 
     const result = await deleteSecretSantaEvent(eventId);
 
-    if (result.error) {
+    if (!result.success) {
       toast({
         variant: 'destructive',
         title: 'Error',

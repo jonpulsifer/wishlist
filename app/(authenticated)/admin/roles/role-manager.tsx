@@ -92,7 +92,7 @@ export function RoleManager({ roles, users }: RoleManagerProps) {
 
     startTransition(async () => {
       const result = await createRole(newRoleName.trim());
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
       } else {
         toast.success('Role created successfully');
@@ -109,8 +109,11 @@ export function RoleManager({ roles, users }: RoleManagerProps) {
     }
 
     startTransition(async () => {
-      const result = await assignRoleToUser(selectedUser, selectedRole);
-      if (result.error) {
+      const result = await assignRoleToUser({
+        userId: selectedUser,
+        roleId: selectedRole,
+      });
+      if (!result.success) {
         toast.error(result.error);
       } else {
         toast.success('Role assigned successfully');
@@ -123,8 +126,8 @@ export function RoleManager({ roles, users }: RoleManagerProps) {
 
   const handleRemoveRole = (userId: string, roleId: string) => {
     startTransition(async () => {
-      const result = await removeRoleFromUser(userId, roleId);
-      if (result.error) {
+      const result = await removeRoleFromUser({ userId, roleId });
+      if (!result.success) {
         toast.error(result.error);
       } else {
         toast.success('Role removed successfully');
@@ -135,7 +138,7 @@ export function RoleManager({ roles, users }: RoleManagerProps) {
   const handleDeleteRole = (roleId: string) => {
     startTransition(async () => {
       const result = await deleteRole(roleId);
-      if (result.error) {
+      if (!result.success) {
         toast.error(result.error);
       } else {
         toast.success('Role deleted successfully');

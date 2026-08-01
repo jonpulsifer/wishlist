@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { getAllRoles, getAllUsersForRoles } from '@/app/_actions/roles';
-import { getSession, isGodmode } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -11,12 +10,12 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { currentViewer } from '@/lib/auth/viewer';
 import { RoleManager } from './role-manager';
 
 export default async function AdminRolesPage() {
-  const { user } = await getSession();
-
-  if (!isGodmode(user)) {
+  const viewer = await currentViewer();
+  if (!viewer?.can('manage:roles')) {
     redirect('/');
   }
 
@@ -25,7 +24,7 @@ export default async function AdminRolesPage() {
     getAllUsersForRoles(),
   ]);
 
-  if (rolesResult.error || !rolesResult.roles) {
+  if (!rolesResult.success) {
     return (
       <SidebarInset>
         <AppHeader>
@@ -48,8 +47,8 @@ export default async function AdminRolesPage() {
     );
   }
 
-  const roles = rolesResult.roles || [];
-  const users = usersResult.users || [];
+  const roles = rolesResult.roles;
+  const users = usersResult.success ? usersResult.users : [];
 
   return (
     <SidebarInset>

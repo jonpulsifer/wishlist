@@ -1,87 +1,71 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
-import { getSession } from '@/app/auth';
+import { z } from 'zod';
+import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
+import { visibleProfileWhere } from '@/lib/db/visibility';
 
-export const updateUser = async (
-  id: string,
-  data: {
-    name?: string;
-    address?: string;
-    sizes: {
-      pants?: string;
-      shirt?: string;
-      shoes?: string;
-    };
-  },
-) => {
-  try {
-    const updateData: any = {};
+const optionalText = z.string().max(255).optional();
 
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.address !== undefined) updateData.address = data.address;
-    if (data.sizes.pants !== undefined) updateData.pant_size = data.sizes.pants;
-    if (data.sizes.shirt !== undefined)
-      updateData.shirt_size = data.sizes.shirt;
-    if (data.sizes.shoes !== undefined) updateData.shoe_size = data.sizes.shoes;
+const updateUserSchema = z.object({
+  name: optionalText,
+  address: optionalText,
+  sizes: z.object({
+    pants: optionalText,
+    shirt: optionalText,
+    shoes: optionalText,
+  }),
+});
 
+/**
+ * Update the viewer's own profile.
+ *
+ * The previous version took a user id from the caller and never resolved a
+ * session, so any client could write to any profile.
+ */
+export const updateUser = defineAction(
+  { input: updateUserSchema, invalidates: ['users'] },
+  async ({ viewer, input }) => {
     await db.user.update({
-      where: { id },
-      data: updateData,
+      where: { id: viewer.id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.address !== undefined ? { address: input.address } : {}),
+        ...(input.sizes.pants !== undefined
+          ? { pant_size: input.sizes.pants }
+          : {}),
+        ...(input.sizes.shirt !== undefined
+          ? { shirt_size: input.sizes.shirt }
+          : {}),
+        ...(input.sizes.shoes !== undefined
+          ? { shoe_size: input.sizes.shoes }
+          : {}),
+      },
     });
 
-    // Revalidate user-related caches
-    revalidateTag('users');
+    return { message: 'Profile updated' };
+  },
+);
 
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
-
-// AI Recommendations actions
-export const getAIRecommendationsForUser = async (targetUserId: string) => {
-  try {
-    const { user } = await getSession();
-
-    // Verify that the current user has access to this person
+export const getAIRecommendationsForUser = defineAction(
+  { input: z.string().min(1, 'User is required') },
+  async ({ viewer, input: targetUserId }) => {
     const targetUser = await db.user.findFirst({
-      where: {
-        id: targetUserId,
-        wishlists: {
-          some: {
-            members: { some: { id: user.id } },
-          },
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
+      where: visibleProfileWhere(viewer.id, targetUserId),
+      select: { id: true, name: true, email: true },
     });
 
     if (!targetUser) {
-      return { error: 'User not found or you do not have access' };
+      throw new ActionError('User not found or you do not have access');
     }
 
-    // Dynamically import the AI module to avoid loading it unnecessarily
+    // Imported lazily so the OpenAI client isn't pulled into every request.
     const { getRecommendationsForHomePage } = await import('@/lib/ai');
-    const recommendations = await getRecommendationsForHomePage(targetUserId);
+    const recommendations = await getRecommendationsForHomePage(
+      targetUserId,
+      viewer.id,
+    );
 
-    return {
-      success: true,
-      recommendations,
-      targetUser,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong getting AI recommendations' };
-  }
-};
+    return { recommendations, targetUser };
+  },
+);

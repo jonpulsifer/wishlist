@@ -13,7 +13,9 @@
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
-    "postinstall": "prisma generate --no-hints"
+    "postinstall": "prisma generate --no-hints",
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.1",

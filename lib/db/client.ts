@@ -2,7 +2,12 @@ import { PrismaClient } from '@/prisma/generated/client';
 
 const prismaClientSingleton = () => {
   return new PrismaClient({
-    log: ['query', 'info', 'warn', 'error'],
+    // Query logging is a development aid; in production it writes every
+    // statement (and its parameters) to the server log.
+    log:
+      process.env.NODE_ENV === 'production'
+        ? ['warn', 'error']
+        : ['query', 'info', 'warn', 'error'],
   });
 };
 

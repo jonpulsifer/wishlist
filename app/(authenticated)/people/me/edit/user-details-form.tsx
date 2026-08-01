@@ -60,9 +60,9 @@ export function UserDetailsForm({ user }: { user: any }) {
   async function onSubmit(data: FormValues) {
     setIsLoading(true);
     try {
-      const result = await updateUser(user.id, data);
+      const result = await updateUser(data);
 
-      if (result.error) {
+      if (!result.success) {
         toast.error('Failed to update profile', {
           description: result.error,
         });

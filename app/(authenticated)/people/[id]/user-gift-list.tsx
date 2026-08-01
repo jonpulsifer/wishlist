@@ -13,11 +13,10 @@ import {
 } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
-import type { Gift } from '@/prisma/generated/client';
+import type { GiftCard } from '@/lib/db/projections';
 
 interface UserGiftListProps {
-  gifts: GiftWithOwnerAndClaimedByAndCreatedBy[];
+  gifts: GiftCard[];
   currentUserId: string;
 }
 
@@ -35,17 +34,19 @@ export function UserGiftList({
     (g) => g.archived && g.ownerId === currentUserId,
   );
 
-  async function handleClaimToggle(gift: Gift) {
+  async function handleClaimToggle(gift: GiftCard) {
+    const toggle = (g: GiftCard) => ({
+      ...g,
+      claimed: !g.claimed,
+      claimedByViewer: !g.claimedByViewer,
+    });
+
     try {
       startTransition(() => {
-        setGifts((prev) =>
-          prev.map((g) =>
-            g.id === gift.id ? { ...g, claimed: !g.claimed } : g,
-          ),
-        );
+        setGifts((prev) => prev.map((g) => (g.id === gift.id ? toggle(g) : g)));
       });
 
-      const result = await (gift.claimed
+      const result = await (gift.claimedByViewer
         ? unclaimGift(gift.id)
         : claimGift(gift.id));
 
@@ -57,14 +58,12 @@ export function UserGiftList({
       } else {
         startTransition(() => {
           setGifts((prev) =>
-            prev.map((g) =>
-              g.id === gift.id ? { ...g, claimed: !g.claimed } : g,
-            ),
+            prev.map((g) => (g.id === gift.id ? toggle(g) : g)),
           );
         });
         toast({
           title: 'Failed to update gift',
-          description: result.message,
+          description: result.error,
           variant: 'destructive',
         });
       }
@@ -91,7 +90,7 @@ export function UserGiftList({
         });
         toast({
           title: 'Failed to delete gift',
-          description: result.message,
+          description: result.error,
           variant: 'destructive',
         });
       }
@@ -104,7 +103,7 @@ export function UserGiftList({
     }
   }
 
-  async function handleArchiveToggle(gift: Gift) {
+  async function handleArchiveToggle(gift: GiftCard) {
     try {
       startTransition(() => {
         setGifts((prev) =>
@@ -146,7 +145,7 @@ export function UserGiftList({
     }
   }
 
-  const renderGiftRow = (gift: GiftWithOwnerAndClaimedByAndCreatedBy) => {
+  const renderGiftRow = (gift: GiftCard) => {
     const isOwner = gift.ownerId === currentUserId;
 
     return (
@@ -209,12 +208,17 @@ export function UserGiftList({
             </>
           ) : (
             <Button
-              variant={gift.claimed ? 'destructive' : 'default'}
+              variant={gift.claimedByViewer ? 'destructive' : 'default'}
               onClick={() => handleClaimToggle(gift)}
               size="sm"
               className="w-20 md:w-24"
+              disabled={gift.claimed && !gift.claimedByViewer}
             >
-              {gift.claimed ? 'Unclaim' : 'Claim'}
+              {gift.claimedByViewer
+                ? 'Unclaim'
+                : gift.claimed
+                  ? 'Claimed'
+                  : 'Claim'}
             </Button>
           )}
         </div>

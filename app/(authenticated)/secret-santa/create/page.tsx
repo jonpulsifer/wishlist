@@ -3,14 +3,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import {
-  addParticipantsToSecretSantaEvent,
   assignSecretSantaParticipants,
-  createSecretSantaEvent,
   getPeopleForSecretSanta,
+  openSecretSantaEvent,
 } from '@/app/_actions/secret-santa';
 import { AppHeader } from '@/components/app-header';
 import {
@@ -52,23 +51,20 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
+import type { PersonRef } from '@/lib/db/projections';
+import {
+  eventNameSchema,
+  MINIMUM_PARTICIPANTS,
+} from '@/lib/secret-santa/schema';
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-});
-
-interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-}
+// The same schema the action validates against, rather than a second copy that
+// only ever ran in the browser.
+const formSchema = z.object({ name: eventNameSchema });
 
 export default function CreateSecretSantaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [eventId, setEventId] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<PersonRef[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const router = useRouter();
@@ -81,13 +77,13 @@ export default function CreateSecretSantaPage() {
     },
   });
 
-  // Step 1: Create the event
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
-    try {
-      const result = await createSecretSantaEvent(data.name);
-
-      if (result.error) {
+  // The wizard is local state only. Nothing is written until the final step, so
+  // abandoning the flow can no longer leave an Event with no Participants.
+  useEffect(() => {
+    let cancelled = false;
+    getPeopleForSecretSanta().then((result) => {
+      if (cancelled) return;
+      if (!result.success) {
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -95,50 +91,18 @@ export default function CreateSecretSantaPage() {
         });
         return;
       }
+      setUsers(result.people);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
 
-      if (result.id) {
-        setEventId(result.id);
-        await loadPeople();
-        setStep(2);
-      }
-    } catch (error) {
-      console.error('Error creating event:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'An unexpected error occurred',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  // Step 1: name the event.
+  const onSubmit = (_data: z.infer<typeof formSchema>) => {
+    setStep(2);
   };
 
-  // Load people from wishlists
-  const loadPeople = async () => {
-    try {
-      const result = await getPeopleForSecretSanta();
-      if (result.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: result.error,
-        });
-        return;
-      }
-      if (result.people) {
-        setUsers(result.people);
-      }
-    } catch (error) {
-      console.error('Error loading people:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load people',
-      });
-    }
-  };
-
-  // Toggle user selection
   const toggleUser = (userId: string) => {
     setSelectedUsers((prev) =>
       prev.includes(userId)
@@ -147,53 +111,35 @@ export default function CreateSecretSantaPage() {
     );
   };
 
-  // Step 2: Add participants
-  const handleAddParticipants = async () => {
-    if (!eventId) return;
-
+  // Step 3: one commit — create the event with its participants, then draw.
+  const handleConfirmAssign = async () => {
     setIsLoading(true);
     try {
-      const result = await addParticipantsToSecretSantaEvent(
-        eventId,
-        selectedUsers,
-      );
+      const created = await openSecretSantaEvent({
+        name: form.getValues('name'),
+        participantIds: selectedUsers,
+      });
 
-      if (result.error) {
+      if (!created.success) {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: result.error,
+          description: created.error,
         });
         return;
       }
 
-      setStep(3);
-    } catch (error) {
-      console.error('Error adding participants:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add participants',
+      const assigned = await assignSecretSantaParticipants({
+        eventId: created.id,
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Step 3: Confirm and assign
-  const handleConfirmAssign = async () => {
-    if (!eventId) return;
-
-    setIsLoading(true);
-    try {
-      const result = await assignSecretSantaParticipants(eventId);
-
-      if (result.error) {
+      if (!assigned.success) {
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: result.error,
+          title: 'Event created, but assignments failed',
+          description: assigned.error,
         });
+        router.push('/secret-santa');
         return;
       }
 
@@ -204,13 +150,6 @@ export default function CreateSecretSantaPage() {
 
       router.push('/secret-santa');
       router.refresh();
-    } catch (error) {
-      console.error('Error assigning participants:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to assign participants',
-      });
     } finally {
       setIsLoading(false);
       setConfirmDialogOpen(false);
@@ -317,16 +256,7 @@ export default function CreateSecretSantaPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Continue to Participants'
-                    )}
-                  </Button>
+                  <Button type="submit">Continue to Participants</Button>
                 </form>
               </Form>
             </CardContent>
@@ -400,17 +330,10 @@ export default function CreateSecretSantaPage() {
                 Back
               </Button>
               <Button
-                onClick={handleAddParticipants}
-                disabled={selectedUsers.length < 3 || isLoading}
+                onClick={() => setStep(3)}
+                disabled={selectedUsers.length < MINIMUM_PARTICIPANTS}
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Continue to Review'
-                )}
+                Continue to Review
               </Button>
             </CardFooter>
           </Card>

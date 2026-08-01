@@ -64,7 +64,7 @@ export function AIRecommendations({ people }: Props) {
       const result: Awaited<ReturnType<typeof getAIRecommendationsForUser>> =
         await getAIRecommendationsForUser(selectedPersonId);
 
-      if ('error' in result) {
+      if (!result.success) {
         toast({
           title: 'Error',
           description: result.error,
@@ -113,12 +113,12 @@ export function AIRecommendations({ people }: Props) {
       url: '',
     };
 
-    const result = await addGift(null, formData);
+    const result = await addGift(formData);
 
-    if ('error' in result) {
+    if (!result.success) {
       toast({
         title: 'Error adding gift',
-        description: result.error || 'Failed to add gift',
+        description: result.error,
         variant: 'destructive',
       });
       setRecommendations((prev) =>

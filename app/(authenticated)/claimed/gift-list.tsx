@@ -4,18 +4,12 @@ import { startTransition, useOptimistic } from 'react';
 import { unclaimGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Prisma } from '@/prisma/generated/client';
-
-type ClaimedGift = Prisma.GiftGetPayload<{
-  include: {
-    owner: true;
-  };
-}>;
+import type { GiftCard } from '@/lib/db/projections';
 
 export default function GiftList({
   gifts: initialGifts,
 }: {
-  gifts: ClaimedGift[];
+  gifts: GiftCard[];
 }) {
   const { toast } = useToast();
   const [gifts, setGifts] = useOptimistic(initialGifts);

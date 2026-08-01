@@ -1,335 +1,151 @@
+/**
+ * Cached reads.
+ *
+ * Every query here composes its `where` clause from `./visibility` rather than
+ * restating the rules, and selects through `./projections` rather than
+ * `include: true`. Six exports that no caller used have been removed, three of
+ * which were entirely unscoped.
+ */
+
 import { unstable_cache } from 'next/cache';
 import prisma from './client';
+import {
+  type GiftCard,
+  type GiftDetail,
+  giftRowSelect,
+  type PersonCard,
+  type Profile,
+  personRefSelect,
+  profileSelect,
+  toGiftCard,
+} from './projections';
+import {
+  claimedByViewerWhere,
+  visibleGiftCountWhere,
+  visibleGiftsWhere,
+  visiblePeopleWhere,
+  visibleProfileWhere,
+} from './visibility';
 
-const CURRENT_YEAR = new Date().getFullYear();
-const currentYearFilter = {
-  createdAt: {
-    gte: new Date(`${CURRENT_YEAR - 2}-01-01`),
-    lt: new Date(`${CURRENT_YEAR + 1}-01-01`),
-  },
-};
-
+/** People the viewer may add a Gift for. */
 const getPeopleForNewGiftModal = unstable_cache(
-  async (userId: string) =>
+  async (viewerId: string) =>
     prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-      where: {
-        wishlists: {
-          some: {
-            members: { some: { id: userId } },
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
+      select: { id: true, name: true, email: true },
+      where: visiblePeopleWhere(viewerId),
+      orderBy: { name: 'asc' },
     }),
   ['peopleForNewGiftModal'],
-  {
-    tags: ['users'],
-  },
+  { tags: ['users', 'wishlists'] },
 );
 
-const getUsersWithGiftCount = unstable_cache(
-  async (id: string) =>
-    await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        _count: {
-          select: {
-            gifts: {
-              where: {
-                archived: false,
-                ...currentYearFilter,
-                AND: {
-                  OR: [
-                    { claimed: false },
-                    {
-                      claimed: true,
-                      claimedBy: {
-                        id,
-                      },
-                    },
-                    { createdBy: { id } },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
-      where: {
-        wishlists: {
-          some: {
-            members: {
-              some: {
-                id,
-              },
-            },
-          },
-        },
-        NOT: {
-          id,
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    }),
-  ['usersWithGiftCount'],
-  { tags: ['users', 'gifts'] },
-);
-
+/** All Wishlists, with members. Membership redaction happens at the call site. */
 const getWishlistsWithMembers = unstable_cache(
   async () =>
     prisma.wishlist.findMany({
       select: {
         id: true,
         name: true,
-        members: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        members: { select: { id: true, name: true, email: true } },
       },
     }),
   ['wishlistsWithMembers'],
   { tags: ['wishlists', 'users'] },
 );
 
-const getWishlistsWithMemberIds = unstable_cache(
-  async () =>
-    prisma.wishlist.findMany({
-      select: {
-        id: true,
-        name: true,
-        members: {
-          select: {
-            id: true,
-          },
-        },
-        _count: {
-          select: {
-            members: true,
-            gifts: {
-              where: {
-                archived: false,
-                ...currentYearFilter,
-              },
-            },
-          },
-        },
-      },
+/**
+ * A person's profile, scoped to the viewer.
+ *
+ * Returns `null` for someone the viewer shares no Wishlist with. This used to be
+ * a bare `findUnique`, so any signed-in viewer with a uuid could read a
+ * stranger's shipping address and sizes.
+ */
+const getVisibleProfile = unstable_cache(
+  async (profileId: string, viewerId: string): Promise<Profile | null> =>
+    prisma.user.findFirst({
+      where: visibleProfileWhere(viewerId, profileId),
+      select: profileSelect,
     }),
-  ['wishlists'],
-  {
-    tags: ['wishlists', 'users', 'gifts'],
-  },
+  ['visibleProfile'],
+  { tags: ['users', 'wishlists'] },
 );
 
-const getUsers = unstable_cache(async () => prisma.user.findMany(), ['users'], {
-  tags: ['users'],
-});
-
-const getUserById = unstable_cache(
-  async (id: string) => prisma.user.findUnique({ where: { id } }),
-  ['userById'],
+/** The viewer's own profile, for the edit form. */
+const getOwnProfile = unstable_cache(
+  async (viewerId: string): Promise<Profile | null> =>
+    prisma.user.findUnique({ where: { id: viewerId }, select: profileSelect }),
+  ['ownProfile'],
   { tags: ['users'] },
 );
 
-// Gets user with ALL gifts (including archived) for AI recommendations
-const getFullUserById = unstable_cache(
-  async (id: string) =>
-    prisma.user.findUnique({
-      where: { id },
-      include: {
-        wishlists: true,
-        secretSantaParticipations: true,
-        gifts: true, // Includes ALL gifts (archived and non-archived)
+/** A person plus everything the AI recommender reads. Viewer-scoped. */
+const getFullUserForRecommendations = unstable_cache(
+  async (profileId: string, viewerId: string) =>
+    prisma.user.findFirst({
+      where: visibleProfileWhere(viewerId, profileId),
+      select: {
+        ...profileSelect,
+        wishlists: { select: { id: true, name: true } },
+        gifts: {
+          select: { id: true, name: true, description: true, url: true },
+        },
       },
     }),
-  ['fullUserById'],
+  ['fullUserForRecommendations'],
   { tags: ['users', 'gifts', 'wishlists'] },
 );
 
+/** Gifts on one person's profile. */
 const getVisibleGiftsForUserById = unstable_cache(
-  async (id: string, currentUserId: string) =>
-    prisma.gift.findMany({
-      where: {
-        // Only filter out archived gifts when viewing someone else's profile
-        ...(currentUserId !== id && { archived: false }),
-        ownerId: id,
-        createdById: currentUserId === id ? id : undefined,
-        ...currentYearFilter,
-        AND: {
-          OR: [
-            { claimed: false },
-            {
-              claimed: true,
-              claimedBy: {
-                id: currentUserId,
-              },
-            },
-            { createdBy: { id: currentUserId } },
-          ],
-        },
-      },
-      include: {
-        owner: true,
-        claimedBy: true,
-        createdBy: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    }),
+  async (profileId: string, viewerId: string): Promise<GiftCard[]> => {
+    const rows = await prisma.gift.findMany({
+      where: visibleGiftsWhere(viewerId, { ownerId: profileId }),
+      select: giftRowSelect,
+      orderBy: { name: 'asc' },
+    });
+    return rows.map((row) => toGiftCard(row, viewerId));
+  },
   ['visibleGiftsForUserById'],
-  { tags: ['gifts', 'users'] },
+  { tags: ['gifts', 'users', 'wishlists'] },
 );
 
+/** The People index. */
 const getUsersForPeoplePage = unstable_cache(
-  async (currentUserId: string) =>
-    prisma.user.findMany({
+  async (viewerId: string): Promise<PersonCard[]> => {
+    const rows = await prisma.user.findMany({
       select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
+        ...personRefSelect,
         _count: {
-          select: {
-            gifts: {
-              where: {
-                archived: false,
-                ...currentYearFilter,
-                AND: {
-                  OR: [
-                    { claimed: false },
-                    {
-                      claimed: true,
-                      claimedBy: {
-                        id: currentUserId,
-                      },
-                    },
-                    { createdBy: { id: currentUserId } },
-                  ],
-                },
-              },
-            },
-          },
+          select: { gifts: { where: visibleGiftCountWhere(viewerId) } },
         },
       },
-      where: {
-        wishlists: {
-          some: {
-            members: { some: { id: currentUserId } },
-          },
-        },
-        AND: {
-          NOT: {
-            id: currentUserId,
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    }),
+      where: visiblePeopleWhere(viewerId, { excludeSelf: true }),
+      orderBy: { name: 'asc' },
+    });
+    return rows.map(({ _count, ...person }) => ({
+      ...person,
+      giftCount: _count.gifts,
+    }));
+  },
   ['people'],
   { tags: ['users', 'gifts', 'wishlists'] },
 );
 
-const getGiftsWithOwnerClaimedByAndCreatedBy = unstable_cache(
-  async () =>
-    prisma.gift.findMany({
-      select: {
-        id: true,
-        name: true,
-        ownerId: true,
-        createdById: true,
-        claimedById: true,
-        url: true,
-        description: true,
-        owner: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true, email: true } },
-        claimedBy: { select: { id: true, name: true, email: true } },
-      },
-      where: {
-        archived: false,
-        ...currentYearFilter,
-      },
-    }),
-  ['gifts'],
-  {
-    tags: ['gifts', 'users'],
-  },
-);
-
+/** Gifts the viewer has claimed. */
 const getClaimedGiftsForMe = unstable_cache(
-  async (currentUserId: string) =>
-    prisma.gift.findMany({
-      where: {
-        archived: false,
-        wishlists: {
-          some: {
-            members: { some: { id: currentUserId } },
-          },
-        },
-        claimedById: {
-          equals: currentUserId,
-        },
-        ...currentYearFilter,
-      },
-      include: {
-        owner: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    }),
+  async (viewerId: string): Promise<GiftCard[]> => {
+    const rows = await prisma.gift.findMany({
+      where: claimedByViewerWhere(viewerId),
+      select: giftRowSelect,
+      orderBy: { name: 'asc' },
+    });
+    return rows.map((row) => toGiftCard(row, viewerId));
+  },
   ['claimedGiftsForMe'],
-  {
-    tags: ['gifts', 'users', 'wishlists'],
-  },
+  { tags: ['gifts', 'users', 'wishlists'] },
 );
 
-const getGiftWithOwnerClaimedByAndCreatedBy = unstable_cache(
-  async (id: string) =>
-    prisma.gift.findUniqueOrThrow({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        ownerId: true,
-        createdById: true,
-        claimedById: true,
-        url: true,
-        description: true,
-        owner: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true, email: true } },
-        claimedBy: { select: { id: true, name: true, email: true } },
-      },
-    }),
-  ['fullGiftById'],
-  {
-    tags: ['gifts'],
-  },
-);
-
-const getGiftById = unstable_cache(
-  async (id: string) => prisma.gift.findUniqueOrThrow({ where: { id } }),
-  ['giftById'],
-  { tags: ['gifts'] },
-);
-
+/** The browse list. */
 const getSortedVisibleGiftsForUser = unstable_cache(
   async ({
     column = 'name',
@@ -339,141 +155,111 @@ const getSortedVisibleGiftsForUser = unstable_cache(
     direction?: 'asc' | 'desc';
     column?: 'name' | 'owner';
     userId: string;
-  }) => {
+  }): Promise<GiftCard[]> => {
     const orderBy =
       column === 'owner' ? { owner: { name: direction } } : { name: direction };
-    return prisma.gift.findMany({
-      where: {
-        archived: false,
-        NOT: { ownerId: userId },
-        wishlists: {
-          some: {
-            members: { some: { id: userId } },
-          },
-        },
-        ...currentYearFilter,
-        OR: [
-          { claimed: false },
-          { claimedById: userId },
-          { createdById: userId },
-        ],
-      },
-      include: {
-        owner: true,
-        claimedBy: true,
-        createdBy: true,
-      },
+    const rows = await prisma.gift.findMany({
+      where: visibleGiftsWhere(userId, { excludeOwn: true }),
+      select: giftRowSelect,
       orderBy: [orderBy],
     });
+    return rows.map((row) => toGiftCard(row, userId));
   },
   ['sortedVisibleGifts'],
-  { tags: ['gifts', 'users'] },
+  { tags: ['gifts', 'users', 'wishlists'] },
 );
 
+/**
+ * The home feed.
+ *
+ * Shares `visibleGiftsWhere` with the browse list, so the `createdById` arm is
+ * present — this query used to omit it, which hid the viewer's own additions.
+ */
 const getLatestVisibleGiftsForUserById = unstable_cache(
-  async (id: string) =>
-    prisma.gift.findMany({
-      where: {
-        archived: false,
-        wishlists: {
-          some: {
-            members: { some: { id } },
-          },
-        },
-        ...currentYearFilter,
-        ownerId: { not: id },
-        AND: {
-          OR: [
-            { claimed: false },
-            {
-              claimed: true,
-              claimedBy: {
-                id,
-              },
-            },
-          ],
-        },
-      },
-      include: {
-        owner: true,
-        claimedBy: true,
-        createdBy: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+  async (viewerId: string): Promise<GiftCard[]> => {
+    const rows = await prisma.gift.findMany({
+      where: visibleGiftsWhere(viewerId, { excludeOwn: true }),
+      select: giftRowSelect,
+      orderBy: { createdAt: 'desc' },
       take: 10,
-    }),
+    });
+    return rows.map((row) => toGiftCard(row, viewerId));
+  },
   ['latestVisibleGiftsForUserById'],
   { tags: ['gifts', 'users', 'wishlists'] },
 );
 
+/**
+ * Secret Santa events.
+ *
+ * Selects only what the page renders. The previous version pulled every
+ * participant's `assignedTo` as a full `User` row for every event, so the whole
+ * assignment graph reached the caller.
+ */
 const getSecretSantaEvents = unstable_cache(
-  async (userId: string) => {
+  async (viewerId: string) => {
     const events = await prisma.secretSantaEvent.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        createdById: true,
         participants: {
-          include: {
-            user: true,
-            assignedTo: true,
+          select: {
+            userId: true,
+            assignedToId: true,
+            user: { select: personRefSelect },
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
     });
 
-    return events.map((event) => ({
-      ...event,
-      isParticipating: event.participants.some((p) => p.userId === userId),
-      canJoin:
-        !event.participants.some((p) => p.userId === userId) &&
-        !event.participants.some((p) => p.assignedToId),
-    }));
+    return events.map(({ participants, ...event }) => {
+      const isParticipating = participants.some((p) => p.userId === viewerId);
+      const hasAssignments = participants.some((p) => p.assignedToId !== null);
+      return {
+        ...event,
+        participants: participants.map(({ user }) => user),
+        participantCount: participants.length,
+        isParticipating,
+        hasAssignments,
+        canJoin: !isParticipating && !hasAssignments,
+        isOwner: event.createdById === viewerId,
+      };
+    });
   },
   ['secretSantaEvents'],
-  { tags: ['secretSanta'] },
+  { tags: ['secretSanta', 'users'] },
 );
 
+/** One Gift, or `null` if the viewer may not see it. */
 const getGiftWithAccessCheck = unstable_cache(
-  async (giftId: string, userId: string) => {
-    const gift = await prisma.gift.findUnique({
+  async (giftId: string, viewerId: string): Promise<GiftDetail | null> => {
+    const gift = await prisma.gift.findFirst({
       where: {
-        id: giftId,
-      },
-      include: {
-        owner: true,
-        claimedBy: true,
-        createdBy: true,
-        wishlists: {
-          select: {
-            id: true,
-            name: true,
-            members: {
-              where: { id: userId },
-              select: { id: true },
-            },
+        AND: [
+          { id: giftId },
+          // Own-profile Gifts are reachable by their owner even when archived;
+          // everything else goes through the full rule set.
+          {
+            OR: [
+              { id: giftId, ownerId: viewerId, createdById: viewerId },
+              visibleGiftsWhere(viewerId),
+            ],
           },
-        },
+        ],
+      },
+      select: {
+        ...giftRowSelect,
+        wishlists: { select: { id: true, name: true } },
       },
     });
 
     if (!gift) return null;
 
-    // Don't return archived gifts
-    if (gift.archived) return null;
-
-    // Check if user has access through any wishlist
-    const hasAccess = gift.wishlists.some(
-      (wishlist) => wishlist.members.length > 0,
-    );
-    if (!hasAccess) return null;
-
-    const isOwner = gift.ownerId === userId;
-    const isCreator = gift.createdById === userId;
-
-    return {
-      ...gift,
-      canEdit: isOwner || isCreator,
-    };
+    const { wishlists, ...row } = gift;
+    return { ...toGiftCard(row, viewerId), wishlists };
   },
   ['giftWithAccess'],
   { tags: ['gifts', 'users', 'wishlists'] },
@@ -481,20 +267,15 @@ const getGiftWithAccessCheck = unstable_cache(
 
 export {
   getClaimedGiftsForMe,
-  getFullUserById,
-  getGiftById,
+  getFullUserForRecommendations,
   getGiftWithAccessCheck,
-  getGiftsWithOwnerClaimedByAndCreatedBy,
-  getGiftWithOwnerClaimedByAndCreatedBy,
   getLatestVisibleGiftsForUserById,
+  getOwnProfile,
   getPeopleForNewGiftModal,
   getSecretSantaEvents,
   getSortedVisibleGiftsForUser,
-  getUserById,
-  getUsers,
   getUsersForPeoplePage,
-  getUsersWithGiftCount,
   getVisibleGiftsForUserById,
-  getWishlistsWithMemberIds,
+  getVisibleProfile,
   getWishlistsWithMembers,
 };

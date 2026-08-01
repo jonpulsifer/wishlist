@@ -1,90 +1,59 @@
 'use server';
 
-import { revalidateGiftRelatedCaches } from '@/app/_actions/gifts';
-import { getSession } from '@/app/auth';
+import { z } from 'zod';
+import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
 
-export const joinWishlist = async (wishlistId: string, pin?: string) => {
-  try {
-    const { user } = await getSession();
+const WISHLIST_CACHES = ['gifts', 'users', 'wishlists'] as const;
 
-    // Get the wishlist to check its password
+const pinSchema = z
+  .string()
+  .regex(/^\d{4}$/, 'Pin must be 4 digits')
+  .optional();
+
+export const joinWishlist = defineAction(
+  {
+    input: z.object({ wishlistId: z.string().min(1), pin: pinSchema }),
+    invalidates: WISHLIST_CACHES,
+  },
+  async ({ viewer, input: { wishlistId, pin } }) => {
     const wishlist = await db.wishlist.findUnique({
       where: { id: wishlistId },
       select: { password: true },
     });
 
-    if (!wishlist) {
-      return { error: 'Wishlist not found' };
-    }
+    if (!wishlist) throw new ActionError('Wishlist not found');
 
-    // Only validate pin if the wishlist has a password
     if (wishlist.password) {
-      if (!pin) {
-        return { error: 'Pin is required to join this wishlist' };
-      }
-
-      // Validate pin format
-      if (!/^\d{4}$/.test(pin)) {
-        return { error: 'Pin must be 4 digits' };
-      }
-
-      if (wishlist.password !== pin) {
-        return { error: 'Invalid pin' };
-      }
+      if (!pin) throw new ActionError('Pin is required to join this wishlist');
+      if (wishlist.password !== pin) throw new ActionError('Invalid pin');
     }
 
     await db.wishlist.update({
       where: { id: wishlistId },
-      data: {
-        members: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
+      data: { members: { connect: { id: viewer.id } } },
     });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: 'Successfully joined wishlist' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
 
-export const leaveWishlist = async (wishlistId: string) => {
-  try {
-    const { user } = await getSession();
+    return { message: 'Successfully joined wishlist' };
+  },
+);
+
+export const leaveWishlist = defineAction(
+  { input: z.string().min(1), invalidates: WISHLIST_CACHES },
+  async ({ viewer, input: wishlistId }) => {
     await db.wishlist.update({
       where: { id: wishlistId },
-      data: {
-        members: {
-          disconnect: {
-            id: user.id,
-          },
-        },
-      },
+      data: { members: { disconnect: { id: viewer.id } } },
     });
-    revalidateGiftRelatedCaches();
-    return { success: true, message: 'Successfully left wishlist' };
-  } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message };
-    }
-    return { error: 'Something went wrong in the server action' };
-  }
-};
+    return { message: 'Successfully left wishlist' };
+  },
+);
 
 export const handleWishlistAction = async (
   wishlistId: string,
   isMember: boolean,
   pin?: string,
 ) => {
-  if (isMember) {
-    return leaveWishlist(wishlistId);
-  }
-
-  return joinWishlist(wishlistId, pin);
+  if (isMember) return leaveWishlist(wishlistId);
+  return joinWishlist({ wishlistId, pin });
 };

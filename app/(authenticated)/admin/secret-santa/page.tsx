@@ -4,7 +4,6 @@ import {
   getAllUsersForExclusions,
   getSecretSantaExclusions,
 } from '@/app/_actions/secret-santa';
-import { getSession, isSecretSantaAdmin } from '@/app/auth';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -15,12 +14,16 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { currentViewer } from '@/lib/auth/viewer';
 import { SecretSantaEventList } from './event-list';
 import { ExclusionManager } from './exclusion-manager';
 
 export default async function AdminSecretSantaPage() {
-  const { user } = await getSession();
-  if (!isSecretSantaAdmin(user)) {
+  // Same capability the actions below require, so a role that reaches this page
+  // can actually use it. This page used to admit `secret-santa-manager` while
+  // every action it calls demanded `godmode`.
+  const viewer = await currentViewer();
+  if (!viewer?.can('manage:secret-santa')) {
     redirect('/');
   }
 
@@ -30,7 +33,7 @@ export default async function AdminSecretSantaPage() {
     getAllUsersForExclusions(),
   ]);
 
-  if (eventsResult.error || !eventsResult.events) {
+  if (!eventsResult.success) {
     return (
       <SidebarInset>
         <AppHeader>
@@ -53,8 +56,10 @@ export default async function AdminSecretSantaPage() {
     );
   }
 
-  const exclusions = exclusionsResult.exclusions || [];
-  const users = usersResult.users || [];
+  const exclusions = exclusionsResult.success
+    ? exclusionsResult.exclusions
+    : [];
+  const users = usersResult.success ? usersResult.users : [];
 
   return (
     <SidebarInset>

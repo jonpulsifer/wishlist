@@ -67,7 +67,7 @@ export function WishlistCard({ wishlist, isMember }: WishlistCardProps) {
         formData.get('pin') as string,
       );
 
-      if (result.error) {
+      if (!result.success) {
         toast({
           variant: 'destructive',
           description: result.error,

@@ -75,11 +75,11 @@ export default async function PeoplePage() {
                         </div>
                         <Badge
                           variant={
-                            person._count.gifts < 3 ? 'destructive' : 'default'
+                            person.giftCount < 3 ? 'destructive' : 'default'
                           }
                         >
-                          {person._count.gifts} gift
-                          {person._count.gifts === 1 ? '' : 's'}
+                          {person.giftCount} gift
+                          {person.giftCount === 1 ? '' : 's'}
                         </Badge>
                       </Link>
                     </TableCell>

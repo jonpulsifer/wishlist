@@ -2,9 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { redirect } from 'next/navigation';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
-import { PrismaClient } from '@/prisma/generated/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/db/client';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -81,31 +79,3 @@ declare module 'next-auth' {
     user: SessionUser & DefaultSession['user'];
   }
 }
-
-export const isGodmode = (user: SessionUser) => {
-  return (
-    user.roles.some((userRole) => userRole.role.name === 'godmode') || false
-  );
-};
-
-export const isSecretSantaAdmin = (user: SessionUser) => {
-  return (
-    user.roles.some(
-      (userRole) => userRole.role.name === 'secret-santa-manager',
-    ) || false
-  );
-};
-
-export const isWishlistAdmin = (user: SessionUser) => {
-  return (
-    isGodmode(user) ||
-    user.roles.some((userRole) => userRole.role.name === 'wishlist-manager') ||
-    false
-  );
-};
-
-export const hasRole = (user: SessionUser, roleName: string) => {
-  return (
-    user.roles.some((userRole) => userRole.role.name === roleName) || false
-  );
-};

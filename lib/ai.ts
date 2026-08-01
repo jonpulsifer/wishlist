@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-import { getFullUserById } from './db/queries-cached';
+import { getFullUserForRecommendations } from './db/queries-cached';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY ?? '',
@@ -12,13 +12,15 @@ export type GiftRecommendation = {
   estimatedPrice?: string;
 };
 
-export const getRecommendations = async (userId: string) => {
-  const user = await getFullUserById(userId);
+export const getRecommendations = async (userId: string, viewerId: string) => {
+  // Scoped read: `null` means the viewer shares no wishlist with this person.
+  const user = await getFullUserForRecommendations(userId, viewerId);
+  if (!user) return null;
 
   // Include ALL gifts (current and archived) to get a full picture of their interests
-  const allGifts = user?.gifts || [];
+  const allGifts = user.gifts;
   const preferences = allGifts.map((gift) => gift.name).join(', ');
-  const name = user?.name?.split(' ')[0] || 'someone mysterious';
+  const name = user.name?.split(' ')[0] || 'someone mysterious';
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -40,13 +42,15 @@ export const getRecommendations = async (userId: string) => {
 
 export const getRecommendationsForHomePage = async (
   userId: string,
+  viewerId: string,
 ): Promise<GiftRecommendation[]> => {
-  const user = await getFullUserById(userId);
+  const user = await getFullUserForRecommendations(userId, viewerId);
+  if (!user) return [];
 
   // Include ALL gifts (current and archived) to get a full picture of their interests
-  const allGifts = user?.gifts || [];
+  const allGifts = user.gifts;
   const preferences = allGifts.map((gift) => gift.name).join(', ');
-  const name = user?.name?.split(' ')[0] || 'someone mysterious';
+  const name = user.name?.split(' ')[0] || 'someone mysterious';
 
   if (!preferences) {
     return []; // Return empty if user has no gifts

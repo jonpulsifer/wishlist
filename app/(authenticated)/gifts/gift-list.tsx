@@ -17,12 +17,11 @@ import {
 } from '@/components/ui/select';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
-import type { GiftWithOwnerAndClaimedByAndCreatedBy } from '@/lib/db/types';
+import type { GiftCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
-import type { Gift } from '@/prisma/generated/client';
 
 interface GiftListProps {
-  initialGifts: GiftWithOwnerAndClaimedByAndCreatedBy[];
+  initialGifts: GiftCard[];
   search: string;
   sort: string;
   direction: string;
@@ -88,19 +87,21 @@ export function GiftList({
       });
   }, [gifts, search, sort, direction]);
 
-  async function handleClaimToggle(gift: Gift) {
+  async function handleClaimToggle(gift: GiftCard) {
+    const toggle = (g: GiftCard) => ({
+      ...g,
+      claimed: !g.claimed,
+      claimedByViewer: !g.claimedByViewer,
+    });
+
     try {
       // Optimistically update the UI
       startTransition(() => {
-        setGifts((prev) =>
-          prev.map((g) =>
-            g.id === gift.id ? { ...g, claimed: !g.claimed } : g,
-          ),
-        );
+        setGifts((prev) => prev.map((g) => (g.id === gift.id ? toggle(g) : g)));
       });
 
       // Perform the server action
-      const result = await (gift.claimed
+      const result = await (gift.claimedByViewer
         ? unclaimGift(gift.id)
         : claimGift(gift.id));
 
@@ -113,9 +114,7 @@ export function GiftList({
         // Revert on failure
         startTransition(() => {
           setGifts((prev) =>
-            prev.map((g) =>
-              g.id === gift.id ? { ...g, claimed: !g.claimed } : g,
-            ),
+            prev.map((g) => (g.id === gift.id ? toggle(g) : g)),
           );
         });
         toast({
@@ -275,12 +274,19 @@ export function GiftList({
                   </Button>
                 ) : (
                   <Button
-                    variant={gift.claimed ? 'destructive' : 'default'}
+                    variant={gift.claimedByViewer ? 'destructive' : 'default'}
                     onClick={() => handleClaimToggle(gift)}
                     size="sm"
                     className="w-20 md:w-24"
+                    // Claimed by someone else: visible only because the viewer
+                    // created it, and not theirs to unclaim.
+                    disabled={gift.claimed && !gift.claimedByViewer}
                   >
-                    {gift.claimed ? 'Unclaim' : 'Claim'}
+                    {gift.claimedByViewer
+                      ? 'Unclaim'
+                      : gift.claimed
+                        ? 'Claimed'
+                        : 'Claim'}
                   </Button>
                 )}
               </div>

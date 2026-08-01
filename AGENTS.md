@@ -38,28 +38,59 @@ This codebase uses App Router + React Server Components. Keep changes compatible
 - **Never trust client state** for access control.
 - **Validate authorization on the server** before returning sensitive data or executing mutations.
 - **Filter before serialize**: only pass the minimum necessary data from server components to client components.
+- **Never hand-write a visibility `where` clause.** "Which gifts / people may this viewer see" lives in `lib/db/visibility.ts`. Compose from `visibleGiftsWhere`, `visiblePeopleWhere`, `visibleProfileWhere`, `claimedByViewerWhere`. Six hand-written copies had drifted into three real defects; the module exists so that cannot happen again.
+- **Never look a person up by id alone.** A bare `findUnique` exposes shipping addresses and sizes to anyone holding a uuid.
+- **Never ask about a role name.** Ask `viewer.can('manage:secret-santa')`. The role → capability table is `lib/auth/capabilities.ts`; it is pure and covered by tests.
 
 ## Server actions (`app/_actions/*.ts`)
 
-Follow the existing patterns:
+Actions are built with `defineAction` from `lib/actions/define.ts`. It owns the session, the capability gate, zod parsing, `NEXT_REDIRECT` passthrough, error normalisation and cache invalidation — do not re-derive any of it inside a handler.
 
-- **File header**: start with `'use server';`
-- **Auth**: use `getSession()` from `app/auth.ts`
-- **Validation**: use `zod` (`safeParse`) for input, especially for form-like payloads
-- **Return shape**:
-  - Success: `{ success: true, message?: string, ... }`
-  - Error: `{ error: string }`
-  - Field errors for forms (when applicable): `{ errors: Record<string, string[]>, message: string }`
-- **Cache invalidation**: call `revalidateTag(...)` and/or `revalidateGiftRelatedCaches()` after successful writes
-- **Reuse existing helpers/queries** instead of inventing parallel ones
+```ts
+export const claimGift = defineAction(
+  {
+    capability: 'manage:wishlists', // omit for "any signed-in viewer"
+    input: z.string().min(1, 'Gift ID is required'),
+    invalidates: ['gifts', 'users'],
+  },
+  async ({ viewer, input: id }) => {
+    // ...work...
+    return { message: `You claimed ${gift.name}` }; // becomes { success: true, message }
+  },
+);
+```
+
+- **File header**: still `'use server';`. Because that directive only allows async function exports, the combinator itself lives outside `app/_actions/`.
+- **Failing**: `throw new ActionError('...')`. Never return a bare `{ error }`.
+- **One return shape**, always:
+  - Success: `{ success: true, message?: string, ...payload }`
+  - Failure: `{ success: false, error: string, message: string, fieldErrors?: Record<string, string[]> }`
+- **Callers must narrow on `result.success`**, not on `result.error`.
+- **Cache tags** are the `CacheTag` union — `gifts | users | wishlists | secretSanta`. There is no `roles` tag; nothing declares one.
+- **Multi-row writes go in `db.$transaction`**, not `Promise.all`.
+- **Reuse existing helpers/queries** instead of inventing parallel ones.
+
+## Domain modules (`lib/`)
+
+Business rules that do not need the database live in plain modules with no `'use server'` and no Prisma import, so they can be tested directly:
+
+- `lib/secret-santa/draw.ts` — the draw. Takes participants, exclusions and history; returns pairings or a typed failure. Randomness is a parameter, so draws are reproducible under a seeded generator.
+- `lib/secret-santa/schema.ts` — intake rules, shared by the create form and the action.
+- `lib/db/visibility.ts` — the visibility rules, as Prisma `where` builders.
+- `lib/db/projections.ts` — what may cross to the browser. Client components import types from here, never from `@/prisma/generated/client`.
+
+## Tests
+
+`pnpm test` runs `node --test` over `lib/**/*.test.ts` using Node's native TypeScript support — no test framework dependency. Test files import with an explicit `.ts` extension. Cover the pure modules; there is no database in the test run.
 
 ## Client components (`'use client'`)
 
 Use client components only when necessary (interactivity, hooks). Prefer these patterns:
 
 - **Optimistic UI**: `useOptimistic` + `startTransition` for list updates (e.g. claim/unclaim flows)
-- **Server action forms**: prefer `useActionState` for form state; avoid sprinkling `useFormStatus` across large components
+- **Server action forms**: `useTransition` + call the action directly, then branch on `result.success`. (`useActionState` does not fit `defineAction`, whose actions take their parsed input as the only argument rather than `(prevState, formData)`.)
   - If you need pending state, encapsulate it in a small `SubmitButton` that is a **direct child** of the `<form>`
+- **Never toast success before checking `result.success`**
 - **UX**: use shadcn components and consistent interaction patterns (hover states, disabled states, toasts)
 
 ## UI system (shadcn + Tailwind v4 + “festive dream”)
