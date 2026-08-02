@@ -206,8 +206,8 @@ The setting gates the **write**: it is a check on the adding, never a `where` cl
   [#156](https://github.com/jonpulsifer/wishlist/issues/156) and
   [#157](https://github.com/jonpulsifer/wishlist/issues/157). Declining is
   **defined and deliberately not built** — no column, no toggle, no reader, and nobody
-  has asked for it. It is additive when it lands (a `Boolean` with a default, which
-  `db push` applies without data loss and which does not break first sign-in), so it
+  has asked for it. It is additive when it lands (a `Boolean` with a default, which a
+  migration applies without data loss and which does not break first sign-in), so it
   waits on nothing.
 - **Rejected**: a separate `Suggestion` model — it would force a [Claim](#claim) to
   point at either kind, splitting 600+ rows across two tables to express one rule.

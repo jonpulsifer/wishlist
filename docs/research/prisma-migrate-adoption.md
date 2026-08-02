@@ -7,7 +7,12 @@ rather than documentation, it says so.
 
 ## Version discipline (read this first)
 
-This repo pins `prisma` and `@prisma/client` at **6.19.3** (`package.json`).
+> **The pin has moved since this was written.** The repo is on **7.9.1**, so the
+> flag to use is `--to-schema`, not the `--to-schema-datamodel` this document
+> recommends throughout. Everything else here still holds. The rest of this
+> section is why the distinction matters.
+
+This document was researched against a pin of **6.19.3**.
 6.19.3 is the last 6.x release; current is 7.9.1
 ([releases](https://github.com/prisma/prisma/releases)). prisma.io/docs now
 serves ORM 7 by default; ORM 6 docs are under `/docs/v6/`.
