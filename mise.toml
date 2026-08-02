@@ -133,12 +133,44 @@ fi
 '''
 
 [tasks."db:migrate"]
-description = "Apply pending migrations, creating one from schema.prisma if it has drifted"
-# migrate dev generates only when it actually creates a migration — its
-# "already in sync" path exits before the generators run, which leaves a stale
-# client after an edit that turned out to be a no-op.
+description = "Write a migration for the current schema.prisma changes. Does not apply it. Usage: mise run db:migrate <name>"
+# Deliberately not `prisma migrate dev`, which refuses to run in a
+# non-interactive shell — so it is unusable from CI or an agent, and this repo
+# has both. Generating with `migrate diff` works everywhere and gives the
+# read-before-you-apply habit for free: the SQL lands in a file first, which is
+# the whole point for a hand-edited RENAME.
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+name="${1:-}"
+[ -n "$name" ] || { echo "usage: mise run db:migrate <name>" >&2; exit 2; }
+
+dir="prisma/migrations/$(date +%Y%m%d%H%M%S)_${name}"
+mkdir -p "$dir"
+bunx --bun prisma migrate diff \
+  --from-migrations ./prisma/migrations \
+  --to-schema prisma/schema.prisma \
+  --script > "$dir/migration.sql"
+
+if grep -q 'This is an empty migration' "$dir/migration.sql"; then
+  rm -rf "$dir"
+  echo "==> schema.prisma matches the migration history; nothing to write"
+  exit 0
+fi
+
+echo "==> wrote $dir/migration.sql"
+echo
+cat "$dir/migration.sql"
+echo
+echo "==> read it, hand-edit any RENAME, then: mise run db:apply"
+'''
+
+[tasks."db:apply"]
+description = "Apply pending migrations to the local database"
+# v7 does not regenerate the client as a side effect, and a stale client is a
+# confusing typecheck failure rather than an obvious one.
 depends = ["generate"]
-run = "bunx --bun prisma migrate dev"
+run = "bunx --bun prisma migrate deploy"
 
 [tasks."db:seed"]
 description = "Fill the database with faker data"
