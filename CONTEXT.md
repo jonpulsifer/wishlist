@@ -222,23 +222,30 @@ another Family sharing members. A Family's name is a **label, not an identifier*
 unrelated Smiths may both use it, because you reach a Family by invite or by already
 being in it, never by typing its name.
 
+There is **no directory of Families**. A Family you are not in is not merely closed to
+you, it is invisible: you cannot see that it exists, learn its name or count its members.
+The only way in is an [Invite](#invite).
+
 The word is chosen for what the app is actually for — helping big families track the
 wants of their peeps. A friend group or a set of coworkers is modelled as a Family too,
 and that is the one place the word is a stretch.
 
 - **Grounded**: the concept, the many-to-many membership and its role as the single
   visibility edge all exist today.
-- **Anticipated**: the name, flatness as a decision rather than an accident, and names
-  ceasing to be unique. Decided in
-  [#150](https://github.com/jonpulsifer/wishlist/issues/150).
+- **Anticipated**: the name, flatness as a decision rather than an accident, names ceasing
+  to be unique ([#150](https://github.com/jonpulsifer/wishlist/issues/150)), and Families
+  being invisible rather than merely closed
+  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)).
 - **Rejected**: `Circle` and `Group` — neutral enough to fit coworkers, but they name a
   shape rather than a thing, and the coworkers case is speculative while the family case
   is the product. Nesting — overlapping membership already expresses every subset, and
   making the one remaining visibility rule recursive would be felt everywhere.
 - **Schema today**: `model Wishlist`. Its `name` is globally `@unique`, its `password`
-  is a plaintext pin ([#153](https://github.com/jonpulsifer/wishlist/issues/153)), and
-  it has no owner column — so nobody runs a Family
-  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+  is a plaintext pin, and it has no owner column — so nobody runs a Family
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)). There *is* a directory:
+  `getWishlistsWithMembers` takes no viewer and lists every Family by name to every
+  signed-in user, on `/wishlists` and in global search. Both the pin and the directory go
+  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)).
 
 ## User
 
@@ -249,12 +256,20 @@ name, their sizes, their address. An **Account** is how they sign in, and a User
 have none. Someone who has never signed in is not a different kind of thing; they are a
 User with no Account.
 
+Such a User is **provisional**: they are here because a member added them by email, not
+because they arrived. Provisional is **derived, never stored** — the absence of an Account
+row is the entire definition, so no field records it and it stops being true the moment
+they sign in. It is shown wherever people are listed, which is the point: a member who
+mistypes an address can see the stranger they just added to the Family, instead of finding
+out when that address signs in years later.
+
 - **Grounded**: `model User` is this already, and `allowDangerousEmailAccountLinking` is
   on, so an accountless User links correctly when that person later signs in with
   Google.
-- **Anticipated**: that a person who will never sign in needs nothing more than this.
-  Nothing creates such a row today — every User comes from the Auth.js adapter — and the
-  flow that would is [#153](https://github.com/jonpulsifer/wishlist/issues/153).
+- **Anticipated**: that a person who will never sign in needs nothing more than this, and
+  that provisional stays derived. Nothing creates such a row today — every User comes from
+  the Auth.js adapter — and the flow that would is the push half of
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153).
 - **Rejected**: `Person` as a distinct level above `User`. Decided in
   [#150](https://github.com/jonpulsifer/wishlist/issues/150): the higher-level concept
   the product needed was [Family](#family), and splitting the human from the login costs
@@ -262,6 +277,43 @@ User with no Account.
   [#154](https://github.com/jonpulsifer/wishlist/issues/154) to express a state that is
   already expressible.
 - **Schema today**: `model User`, with `Account` and `Session` bound by the adapter.
+
+## Invite
+
+A link that grants membership of a [Family](#family).
+
+An Invite is the **only** way into a Family, and following one is the whole of joining:
+the link *is* the consent, so there is no secret to type, no approval queue and no
+confirmation screen. Any member of a Family may create an Invite to it — a family whose
+members cannot invite anyone is a family that grows only as fast as its admin answers
+messages. An Invite is revocable and expires.
+
+An Invite grants **join**, not view. A link that shows someone a Wishlist without making
+them a member is a different thing, and belongs to
+[#158](https://github.com/jonpulsifer/wishlist/issues/158).
+
+Joining also has a **push** direction, which needs no Invite: a member adds someone by
+email, creating a provisional [User](#user) who is in the Family at once. That person has
+a [Wishlist](#wishlist) and can be given [Suggestions](#suggestion) before they have heard
+of the app, and their first Google sign-in adopts the row that is already waiting. This is
+the half of joining that has no mechanism at all today.
+
+- **Grounded**: the token, its revocation, the cookie that carries it through sign-in, and
+  the join-on-click route all exist and work.
+- **Anticipated**: that an Invite is the only door, that any member may create one — which
+  [#160](https://github.com/jonpulsifer/wishlist/issues/160) may refine once Families have
+  owners — and the push direction entirely. Decided in
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153).
+- **Rejected**: a shared pin. It is not a second mechanism but a worse Invite — a bearer
+  secret that grants membership, four digits long, shared, permanent, reusable, stored in
+  plaintext and guessable in ten thousand tries. Joining by email domain — a Family is not
+  a domain, and that is a corporate-SSO idea wearing a festive hat.
+- **Schema today**: `model WishlistInvite`, reachable only by an admin —
+  `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
+  all, so no ordinary member can invite anyone or start a family. One active invite per
+  Family is enforced by revoking the previous one. `expiresAt` exists and nothing ever
+  writes it, so invites do not expire. The pin path
+  (`joinWishlist`) is unthrottled and compares in plaintext.
 
 ## Occasion
 
@@ -350,6 +402,11 @@ parameter.
   person; the higher-level concept the product needed turned out to be
   [Family](#family). "Person" survives in prose where it reads naturally, but no model
   or type is named for it.
+- **Pin** / **password** — retired by
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153). `Wishlist.password` is a
+  join secret, not a credential — nobody authenticates with it, since signing in is
+  Google's job. As a way into a [Family](#family) it is a weaker
+  [Invite](#invite), so it goes rather than being hashed or lengthened.
 - **Published** — never a concept. `Gift.published` exists in
   `prisma/schema.prisma`, defaults to `false`, and outside the generated client nothing
   in the repo reads or writes it: not the seed, not an action, not a query, not a
