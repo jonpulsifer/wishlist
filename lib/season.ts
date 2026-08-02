@@ -7,77 +7,130 @@
  * page, and a hand-rolled copy of the partition in the admin event list. Each
  * one had its own idea of where a year starts.
  *
+ * Two distinct years live here and must not be conflated. `year` is the
+ * calendar's, and drives how stale a gift may be. `occasionYear` is the
+ * Christmas an [Exchange] is held *for*, which the row carries in a column
+ * because it is not derivable from the calendar: an exchange drawn on
+ * January 2nd belongs to the year before. See `CONTEXT.md` on Occasion.
+ *
  * Every window takes `now` as a parameter and is computed per call, so a server
  * process alive across New Year cannot keep serving the old Season and the
  * windows can be asserted directly in tests.
  *
- * Client-safe: no Prisma, no `next/*`. The date filters are plain objects, which
- * are structurally what Prisma's `DateTimeFilter` wants.
+ * Client-safe: no Prisma, no `next/*`. The filters are plain objects, which are
+ * structurally what Prisma's `where` wants.
  */
 
 /** A half-open instant range: `gte <= t < lt`. */
 export type Window = { gte: Date; lt: Date };
-
-/** An open-ended range, used where only the lower bound matters. */
-export type OpenWindow = { gte: Date };
 
 /** UTC midnight on Jan 1 of `year`. Every database window starts here. */
 function januaryFirst(year: number): Date {
   return new Date(`${year}-01-01`);
 }
 
+/**
+ * The month an Occasion year turns over, zero-indexed. Christmas is the only
+ * Occasion, so January, February and March still belong to the Christmas just
+ * gone; from April, whoever opens an Exchange means the next one.
+ */
+const OCCASION_ROLLOVER_MONTH = 3;
+
 export type Season = {
   /** The calendar year currently in play. */
   year: number;
+  /**
+   * The Occasion an Exchange opened now is held for. Trails `year` through the
+   * first quarter, so a draw run on January 2nd files under the Christmas it
+   * is actually for.
+   */
+  occasionYear: number;
   /**
    * Gifts considered "current": this year and the two before it. Wide on
    * purpose — a gift added last December is still a fair suggestion in January.
    */
   giftWindow: Window;
-  /** Secret Santa Events belonging to this Season. */
-  eventWindow: Window;
-  /**
-   * How far back the draw looks to avoid repeating last year's pairing. Only
-   * the previous year and this one count as recent.
-   */
-  drawHistoryWindow: OpenWindow;
 };
 
 export function currentSeason(now: Date = new Date()): Season {
   const year = now.getFullYear();
   return {
     year,
+    occasionYear: now.getMonth() < OCCASION_ROLLOVER_MONTH ? year - 1 : year,
     giftWindow: { gte: januaryFirst(year - 2), lt: januaryFirst(year + 1) },
-    eventWindow: { gte: januaryFirst(year), lt: januaryFirst(year + 1) },
-    drawHistoryWindow: { gte: januaryFirst(year - 1) },
   };
 }
 
-/** Anything the app groups into a Season by when it was created. */
-export type Dated = { createdAt: Date | string };
+/** An Exchange, as much of one as deciding its Occasion needs. */
+export type Exchange = { year: number | null; createdAt: Date | string };
 
-export function yearOf(dated: Dated): number {
-  return new Date(dated.createdAt).getFullYear();
+/**
+ * Which Occasion an Exchange is held for.
+ *
+ * A null `year` reads as the year it was opened in, which is the answer the
+ * backfill would have written and the only one the row carries.
+ */
+export function occasionYearOf(exchange: Exchange): number {
+  return exchange.year ?? new Date(exchange.createdAt).getFullYear();
 }
 
 /**
- * Split by Season into "this year" and "past", newest first.
+ * Exchanges held for the Occasion in play, as a Prisma `where`.
+ *
+ * The `createdAt` arm is `occasionYearOf`'s fallback expressed in SQL: rows
+ * carrying a `year` are matched on it, and only rows without one are judged by
+ * when they were opened.
+ */
+export function heldForCurrentOccasion(now: Date = new Date()) {
+  const { occasionYear } = currentSeason(now);
+  return {
+    OR: [
+      { year: occasionYear },
+      {
+        year: null,
+        createdAt: {
+          gte: januaryFirst(occasionYear),
+          lt: januaryFirst(occasionYear + 1),
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Exchanges recent enough that the Draw must not repeat their pairings — the
+ * Occasion in play and the one before it.
+ */
+export function withinDrawHistory(now: Date = new Date()) {
+  const { occasionYear } = currentSeason(now);
+  return {
+    OR: [
+      { year: { gte: occasionYear - 1 } },
+      { year: null, createdAt: { gte: januaryFirst(occasionYear - 1) } },
+    ],
+  };
+}
+
+/**
+ * Split by Occasion into "the one in play" and "past", newest first.
  *
  * Both the Secret Santa page and the admin event list render this split. The
  * admin copy used to be written out by hand.
  */
-export function partitionBySeason<T extends Dated>(
+export function partitionBySeason<T extends Exchange>(
   items: readonly T[],
   now: Date = new Date(),
 ): { current: T[]; past: T[]; year: number } {
-  const { year } = currentSeason(now);
+  const { occasionYear } = currentSeason(now);
   const sorted = [...items].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+  // Anything not held for the Occasion in play is past, rather than strictly
+  // older than it, so the two halves always account for every item.
   return {
-    year,
-    current: sorted.filter((item) => yearOf(item) === year),
-    past: sorted.filter((item) => yearOf(item) < year),
+    year: occasionYear,
+    current: sorted.filter((item) => occasionYearOf(item) === occasionYear),
+    past: sorted.filter((item) => occasionYearOf(item) !== occasionYear),
   };
 }
 

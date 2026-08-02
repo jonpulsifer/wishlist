@@ -89,6 +89,7 @@ export async function getAllSecretSantaEvents(viewer: Viewer) {
     select: {
       id: true,
       name: true,
+      year: true,
       createdAt: true,
       createdBy: { select: adminPersonSelect },
       participants: {

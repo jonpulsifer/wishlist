@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
 import db from '@/lib/db/client';
-import { currentSeason } from '@/lib/season';
+import { currentSeason, withinDrawHistory } from '@/lib/season';
 import {
   drawAssignments,
   toExclusionMap,
@@ -27,7 +27,14 @@ export const openSecretSantaEvent = defineAction(
   async ({ viewer, input }) => {
     const event = await db.$transaction(async (tx) => {
       const created = await tx.secretSantaEvent.create({
-        data: { name: input.name, createdBy: { connect: { id: viewer.id } } },
+        data: {
+          name: input.name,
+          // The Occasion this is for, not the year the row was made. Opening
+          // one in January means last Christmas, and the draw's history and
+          // the current/past split both read this rather than `createdAt`.
+          year: currentSeason().occasionYear,
+          createdBy: { connect: { id: viewer.id } },
+        },
       });
       await tx.secretSantaParticipant.createMany({
         data: input.participantIds.map((userId) => ({
@@ -68,7 +75,6 @@ export const assignSecretSantaParticipants = defineAction(
     }
 
     const participantIds = event.participants.map((p) => p.userId);
-    const { drawHistoryWindow } = currentSeason();
 
     const [exclusionRows, historyRows] = await Promise.all([
       db.user.findMany({
@@ -82,7 +88,7 @@ export const assignSecretSantaParticipants = defineAction(
         where: {
           userId: { in: participantIds },
           assignedToId: { not: null },
-          event: { createdAt: drawHistoryWindow, id: { not: eventId } },
+          event: { ...withinDrawHistory(), id: { not: eventId } },
         },
         select: { userId: true, assignedToId: true },
       }),

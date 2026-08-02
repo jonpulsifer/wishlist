@@ -31,7 +31,7 @@ import {
   getLatestVisibleGiftsForUserById,
   getPeopleForNewGiftModal,
 } from '@/lib/db/queries-cached';
-import { currentSeason } from '@/lib/season';
+import { heldForCurrentOccasion } from '@/lib/season';
 
 export default async function HomePage() {
   const viewer = await requireViewerOrRedirect();
@@ -44,7 +44,7 @@ export default async function HomePage() {
       db.secretSantaParticipant.findMany({
         where: {
           userId: viewer.id,
-          event: { createdAt: currentSeason().eventWindow },
+          event: heldForCurrentOccasion(),
         },
         include: {
           event: { select: { id: true, name: true } },

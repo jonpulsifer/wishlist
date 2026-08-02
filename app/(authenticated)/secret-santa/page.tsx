@@ -19,7 +19,7 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import { getSecretSantaEvents } from '@/lib/db/queries-cached';
-import { partitionBySeason, yearOf } from '@/lib/season';
+import { occasionYearOf, partitionBySeason } from '@/lib/season';
 
 export default async function SecretSantaPage() {
   const viewer = await requireViewerOrRedirect();
@@ -233,7 +233,7 @@ export default async function SecretSantaPage() {
                 <div className="grid gap-4 opacity-60">
                   {pastEvents.map((event) => {
                     const assignment = assignmentsByEvent.get(event.id);
-                    const eventYear = yearOf(event);
+                    const eventYear = occasionYearOf(event);
 
                     return (
                       <Card key={event.id} className="bg-muted/30">
