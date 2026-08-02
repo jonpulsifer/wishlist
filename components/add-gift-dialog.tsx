@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAction } from '@/hooks/use-action';
-import type { User } from '@/prisma/generated/client';
+import type { PersonRef } from '@/lib/db/projections';
 
 function SubmitButton({ isPending }: { isPending: boolean }) {
   return (
@@ -45,11 +45,12 @@ function SubmitButton({ isPending }: { isPending: boolean }) {
 }
 
 type Props = {
-  users: Pick<User, 'id' | 'name' | 'email'>[];
-  currentUser: Pick<User, 'id' | 'name' | 'email'>;
+  users: Omit<PersonRef, 'image'>[];
+  /** The id alone. A whole `Viewer` carries `can`, which cannot be serialised. */
+  currentUserId: string;
 };
 
-export function AddGiftDialog({ users, currentUser }: Props) {
+export function AddGiftDialog({ users, currentUserId }: Props) {
   const [open, setOpen] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -73,7 +74,7 @@ export function AddGiftDialog({ users, currentUser }: Props) {
   };
 
   const usersOptions = users.map((user) => {
-    const isCurrentUser = user.id === currentUser.id;
+    const isCurrentUser = user.id === currentUserId;
     const name = isCurrentUser
       ? `You (${user.name || user.email})`
       : user.name || user.email;
@@ -105,7 +106,7 @@ export function AddGiftDialog({ users, currentUser }: Props) {
             <Label htmlFor="recipientId" className="font-bold">
               Recipient
             </Label>
-            <Select name="recipientId" defaultValue={currentUser.id}>
+            <Select name="recipientId" defaultValue={currentUserId}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

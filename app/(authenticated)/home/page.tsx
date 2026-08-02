@@ -99,7 +99,10 @@ export default async function HomePage() {
             </CardContent>
           </Card>
           <div className="flex flex-col sm:flex-row gap-2 w-full justify-center items-center">
-            <AddGiftDialog currentUser={viewer} users={addGiftDialogUsers} />
+            <AddGiftDialog
+              currentUserId={viewer.id}
+              users={addGiftDialogUsers}
+            />
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/claimed">
                 <GiftIcon className="h-4 w-4" />
