@@ -28,6 +28,7 @@ import { partitionBySeason } from '@/lib/season';
 type SecretSantaEvent = {
   id: string;
   name: string;
+  year: number | null;
   createdAt: Date;
   createdBy: {
     id: string;

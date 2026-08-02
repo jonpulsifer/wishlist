@@ -215,6 +215,7 @@ const getSecretSantaEvents = unstable_cache(
       select: {
         id: true,
         name: true,
+        year: true,
         createdAt: true,
         createdById: true,
         participants: {

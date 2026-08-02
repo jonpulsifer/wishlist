@@ -154,8 +154,15 @@ model WishlistInvite {
 }
 
 model SecretSantaEvent {
-  id           String                   @id @default(uuid()) @db.Uuid
-  name         String
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+  /// The Occasion year this exchange is held for, which is not always the year
+  /// it was opened in — one drawn on January 2nd is still for the Christmas
+  /// just gone. Nullable because there are no migrations to backfill with:
+  /// `occasionYearOf` reads a null as the `createdAt` year, which is what the
+  /// backfill would have written.
+  year Int?
+
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
   createdBy    User                     @relation("CreatedEvents", fields: [createdById], references: [id])

@@ -205,8 +205,8 @@ year.
 - **Rejected**: `Season` for this meaning — it names the look, below. `Event` — names
   nothing specific. Birthdays as Occasions — one receiver, and modelling them here
   would put a nullable "whose is it" discriminator on every reader.
-- **Schema today**: none. An [Exchange](#exchange)'s occasion is inferred from its
-  `createdAt` year.
+- **Schema today**: no table. An [Exchange](#exchange) names the Occasion it is held for
+  by year alone, in `SecretSantaEvent.year`.
 
 ## Season
 
@@ -218,9 +218,10 @@ it is not what an Exchange belongs to, and it is not "the year in play".
 
 - **Grounded**: theming follows the calendar today, and needs no rows to keep doing so.
 - **Anticipated**: that the word narrows to the look alone.
-- **Code today**: `lib/season.ts` uses `Season` for the calendar year in play, and
-  computes three windows from it. Only one of those — how stale a [Wish](#wish) may be
-  and still count as current — survives this definition, and it is not seasonal.
+- **Code today**: `lib/season.ts` uses `Season` for the calendar year in play. It
+  computes one window from it — how stale a [Wish](#wish) may be and still count as
+  current — which survives this definition, and is not seasonal. The module's other
+  export, `occasionYear`, is the [Occasion](#occasion)'s and deliberately not this.
 
 ## Exchange
 
@@ -234,9 +235,11 @@ is paired: people join an undrawn Exchange, and the [Draw](#draw) is what assign
   exist. Exclusions ("never match me with my spouse") are **global** rather than per
   Exchange, which is open in
   [#152](https://github.com/jonpulsifer/wishlist/issues/152).
-- **Anticipated**: the name, and that an Exchange records which year it is *for*.
-- **Schema today**: `model SecretSantaEvent`, whose year is inferred from `createdAt` —
-  so an Exchange for 2026 created on January 2nd 2027 files itself under 2027.
+- **Anticipated**: the name, and the [Occasion](#occasion) row a year would become.
+- **Schema today**: `model SecretSantaEvent`, carrying the `year` it is held for.
+  `lib/season.ts` owns the reading of it: `occasionYearOf` falls a null year back to
+  `createdAt`, and the Occasion in play turns over on April 1st rather than New Year, so
+  an Exchange opened on January 2nd is for the Christmas just gone.
 
 ## Draw
 
