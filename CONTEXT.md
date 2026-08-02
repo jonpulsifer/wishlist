@@ -7,7 +7,8 @@ hypotheses, test names and code.
 **This glossary runs ahead of the schema.** It is being written by
 [the domain-language map](https://github.com/jonpulsifer/wishlist/issues/148) one
 decision at a time, and the refactor that makes `prisma/schema.prisma` match it has
-not landed. Each entry therefore carries a **Schema today** line where the code still
+not landed — `docs/refactor-plan.md` is the sequence that lands it. Each entry
+therefore carries a **Schema today** line where the code still
 says something else. When the two disagree, the glossary is the intent and the schema
 is the fact — write new prose in glossary terms, and read code in schema terms.
 
