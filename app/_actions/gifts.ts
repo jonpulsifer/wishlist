@@ -56,9 +56,13 @@ async function loadEditableGift(giftId: string, viewerId: string) {
 export const addGift = defineAction(
   { input: GiftSchema, invalidates: GIFT_CACHES },
   async ({ viewer, input }) => {
+    // The recipient's Wishlists, not the adder's. Visibility is "sits on a
+    // Wishlist the viewer belongs to", so resolving these from the viewer shares
+    // the Gift with groups the recipient may not even be in, and withholds it
+    // from the ones they are.
     const wishlists = await db.wishlist.findMany({
       select: { id: true },
-      where: { members: { some: { id: viewer.id } } },
+      where: { members: { some: { id: input.recipientId } } },
     });
 
     await db.gift.create({
