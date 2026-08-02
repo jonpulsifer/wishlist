@@ -63,7 +63,8 @@ comes out of the nix store and its cluster lives in `.pgdata/`.
 | --- | --- |
 | `mise run db:up` | initdb if needed, start, create the `wishlist` database |
 | `mise run db:down` | stop |
-| `mise run db:migrate` | create and apply a migration, and regenerate the client |
+| `mise run db:migrate <name>` | write a migration for the current schema changes, without applying it |
+| `mise run db:apply` | apply pending migrations and regenerate the client |
 | `mise run db:seed` | faker data |
 | `mise run db:reset` | drop the database and replay the migration chain from empty |
 | `mise run db:psql` | psql shell |

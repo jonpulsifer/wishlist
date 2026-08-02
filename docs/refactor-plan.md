@@ -206,12 +206,18 @@ bookkeeping row without executing any of it.
    `migrate diff --script` does not produce it and `migrate deploy` wants it.
 6. `package.json`: `prisma db push` → `prisma migrate deploy` in `build`.
    `prisma generate` stays — `migrate deploy` does not generate the client.
-7. `mise.toml`: `db:push` → `db:migrate` (`prisma migrate dev`), `db:reset`
-   becomes `prisma migrate reset`, and `setup` follows. Locally the data is
-   disposable, so local environments migrate from empty rather than baselining.
-   `db:migrate` keeps `depends = ["generate"]`: `migrate dev` runs the
-   generators only when it creates a migration, so its "already in sync" path
-   leaves a stale client behind.
+7. `mise.toml`: `db:push` splits into `db:migrate <name>`, which writes a
+   migration without applying it, and `db:apply`, which applies pending ones and
+   regenerates the client. `db:reset` becomes `prisma migrate reset`, and
+   `setup` follows. Locally the data is disposable, so local environments
+   migrate from empty rather than baselining.
+
+   **Neither task uses `prisma migrate dev`**, which refuses to run in a
+   non-interactive shell and so is unusable from CI or an agent. `db:migrate`
+   generates with `migrate diff --from-migrations` into a timestamped
+   directory, which is also where the `--create-only` behaviour Phase 3 needs
+   comes from: the SQL lands in a file to be read and hand-edited before
+   anything applies it.
 8. `prisma.config.ts` gains `datasource.shadowDatabaseUrl`, and `db:up` creates
    the database it points at — see the standing gate above.
 9. Correct `.agents/skills/schema-change/SKILL.md` (the whole "There are no
@@ -729,8 +735,10 @@ is the point of the new shape and not a loss the old shape could have held.
 # Phase 3 — Rename physically
 
 Tables and columns, not `@@map` (ADR-0007). Prisma emits DROP+CREATE for a
-rename, so **every migration in this phase is `--create-only` and hand-edited**,
+rename, so **every migration in this phase is generated and then hand-edited**,
 one `ALTER` per table and per column, before it is applied anywhere.
+`mise run db:migrate <name>` writes the file without applying it, which is what
+makes that possible; `mise run db:apply` runs it once you are satisfied.
 
 Three things to know before the first one:
 
@@ -783,7 +791,7 @@ UPDATE "Wish" SET "proposerId" = "subjectId" WHERE "proposerId" IS NULL;
 ALTER TABLE "Wish" ALTER COLUMN "proposerId" SET NOT NULL;
 -- then every index and constraint by its generated name; take the old names
 -- from prisma/migrations/0_init/migration.sql and the new ones from what
--- `migrate dev --create-only` generated before you hand-edited it.
+-- `mise run db:migrate` generated before you hand-edited it.
 ALTER INDEX "Gift_pkey" RENAME TO "Wish_pkey";
 ALTER INDEX "Gift_ownerId_createdAt_idx" RENAME TO "Wish_subjectId_createdAt_idx";
 -- …
@@ -853,7 +861,7 @@ CREATE TABLE "Membership" (
 INSERT INTO "Membership" ("familyId", "userId")
 SELECT uw."B", uw."A" FROM "_UserToWishlist" uw;
 DROP TABLE "_UserToWishlist";
--- then the FKs and the userId index, from what migrate dev generated
+-- then the FKs and the userId index, from what db:migrate generated
 ```
 
 `joinedAt` cannot be recovered for existing rows and defaults to the migration's

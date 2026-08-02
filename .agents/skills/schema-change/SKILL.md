@@ -20,10 +20,16 @@ Vercel deploy then fails at the same point until a human runs
 apply whole or not at all.
 
 **A rename must be written by hand.** Left to itself Prisma emits a drop and a
-create, which loses every row. Use `prisma migrate dev --create-only`, replace
-the generated SQL with `ALTER TABLE … RENAME`, and remember that indexes and
-constraints keep their old names through a rename — they need their own
+create, which loses every row. `mise run db:migrate <name>` writes the SQL to a
+file without applying it, so replace the generated statements with
+`ALTER TABLE … RENAME` before running `mise run db:apply`. Remember that indexes
+and constraints keep their old names through a rename — they need their own
 `ALTER … RENAME` lines or the schema and the history quietly disagree.
+
+**Do not reach for `prisma migrate dev`.** It refuses to run in a
+non-interactive shell, so it is unusable from CI or an agent, and it resolves
+drift by offering to reset the database. `db:migrate` generates the same SQL
+with `migrate diff` and works everywhere.
 
 That disagreement has a check:
 
@@ -40,14 +46,15 @@ needs a local Postgres with `CREATEDB`, which `mise run db:up` provides.
 
 1. Edit `prisma/schema.prisma`.
 2. `mise run db:up` if the local database is not running.
-3. `mise run db:migrate` — creates the migration, applies it, regenerates the
-   client. Add `--create-only` when the SQL needs hand-editing.
-4. `mise run db:reset` — proves the whole chain still applies from empty.
-5. Update `lib/db/projections.ts` if the new field should (or must not) reach
+3. `mise run db:migrate <name>` — writes the migration and prints it. Read it.
+   If nothing changed it says so and writes no directory.
+4. `mise run db:apply` — applies it and regenerates the client.
+5. `mise run db:reset` — proves the whole chain still applies from empty.
+6. Update `lib/db/projections.ts` if the new field should (or must not) reach
    the browser. A field that is not in a projection select cannot leak; one that
    is added to a select ships to every client component using it.
-6. Update `lib/db/visibility.ts` if the field changes who may see a row.
-7. `mise run typecheck` — the generated client is typed, so most fallout shows
+7. Update `lib/db/visibility.ts` if the field changes who may see a row.
+8. `mise run typecheck` — the generated client is typed, so most fallout shows
    up here.
 
 The generated client lands in `prisma/generated/` and is gitignored. Never edit
