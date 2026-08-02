@@ -61,6 +61,75 @@ of the model.
   several Claims may exist against one Wish — people chipping in together — is open in
   [#152](https://github.com/jonpulsifer/wishlist/issues/152).
 
+## Occasion
+
+A shared, dated happening that people give around — Christmas 2026.
+
+**Shared is the test**: every participant both gives and receives. A birthday has a
+single receiver, so it is not an Occasion. An Occasion is global — Christmas 2026 is
+one happening, not one per family — and each row is a single occurrence, so Christmas
+2027 is a different Occasion rather than the same one coming round again.
+
+An Occasion owns a date and the [Exchanges](#exchange) held for it. It does **not** own
+[Wishes](#wish): a Wish is a thing a person wants, not a thing they want *for*
+something, and it stays on their list across occasions rather than being re-filed each
+year.
+
+- **Grounded**: nothing. There is no table, no row, and no code that reads one.
+- **Anticipated**: all of it. Decided in
+  [#151](https://github.com/jonpulsifer/wishlist/issues/151). wishin.app is
+  Christmas-first and stays that way; the term exists so that the calendar year stops
+  being the organising fact once other occasions arrive. Treat it as the most revisable
+  entry here.
+- **Rejected**: `Season` for this meaning — it names the look, below. `Event` — names
+  nothing specific. Birthdays as Occasions — one receiver, and modelling them here
+  would put a nullable "whose is it" discriminator on every reader.
+- **Schema today**: none. An [Exchange](#exchange)'s occasion is inferred from its
+  `createdAt` year.
+
+## Season
+
+A period of the year with a look.
+
+A Season is derived from the calendar and stored nowhere: December is festive whether
+or not anyone is running an [Exchange](#exchange). It drives theming and nothing else —
+it is not what an Exchange belongs to, and it is not "the year in play".
+
+- **Grounded**: theming follows the calendar today, and needs no rows to keep doing so.
+- **Anticipated**: that the word narrows to the look alone.
+- **Code today**: `lib/season.ts` uses `Season` for the calendar year in play, and
+  computes three windows from it. Only one of those — how stale a [Wish](#wish) may be
+  and still count as current — survives this definition, and it is not seasonal.
+
+## Exchange
+
+A gift exchange people join and are paired in — what the app calls Secret Santa.
+
+An Exchange belongs to one [Occasion](#occasion) and names its participants explicitly,
+so it is the participant-scoped thing and the Occasion is not. It exists before anyone
+is paired: people join an undrawn Exchange, and the [Draw](#draw) is what assigns them.
+
+- **Grounded**: the container, its explicit participants and its undrawn state all
+  exist. Exclusions ("never match me with my spouse") are **global** rather than per
+  Exchange, which is open in
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+- **Anticipated**: the name, and that an Exchange records which year it is *for*.
+- **Schema today**: `model SecretSantaEvent`, whose year is inferred from `createdAt` —
+  so an Exchange for 2026 created on January 2nd 2027 files itself under 2027.
+
+## Draw
+
+The act of assigning who gives to whom within an [Exchange](#exchange).
+
+A Draw is not a thing people join — that is the Exchange. It is the moment pairings are
+made, and it is reproducible: `lib/secret-santa/draw.ts` takes its randomness as a
+parameter.
+
+- **Grounded**: entirely. `drawAssignments`, `DrawInput`, `DrawResult` and the tests
+  already use this word for exactly this meaning.
+- **Schema today**: the `assignedToId` and `assignedById` columns on
+  `SecretSantaParticipant`. The act has no row of its own.
+
 ---
 
 ## Terms this project does not use
@@ -71,3 +140,7 @@ of the model.
   It was deliberately **not** reused for Claim, despite fitting: every existing `Gift`
   row becomes a Wish, so keeping the word would silently move its meaning across ~60
   call sites.
+- **Event** — retired by
+  [#151](https://github.com/jonpulsifer/wishlist/issues/151). It named the container
+  people join, which is an [Exchange](#exchange), and it names nothing specific enough
+  to be worth keeping alongside a dated [Occasion](#occasion).
