@@ -2,15 +2,15 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider     = "prisma-client-js"
-  output       = "generated/client"
+  provider     = "prisma-client"
+  output       = "generated"
   moduleFormat = "esm"
 }
 
+// Connection URLs live in prisma.config.ts (CLI) and lib/db/client.ts (runtime
+// adapter) — v7 does not accept them here.
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model Account {

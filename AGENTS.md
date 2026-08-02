@@ -42,10 +42,10 @@ after the fact is too late. Every one exists because the opposite shipped.
 exists, then `mise run <task>`. The tasks encode the correct binary and flags.
 
 Entering the directory is enough to get a working environment. mise pins bun and
-node, and `.mise/nix-env.sh` exports the Prisma engine paths out of the pinned
-flake — so `bunx prisma`, `bun run build` and the `db:*` tasks work in a plain
-shell. There is no `nix develop` wrapper to remember and no docker-compose to
-start; `mise run db:up` runs Postgres out of the nix store.
+node, and `.mise/nix-env.sh` exports the Prisma schema engine path out of the
+pinned flake — so `bunx --bun prisma`, `bun run build` and the `db:*` tasks work
+in a plain shell. There is no `nix develop` wrapper to remember, and no
+docker-compose to start; `mise run db:up` runs Postgres out of the nix store.
 
 `package.json` scripts stay the source of truth for what Vercel and CI run. The
 mise tasks delegate to them, and add what `package.json` cannot express — the

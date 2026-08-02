@@ -10,7 +10,7 @@ Tailwind v4. Deployed on Vercel.
 ## Getting started
 
 Requires [mise](https://mise.jdx.dev). Nix is required only on NixOS, where it
-supplies the Prisma engines and Postgres.
+supplies the Prisma schema engine and Postgres.
 
 ```bash
 mise run setup   # install deps, write .env, start and migrate a local database
