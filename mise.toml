@@ -46,7 +46,7 @@ run = "bun run dev"
 
 [tasks.generate]
 description = "Regenerate the Prisma client into prisma/generated"
-run = "bunx prisma generate --no-hints"
+run = "bunx --bun prisma generate --no-hints"
 
 # ─── Validate ────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,9 @@ fi
 
 [tasks."db:push"]
 description = "Push prisma/schema.prisma into the database (no migrations in this repo)"
-run = "bunx prisma db push"
+# v7 does not regenerate the client as a side effect of a push.
+depends = ["generate"]
+run = "bunx --bun prisma db push"
 
 [tasks."db:seed"]
 description = "Fill the database with faker data"
@@ -129,7 +131,7 @@ run = "bun prisma/seed.ts"
 
 [tasks."db:studio"]
 description = "Open Prisma Studio against the local database"
-run = "bunx prisma studio"
+run = "bunx --bun prisma studio"
 
 [tasks."db:psql"]
 description = "psql shell on the local database"

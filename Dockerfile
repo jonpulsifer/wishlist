@@ -1,10 +1,7 @@
-# Builder and runner deliberately share one base. Prisma's generator defaults to
-# `native`, so the query engine baked into the standalone output is built for the
-# builder's libc. The previous split (alpine builder -> debian distroless runner)
-# shipped a musl engine into a glibc runtime.
+# Builder and runner share one base. Prisma v7 ships no native engine — the
+# client reaches Postgres through a JS driver adapter — so nothing libc-specific
+# is baked into the standalone output.
 FROM oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 AS base
-# libc6-compat and openssl are what Prisma's engine needs on alpine.
-RUN apk add --no-cache libc6-compat openssl
 
 FROM base AS builder
 ENV STANDALONE=1

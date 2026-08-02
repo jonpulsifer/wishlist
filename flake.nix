@@ -1,6 +1,7 @@
 {
-  description = "wishlist — pinned Prisma engines and Postgres for local development";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+  description = "wishlist — pinned Prisma schema engine and Postgres for local development";
+  # unstable, because it is the channel that carries a Prisma 7 engine.
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils }:
@@ -10,21 +11,21 @@
       in
       {
         # mise resolves these out of the store and exports the paths into the
-        # environment — see .mise/nix-env.sh. Prisma publishes no engine for the
-        # linux-nixos binary target, so the nixpkgs build is the only one that
-        # runs here.
+        # environment — see .mise/nix-env.sh.
+        #
+        # v7 talks to the database through a driver adapter, so there is no
+        # query engine left to pin; `prisma db push` still shells out to the
+        # schema engine, and Prisma publishes no build of it for the
+        # linux-nixos target.
         packages = {
-          prisma-engines = pkgs.prisma-engines;
+          prisma-engines = pkgs.prisma-engines_7;
           postgresql = pkgs.postgresql_17;
         };
 
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ bashInteractive openssl postgresql_17 ];
-          shellHook = with pkgs; ''
-            export PRISMA_QUERY_ENGINE_BINARY="${prisma-engines}/bin/query-engine"
-            export PRISMA_QUERY_ENGINE_LIBRARY="${prisma-engines}/lib/libquery_engine.node"
-            export PRISMA_SCHEMA_ENGINE_BINARY="${prisma-engines}/bin/schema-engine"
-            export PRISMA_FMT_BINARY="${prisma-engines}/bin/prisma-fmt"
+          packages = with pkgs; [ bashInteractive postgresql_17 ];
+          shellHook = ''
+            export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines_7}/bin/schema-engine"
           '';
         };
       });

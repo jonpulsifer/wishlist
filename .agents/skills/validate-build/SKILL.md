@@ -44,5 +44,7 @@ generator rather than on statistical properties.
   `bunx biome check app components lib hooks types`.
 - **`Prisma failed to detect the libssl/openssl version`** — noise on NixOS. The
   command still succeeds.
-- **Prisma cannot find an engine** — the environment did not resolve. See the
-  `local-dev` skill; `mise env | grep PRISMA` should print four paths.
+- **Prisma cannot find an engine**, or `Cannot resolve environment variable:
+  DIRECT_URL` — the environment did not resolve, or the CLI was run under node
+  instead of `bunx --bun`. See the `local-dev` skill; `mise env | grep -E
+  'PRISMA|PGBIN'` should print the schema engine and Postgres paths.
