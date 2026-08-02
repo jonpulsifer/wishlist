@@ -250,19 +250,41 @@ The word is chosen for what the app is actually for — helping big families tra
 wants of their peeps. A friend group or a set of coworkers is modelled as a Family too,
 and that is the one place the word is a stretch.
 
+**Nobody runs a Family.** There is no owner, no organiser and no per-Family role: every
+member may do everything a Family affords — create an [Invite](#invite), add someone by
+email, leave. What no member may do is act on another. **There is no way to remove
+anyone**, so membership is a one-way ratchet and following an Invite is the only
+irreversible act in the model, which is why an Invite admits exactly one person. Nobody
+deletes a Family either: the last member leaving deletes it, so an empty Family is a
+consequence rather than a decision, and no one can dissolve a Family out from under the
+people still in it.
+
 - **Grounded**: the concept, the many-to-many membership and its role as the single
-  visibility edge all exist today.
+  visibility edge all exist today. So does the absence of any way to remove a member —
+  `leaveWishlist` only ever disconnects the viewer — though today that is an omission
+  rather than a decision.
 - **Anticipated**: the name, flatness as a decision rather than an accident, names ceasing
   to be unique ([#150](https://github.com/jonpulsifer/wishlist/issues/150)), and Families
   being invisible rather than merely closed
-  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)).
+  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)). Nobody running one, the
+  ratchet, and deletion by last exit
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
 - **Rejected**: `Circle` and `Group` — neutral enough to fit coworkers, but they name a
   shape rather than a thing, and the coworkers case is speculative while the family case
   is the product. Nesting — overlapping membership already expresses every subset, and
-  making the one remaining visibility rule recursive would be felt everywhere.
+  making the one remaining visibility rule recursive would be felt everywhere. Ejection,
+  in every form offered: symmetric removal, removal by whoever admitted you, and a
+  per-Family owner holding it. Ejection destroys nothing and is undone by a new Invite,
+  so it is cheap — but each form buys a remedy for a forwarded link at the price of a
+  hierarchy, a stored `admittedById`, or an owner, and the narrower Invite closes the
+  same hole without any of them.
 - **Schema today**: `model Wishlist`. Its `name` is globally `@unique`, its `password`
-  is a plaintext pin, and it has no owner column — so nobody runs a Family
-  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)). There *is* a directory:
+  is a plaintext pin, and it has no owner column — which
+  [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate.
+  `deleteWishlistAdmin` hard-deletes one behind `manage:wishlists`, and after
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156) that destroys no
+  [Wish](#wish) — a Family owns nothing but its membership edges and its Invites. There
+  *is* a directory:
   `getWishlistsWithMembers` takes no viewer and lists every Family by name to every
   signed-in user, on `/wishlists` and in global search. Both the pin and the directory go
   ([#153](https://github.com/jonpulsifer/wishlist/issues/153)).
@@ -283,13 +305,22 @@ they sign in. It is shown wherever people are listed, which is the point: a memb
 mistypes an address can see the stranger they just added to the Family, instead of finding
 out when that address signs in years later.
 
+**A provisional User may be deleted**, by any member who can see them. This is the undo
+for that mistyped address, and it is not an ejection: a row nobody has claimed is not yet
+a person, and showing a typo to a Family that has no way to fix it would be theatre. The
+carve-out closes itself, because the boundary is the same derived one — the moment they
+sign in an Account exists, they are a member like anyone else, and
+[Family](#family) membership admits no removal at all.
+
 - **Grounded**: `model User` is this already, and `allowDangerousEmailAccountLinking` is
   on, so an accountless User links correctly when that person later signs in with
   Google.
 - **Anticipated**: that a person who will never sign in needs nothing more than this, and
   that provisional stays derived. Nothing creates such a row today — every User comes from
   the Auth.js adapter — and the flow that would is the push half of
-  [#153](https://github.com/jonpulsifer/wishlist/issues/153).
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153). Deletion while provisional
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)), which has nothing to
+  delete until that flow exists.
 - **Rejected**: `Person` as a distinct level above `User`. Decided in
   [#150](https://github.com/jonpulsifer/wishlist/issues/150): the higher-level concept
   the product needed was [Family](#family), and splitting the human from the login costs
@@ -306,7 +337,15 @@ An Invite is the **only** way into a Family, and following one is the whole of j
 the link *is* the consent, so there is no secret to type, no approval queue and no
 confirmation screen. Any member of a Family may create an Invite to it — a family whose
 members cannot invite anyone is a family that grows only as fast as its admin answers
-messages. An Invite is revocable and expires.
+messages.
+
+An Invite is **single-use**, revocable, and expires. It carries the model's whole weight:
+membership cannot be undone, so following an Invite is the only irreversible act anyone
+performs, and a link handed out by every member had better admit exactly the person it was
+sent to. Spent, it is dead — a forwarded link does nothing, and one forwarded before it is
+used costs a single wrong member rather than a group chat's worth. The bulk case it gives
+up is served better by push, below, which is reversible while those people remain
+provisional.
 
 An Invite grants **join**, not view. A link that shows someone a Wishlist without making
 them a member is a different thing, and belongs to
@@ -320,20 +359,26 @@ the half of joining that has no mechanism at all today.
 
 - **Grounded**: the token, its revocation, the cookie that carries it through sign-in, and
   the join-on-click route all exist and work.
-- **Anticipated**: that an Invite is the only door, that any member may create one — which
-  [#160](https://github.com/jonpulsifer/wishlist/issues/160) may refine once Families have
-  owners — and the push direction entirely. Decided in
+- **Anticipated**: that an Invite is the only door, that any member may create one, and
+  the push direction entirely. Decided in
   [#153](https://github.com/jonpulsifer/wishlist/issues/153).
+  [#160](https://github.com/jonpulsifer/wishlist/issues/160) confirms who may create one —
+  nobody runs a Family, so there is no narrower answer available — and makes it
+  single-use.
 - **Rejected**: a shared pin. It is not a second mechanism but a worse Invite — a bearer
   secret that grants membership, four digits long, shared, permanent, reusable, stored in
   plaintext and guessable in ten thousand tries. Joining by email domain — a Family is not
-  a domain, and that is a corporate-SSO idea wearing a festive hat.
+  a domain, and that is a corporate-SSO idea wearing a festive hat. A multi-use link with
+  a mandatory expiry — it keeps the paste-into-the-family-chat flow and bounds only how
+  long the risk lasts, not how many people it admits, which is the wrong half of the
+  problem once nobody can be removed.
 - **Schema today**: `model WishlistInvite`, reachable only by an admin —
   `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
-  all, so no ordinary member can invite anyone or start a family. One active invite per
-  Family is enforced by revoking the previous one. `expiresAt` exists and nothing ever
-  writes it, so invites do not expire. The pin path
-  (`joinWishlist`) is unthrottled and compares in plaintext.
+  all, so no ordinary member can invite anyone or start a family. A token is multi-use:
+  `app/invite/[token]/route.ts` records nothing about redemption, so one link admits
+  everyone who follows it, and only one is active per Family because creating one revokes
+  the previous. `expiresAt` exists and nothing ever writes it, so invites do not expire.
+  The pin path (`joinWishlist`) is unthrottled and compares in plaintext.
 
 ## Occasion
 
@@ -384,15 +429,73 @@ An Exchange belongs to one [Occasion](#occasion) and names its participants expl
 so it is the participant-scoped thing and the Occasion is not. It exists before anyone
 is paired: people join an undrawn Exchange, and the [Draw](#draw) is what assigns them.
 
+An Exchange is held **for one [Family](#family)**, and its participants are a subset of
+that Family's members — so opting out is simply not being picked. The bound is not
+bookkeeping: it is what keeps a santa able to see their recipient's [Wishes](#wish). A
+Family is the only visibility edge there is, so participants drawn from two of them could
+be paired into an obligation the visibility rules make impossible to fulfil. Bounding the
+Exchange makes that unrepresentable rather than merely unlikely, and it is why an Exchange
+grants no visibility of its own.
+
+**Exclusions belong to the people in them, not to the Exchange.** Either party may say
+they should never be matched with the other; it binds both ways, and it is visible to
+those two and to no one else — not to the [Organiser](#organiser), who therefore runs a
+Draw shaped by constraints they cannot inspect or override.
+
 - **Grounded**: the container, its explicit participants and its undrawn state all
-  exist. Exclusions ("never match me with my spouse") are **global** rather than per
-  Exchange, which is open in
-  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
-- **Anticipated**: the name, and the [Occasion](#occasion) row a year would become.
-- **Schema today**: `model SecretSantaEvent`, carrying the `year` it is held for.
-  `lib/season.ts` owns the reading of it: `occasionYearOf` falls a null year back to
-  `createdAt`, and the Occasion in play turns over on April 1st rather than New Year, so
-  an Exchange opened on January 2nd is for the Christmas just gone.
+  exist. So do exclusions, already global and already symmetric — creating one connects
+  both directions.
+- **Anticipated**: the name, the [Occasion](#occasion) row a year would become, and the
+  Family bound and exclusion ownership
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+- **Rejected**: bounding participants by what the Organiser can see and teaching the Draw
+  to avoid unseeable pairs — it turns an impossible state into a runtime failure, and can
+  strand a participant nobody may be matched with. An Exchange that grants visibility for
+  its duration — it would buy cross-Family exchanges at the cost of the second visibility
+  edge [#150](https://github.com/jonpulsifer/wishlist/issues/150) declined. Per-Exchange
+  exclusions, and exclusions the Organiser sets — the first contradicts
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152)'s finding that they are
+  permanent, and the second puts the shape of a draw in the hands of someone in it.
+- **Schema today**: `model SecretSantaEvent`, carrying the `year` it is held for and no
+  Family at all. `lib/season.ts` owns the reading of the year: `occasionYearOf` falls a
+  null back to `createdAt`, and the Occasion in play turns over on April 1st rather than
+  New Year, so an Exchange opened on January 2nd is for the Christmas just gone.
+  Exclusions are the `secretSantaDoNotMatchWith` self-relation on `User`, created and
+  deleted only behind `manage:secret-santa`, so today they are an administrator's setting
+  rather than the subject's.
+
+## Organiser
+
+The person who opened an [Exchange](#exchange) — and the only authority in the app.
+
+An Organiser holds every act on the one Exchange they opened: picking its participants
+from the [Family](#family) it is held for, firing the [Draw](#draw), and deleting it.
+Nothing else and nowhere else. Organising one Exchange confers nothing over another, over
+a Family, or over a person, so this is ownership of an object rather than a rank someone
+holds.
+
+The Organiser is the creator and **cannot be changed**: no transfer, no co-organisers, no
+succession. An Exchange lives for one [Occasion](#occasion), which is short enough that an
+abandoned one is cheaper to ignore than to inherit — a drawn Exchange is history nobody
+should be editing, and an undrawn one is a stale row the next Occasion's Exchange
+replaces. Someone who wants to help runs their own Exchange; that is the whole answer to
+co-organising, and it is why nobody needed a per-Family role to get it.
+
+- **Grounded**: half of it, unnamed. `app/_actions/secret-santa.ts:68` already restricts
+  the Draw to `event.createdById` — per-object ownership, hand-written against one action
+  and known to no shared module.
+- **Anticipated**: the word, and the other acts gathering under it
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+- **Rejected**: co-organisers and transfer — they buy succession for an object that
+  outlives nothing. Authority following participation, so that any participant may run the
+  Exchange — the Draw is irreversible once assignments are written, and any of thirty
+  people could fire it early. An instance administrator keeping the destructive acts as a
+  backstop for an abandoned Exchange, which was the last job anything global had.
+- **Schema today**: `SecretSantaEvent.createdById`. The acts are split against it rather
+  than gathered: the creator may run the Draw but not delete the Exchange, while
+  `manage:secret-santa` may delete one it has nothing to do with. Opening an Exchange is
+  gated by nothing at all, and its participant list is never checked against what the
+  viewer may see ([#185](https://github.com/jonpulsifer/wishlist/issues/185)).
 
 ## Draw
 
@@ -402,8 +505,14 @@ A Draw is not a thing people join — that is the Exchange. It is the moment pai
 made, and it is reproducible: `lib/secret-santa/draw.ts` takes its randomness as a
 parameter.
 
-- **Grounded**: entirely. `drawAssignments`, `DrawInput`, `DrawResult` and the tests
-  already use this word for exactly this meaning.
+The [Organiser](#organiser) fires it, once. It consumes exclusions belonging to the
+participants rather than to the Organiser, so the person running a Draw cannot see every
+constraint shaping it.
+
+- **Grounded**: entirely, including who fires it — `drawAssignments`, `DrawInput`,
+  `DrawResult` and the tests already use this word for exactly this meaning, and
+  `assignSecretSantaParticipants` already refuses anyone but the creator and refuses a
+  second run.
 - **Schema today**: the `assignedToId` and `assignedById` columns on
   `SecretSantaParticipant`. The act has no row of its own.
 
@@ -448,3 +557,29 @@ parameter.
   What is left is one boolean — declining [Suggestions](#suggestion), above. There is no
   composition, no precedence and no most-restrictive-wins rule, so there is no policy, and
   a name promising that machinery would assert a shape the domain does not have.
+- **Admin** / **Role** / **Capability** — retired by
+  [#160](https://github.com/jonpulsifer/wishlist/issues/160). **There are no admins.**
+  Every act belongs to a member of a [Family](#family), to the subject it is about, or to
+  the [Organiser](#organiser) of one [Exchange](#exchange) — and none of those is granted
+  to anyone, so there is nothing for a role to hold. The four capabilities emptied out
+  one by one: creating a Family and inviting to one became member acts
+  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)), the pin and the directory
+  were deleted with them, deleting a Family became a consequence of the last member
+  leaving, and every Secret Santa act went to the Organiser or to the participants
+  themselves — leaving `manage:roles`, whose sole remaining power was granting
+  `manage:roles`.
+
+  The second argument is sharper than the tally. A Family you are not in is *invisible*,
+  not merely closed, so an instance administrator could not inspect one without a bypass
+  that reads straight through the disclosure boundary — every member's address and sizes.
+  The power such a role would need is precisely the one the model is built to deny.
+
+  Per-**Family** roles were rejected too, and first: scoping capabilities would have
+  added an axis to `lib/db/visibility.ts` that is not membership, to express acts that
+  turned out not to need permission. Authority stays a property of objects and of
+  subjects, never of people.
+- **Godmode** — goes with the above. It is instance-wide superuser, and after
+  [#160](https://github.com/jonpulsifer/wishlist/issues/160) the instance has nothing to
+  administer: the last job on offer was deleting an [Exchange](#exchange) whose
+  [Organiser](#organiser) has left, and a stranded Exchange is inert rather than a
+  problem. Operator work is `psql`, not a screen.
