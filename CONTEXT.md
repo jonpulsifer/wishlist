@@ -246,9 +246,16 @@ There is **no directory of Families**. A Family you are not in is not merely clo
 you, it is invisible: you cannot see that it exists, learn its name or count its members.
 The only way in is an [Invite](#invite).
 
+Membership is **mutual**: you see everyone who can see you. There is no way to be seen
+without seeing, so a Family cannot express a one-directional view.
+
 The word is chosen for what the app is actually for — helping big families track the
 wants of their peeps. A friend group or a set of coworkers is modelled as a Family too,
-and that is the one place the word is a stretch.
+and that is the one place the word is a stretch — though not only in the word. Mutual and
+unremovable together mean showing one coworker a list costs a permanent two-way
+membership carrying addresses and sizes, which is why
+[#158](https://github.com/jonpulsifer/wishlist/issues/158) leaves that case unserved
+rather than opening a way around the boundary.
 
 **Nobody runs a Family.** There is no owner, no organiser and no per-Family role: every
 member may do everything a Family affords — create an [Invite](#invite), add someone by
@@ -260,9 +267,10 @@ consequence rather than a decision, and no one can dissolve a Family out from un
 people still in it.
 
 - **Grounded**: the concept, the many-to-many membership and its role as the single
-  visibility edge all exist today. So does the absence of any way to remove a member —
-  `leaveWishlist` only ever disconnects the viewer — though today that is an omission
-  rather than a decision.
+  visibility edge all exist today. So does its mutuality — `visiblePeopleWhere` is a
+  single `some → some`, which has no way to express seen-without-seeing. So does the
+  absence of any way to remove a member — `leaveWishlist` only ever disconnects the
+  viewer — though today that is an omission rather than a decision.
 - **Anticipated**: the name, flatness as a decision rather than an accident, names ceasing
   to be unique ([#150](https://github.com/jonpulsifer/wishlist/issues/150)), and Families
   being invisible rather than merely closed
@@ -277,7 +285,10 @@ people still in it.
   per-Family owner holding it. Ejection destroys nothing and is undone by a new Invite,
   so it is cheap — but each form buys a remedy for a forwarded link at the price of a
   hierarchy, a stored `admittedById`, or an owner, and the narrower Invite closes the
-  same hole without any of them.
+  same hole without any of them. One-directional visibility — a Family that some people
+  see into without being seen. It is the second axis on `lib/db/visibility.ts` that
+  per-Family roles were rejected for, wearing a different hat
+  ([#158](https://github.com/jonpulsifer/wishlist/issues/158)).
 - **Schema today**: `model Wishlist`. Its `name` is globally `@unique`, its `password`
   is a plaintext pin, and it has no owner column — which
   [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate.
@@ -347,9 +358,19 @@ used costs a single wrong member rather than a group chat's worth. The bulk case
 up is served better by push, below, which is reversible while those people remain
 provisional.
 
-An Invite grants **join**, not view. A link that shows someone a Wishlist without making
-them a member is a different thing, and belongs to
-[#158](https://github.com/jonpulsifer/wishlist/issues/158).
+An Invite grants **join**, and join is the only grant there is. No link shows someone a
+Wishlist without making them a member —
+[#158](https://github.com/jonpulsifer/wishlist/issues/158) went looking for one and found
+a [Family](#family) instead. See *Share link* under
+[Terms this project does not use](#terms-this-project-does-not-use).
+
+An Invite is **unaddressed** — a bearer link, naming no recipient, so whoever holds it
+joins. Binding it to an email is dominated by push, below: it demands the same thing you
+would already have to know, then waits for a click that push does not wait for, and gives
+up push's undo to do it. It also fails Grandma in the one way she cannot talk her way out
+of — she signs in with the address you did not type, and the link refuses her. So the
+split is by what the sender knows: push when you have their email, an Invite when you do
+not.
 
 Joining also has a **push** direction, which needs no Invite: a member adds someone by
 email, creating a provisional [User](#user) who is in the Family at once. That person has
@@ -364,14 +385,20 @@ the half of joining that has no mechanism at all today.
   [#153](https://github.com/jonpulsifer/wishlist/issues/153).
   [#160](https://github.com/jonpulsifer/wishlist/issues/160) confirms who may create one —
   nobody runs a Family, so there is no narrower answer available — and makes it
-  single-use.
+  single-use. That an unaddressed token is the deliberate shape rather than the
+  unfinished one is [#158](https://github.com/jonpulsifer/wishlist/issues/158).
 - **Rejected**: a shared pin. It is not a second mechanism but a worse Invite — a bearer
   secret that grants membership, four digits long, shared, permanent, reusable, stored in
   plaintext and guessable in ten thousand tries. Joining by email domain — a Family is not
   a domain, and that is a corporate-SSO idea wearing a festive hat. A multi-use link with
   a mandatory expiry — it keeps the paste-into-the-family-chat flow and bounds only how
   long the risk lasts, not how many people it admits, which is the wrong half of the
-  problem once nobody can be removed.
+  problem once nobody can be removed. Addressing the token — binding it to an email at
+  creation and refusing a Google account that does not match; it removes the wrong-contact
+  failure entirely, but only where push already applies, and trades a recoverable mistake
+  for one Grandma cannot recover from. Redemption behind the inviter's approval, which
+  restores an undo before the irreversible step by giving up the finding that the link
+  *is* the consent.
 - **Schema today**: `model WishlistInvite`, reachable only by an admin —
   `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
   all, so no ordinary member can invite anyone or start a family. A token is multi-use:
@@ -578,6 +605,25 @@ constraint shaping it.
   added an axis to `lib/db/visibility.ts` that is not membership, to express acts that
   turned out not to need permission. Authority stays a property of objects and of
   subjects, never of people.
+- **Share link** — retired by
+  [#158](https://github.com/jonpulsifer/wishlist/issues/158), which went looking for a
+  view-granting bearer token and found a [Family](#family). The case it was for —
+  coworkers, a friend group — is one: a Family is *the people who can see each other's
+  Wishes*, people belong to as many as they like, and
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153) made creating one and
+  inviting to it member acts, so there is no friction left to route around. The only case
+  a Family cannot express needs a viewer with **no account**, and that was disclaimed at
+  the outset: everyone signs in with Google.
+
+  The link would have cost a second axis in `lib/db/visibility.ts` that is not
+  membership — the one per-Family roles were rejected for — and it buys nothing to offset
+  that, because a screenshot forwards exactly as well as a link. *Show someone my list* is
+  served out of band, by copying or printing a list, which grants nothing and so needs no
+  revoking; nothing in the app does that today.
+
+  What no rejection serves is the coworker you are unwilling to hand a permanent, mutual
+  [Family](#family) membership. That is the ratchet's price — see Family, above — and
+  #158 is the third ticket to lean on it.
 - **Godmode** — goes with the above. It is instance-wide superuser, and after
   [#160](https://github.com/jonpulsifer/wishlist/issues/160) the instance has nothing to
   administer: the last job on offer was deleting an [Exchange](#exchange) whose
