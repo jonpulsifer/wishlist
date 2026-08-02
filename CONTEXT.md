@@ -26,18 +26,29 @@ hand-me-down, an experience, or a favour. A goal nobody can give you — "learn 
 is not a Wish, because there would be nothing to [Claim](#claim).
 
 A Wish is flat: there is no kind or type discriminator, and none is planned. A Wish
-carries a name and, optionally, a link, a description and an image. It belongs to the
-person who wants it, but it need not have been **added** by them — anyone who can see
-someone may add a Wish on their behalf, which is what makes surprises possible.
+carries a name and, optionally, a link, a description and an image.
 
-- **Grounded**: the fields, the optionality, and the adder-is-not-always-the-owner rule
-  all exist today.
+Every Wish has a **subject** — the person who would receive it — and a **proposer**,
+the person who added it. Usually they are the same person, and the Wish sits on that
+person's [Wishlist](#wishlist). When they differ the Wish is a
+[Suggestion](#suggestion), which is what makes surprises possible.
+
+Who may see a Wish follows from its **subject**: anyone sharing a group with them.
+Nothing is pinned or filed — a Wish is visible wherever its subject is.
+
+- **Grounded**: the fields, the optionality, and the proposer-is-not-always-the-subject
+  rule all exist today.
 - **Anticipated**: that no discriminator is ever needed. Decided in
   [#149](https://github.com/jonpulsifer/wishlist/issues/149) on the grounds that
-  "receivable" is exactly the boundary that keeps Claim meaningful.
+  "receivable" is exactly the boundary that keeps Claim meaningful. The subject and
+  proposer vocabulary is from
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156).
 - **Rejected**: `Gift` — too specific, and it names the giving rather than the wanting.
   `Want` — no natural collection noun. `Item` — carries no meaning.
-- **Schema today**: `model Gift`.
+- **Schema today**: `model Gift`; the subject is `ownerId` and the proposer is
+  `createdById`. Visibility is **not** derived — `Gift.wishlists` pins each row to the
+  groups its *proposer* belonged to at the moment it was added, so it is a snapshot
+  rather than a rule, and it goes stale when anyone joins a group.
 
 ## Claim
 
@@ -60,6 +71,58 @@ of the model.
 - **Schema today**: the `claimed` boolean and `claimedById` on `model Gift`. Whether
   several Claims may exist against one Wish — people chipping in together — is open in
   [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+
+## Wishlist
+
+Everything a person has asked for: the [Wishes](#wish) whose subject and proposer are
+both them.
+
+A Wishlist is a **view, not a thing**. There is no row and no table — a Wish already
+names its subject, so a Wishlist is a query over Wishes, and a table would carry no
+field the Wish does not already have. Each person has exactly one, implicitly: nothing
+has yet appeared that would distinguish a second.
+
+A Wishlist is what its owner **asked for**, which is precisely why a
+[Suggestion](#suggestion) is not on it.
+
+- **Grounded**: the collection exists this way already — it is `ownerId`, queried.
+- **Anticipated**: that one per person is enough.
+  [#151](https://github.com/jonpulsifer/wishlist/issues/151) removed occasion as a way
+  to tell two apart, and audience belongs to interaction policy
+  ([#157](https://github.com/jonpulsifer/wishlist/issues/157)) rather than to a list.
+  Decided in
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156).
+- **Rejected**: `Wishlist` as the name of the **group** — that is the meaning the
+  schema carries today, and it retires in
+  [#150](https://github.com/jonpulsifer/wishlist/issues/150). Naming a person's
+  collection anything else, when wishin.app is named for this word and every user
+  already uses it this way.
+- **Schema today**: `model Wishlist` is the group, not this. A person's collection has
+  no representation beyond `Gift.ownerId`.
+
+## Suggestion
+
+Someone else's idea of what a person might want: a [Wish](#wish) whose **proposer is
+not its subject**.
+
+A Suggestion is visible to everyone who can see the subject **except the subject**.
+That is the whole point, and it is why a Suggestion is not on the subject's
+[Wishlist](#wishlist) — a Wishlist is what its owner asked for.
+
+A Suggestion is not a separate kind of row. It is the state a Wish is in when its two
+people differ, so a [Claim](#claim) attaches to it exactly as to any other Wish, and
+**adopting** one — the subject deciding they do want it — is setting the proposer to
+the subject.
+
+- **Grounded**: the behaviour exists. `lib/db/visibility.ts` narrows a viewer looking
+  at their own list to `createdById: viewerId`, so a Wish added for you is already
+  hidden from you.
+- **Anticipated**: the name, and adoption. Decided in
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156).
+- **Rejected**: a separate `Suggestion` model — it would force a [Claim](#claim) to
+  point at either kind, splitting 600+ rows across two tables to express one rule.
+- **Schema today**: `Gift.createdById` differing from `Gift.ownerId`. The rule is
+  hand-written as a branch in `visibility.ts` rather than named.
 
 ## Occasion
 
