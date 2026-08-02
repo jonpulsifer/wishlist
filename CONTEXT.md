@@ -33,7 +33,8 @@ the person who added it. Usually they are the same person, and the Wish sits on 
 person's [Wishlist](#wishlist). When they differ the Wish is a
 [Suggestion](#suggestion), which is what makes surprises possible.
 
-Who may see a Wish follows from its **subject**: anyone sharing a group with them.
+Who may see a Wish follows from its **subject**: anyone sharing a [Family](#family)
+with them.
 Nothing is pinned or filed — a Wish is visible wherever its subject is.
 
 - **Grounded**: the fields, the optionality, and the proposer-is-not-always-the-subject
@@ -47,8 +48,8 @@ Nothing is pinned or filed — a Wish is visible wherever its subject is.
   `Want` — no natural collection noun. `Item` — carries no meaning.
 - **Schema today**: `model Gift`; the subject is `ownerId` and the proposer is
   `createdById`. Visibility is **not** derived — `Gift.wishlists` pins each row to the
-  groups its *proposer* belonged to at the moment it was added, so it is a snapshot
-  rather than a rule, and it goes stale when anyone joins a group.
+  Families its *proposer* belonged to at the moment it was added, so it is a snapshot
+  rather than a rule, and it goes stale when anyone joins a Family.
 
 ## Claim
 
@@ -92,13 +93,13 @@ A Wishlist is what its owner **asked for**, which is precisely why a
   ([#157](https://github.com/jonpulsifer/wishlist/issues/157)) rather than to a list.
   Decided in
   [#156](https://github.com/jonpulsifer/wishlist/issues/156).
-- **Rejected**: `Wishlist` as the name of the **group** — that is the meaning the
-  schema carries today, and it retires in
+- **Rejected**: `Wishlist` as the name of the **[Family](#family)** — that is the
+  meaning the schema carries today, and it retires in
   [#150](https://github.com/jonpulsifer/wishlist/issues/150). Naming a person's
   collection anything else, when wishin.app is named for this word and every user
   already uses it this way.
-- **Schema today**: `model Wishlist` is the group, not this. A person's collection has
-  no representation beyond `Gift.ownerId`.
+- **Schema today**: `model Wishlist` is the [Family](#family), not this. A person's
+  collection has no representation beyond `Gift.ownerId`.
 
 ## Suggestion
 
@@ -123,6 +124,63 @@ the subject.
   point at either kind, splitting 600+ rows across two tables to express one rule.
 - **Schema today**: `Gift.createdById` differing from `Gift.ownerId`. The rule is
   hand-written as a branch in `visibility.ts` rather than named.
+
+## Family
+
+The people who can see each other's [Wishes](#wish).
+
+A Family is the app's **only** visibility boundary. Everything anyone may see follows
+from sharing one, and after [#151](https://github.com/jonpulsifer/wishlist/issues/151)
+declined per-Family occasions and
+[#156](https://github.com/jonpulsifer/wishlist/issues/156) dropped the pinning of Wishes
+to lists, there is no second edge left.
+
+Families are **flat** and may overlap. A person belongs to as many as they like, so any
+subset you would otherwise nest for — "my side", "the immediate family" — is simply
+another Family sharing members. A Family's name is a **label, not an identifier**: two
+unrelated Smiths may both use it, because you reach a Family by invite or by already
+being in it, never by typing its name.
+
+The word is chosen for what the app is actually for — helping big families track the
+wants of their peeps. A friend group or a set of coworkers is modelled as a Family too,
+and that is the one place the word is a stretch.
+
+- **Grounded**: the concept, the many-to-many membership and its role as the single
+  visibility edge all exist today.
+- **Anticipated**: the name, flatness as a decision rather than an accident, and names
+  ceasing to be unique. Decided in
+  [#150](https://github.com/jonpulsifer/wishlist/issues/150).
+- **Rejected**: `Circle` and `Group` — neutral enough to fit coworkers, but they name a
+  shape rather than a thing, and the coworkers case is speculative while the family case
+  is the product. Nesting — overlapping membership already expresses every subset, and
+  making the one remaining visibility rule recursive would be felt everywhere.
+- **Schema today**: `model Wishlist`. Its `name` is globally `@unique`, its `password`
+  is a plaintext pin ([#153](https://github.com/jonpulsifer/wishlist/issues/153)), and
+  it has no owner column — so nobody runs a Family
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+
+## User
+
+A person.
+
+There is no layer between a person and their account: a User **is** the human — their
+name, their sizes, their address. An **Account** is how they sign in, and a User may
+have none. Someone who has never signed in is not a different kind of thing; they are a
+User with no Account.
+
+- **Grounded**: `model User` is this already, and `allowDangerousEmailAccountLinking` is
+  on, so an accountless User links correctly when that person later signs in with
+  Google.
+- **Anticipated**: that a person who will never sign in needs nothing more than this.
+  Nothing creates such a row today — every User comes from the Auth.js adapter — and the
+  flow that would is [#153](https://github.com/jonpulsifer/wishlist/issues/153).
+- **Rejected**: `Person` as a distinct level above `User`. Decided in
+  [#150](https://github.com/jonpulsifer/wishlist/issues/150): the higher-level concept
+  the product needed was [Family](#family), and splitting the human from the login costs
+  a table across ~60 call sites and the adapter binding in
+  [#154](https://github.com/jonpulsifer/wishlist/issues/154) to express a state that is
+  already expressible.
+- **Schema today**: `model User`, with `Account` and `Session` bound by the adapter.
 
 ## Occasion
 
@@ -203,6 +261,11 @@ parameter.
   It was deliberately **not** reused for Claim, despite fitting: every existing `Gift`
   row becomes a Wish, so keeping the word would silently move its meaning across ~60
   call sites.
+- **Person** — never introduced, by
+  [#150](https://github.com/jonpulsifer/wishlist/issues/150). A [User](#user) is the
+  person; the higher-level concept the product needed turned out to be
+  [Family](#family). "Person" survives in prose where it reads naturally, but no model
+  or type is named for it.
 - **Event** — retired by
   [#151](https://github.com/jonpulsifer/wishlist/issues/151). It named the container
   people join, which is an [Exchange](#exchange), and it names nothing specific enough
