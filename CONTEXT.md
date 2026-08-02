@@ -26,7 +26,11 @@ hand-me-down, an experience, or a favour. A goal nobody can give you — "learn 
 is not a Wish, because there would be nothing to [Claim](#claim).
 
 A Wish is flat: there is no kind or type discriminator, and none is planned. A Wish
-carries a name and, optionally, a link, a description and an image.
+carries a name and, optionally, a link and a description.
+
+A Wish also carries a **quantity** — how many of the thing its subject wants, defaulting
+to one. Five pairs of socks is one Wish wanted five times, not five Wishes, and it is what
+lets a [Claim](#claim) speak for part of a Wish rather than all of it.
 
 Every Wish has a **subject** — the person who would receive it — and a **proposer**,
 the person who added it. Usually they are the same person, and the Wish sits on that
@@ -38,18 +42,22 @@ with them.
 Nothing is pinned or filed — a Wish is visible wherever its subject is.
 
 - **Grounded**: the fields, the optionality, and the proposer-is-not-always-the-subject
-  rule all exist today.
+  rule all exist today. Quantity is wanted by the owner.
 - **Anticipated**: that no discriminator is ever needed. Decided in
   [#149](https://github.com/jonpulsifer/wishlist/issues/149) on the grounds that
   "receivable" is exactly the boundary that keeps Claim meaningful. The subject and
   proposer vocabulary is from
-  [#156](https://github.com/jonpulsifer/wishlist/issues/156).
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156); quantity from
+  [#161](https://github.com/jonpulsifer/wishlist/issues/161).
 - **Rejected**: `Gift` — too specific, and it names the giving rather than the wanting.
   `Want` — no natural collection noun. `Item` — carries no meaning.
 - **Schema today**: `model Gift`; the subject is `ownerId` and the proposer is
-  `createdById`. Visibility is **not** derived — `Gift.wishlists` pins each row to the
-  Families its *proposer* belonged to at the moment it was added, so it is a snapshot
-  rather than a rule, and it goes stale when anyone joins a Family.
+  `createdById`, which is **nullable**, so "is this a Suggestion?" has three states rather
+  than two. There is a dead `image` column and a dead `published` one: nothing in the repo
+  reads or writes either. Visibility is **not** derived — `Gift.wishlists` pins each row
+  to the Families its subject belonged to at the moment it was added, so it is a snapshot
+  rather than a rule. It goes stale in both directions: a Family joined later never sees
+  the Wish, and a Family the subject has **left** sees it forever.
 
 ## Claim
 
@@ -66,25 +74,68 @@ of the model.
 
 A Wish has **at most one Claim**, and a Claim may have **several claimers**. People
 chipping in together are not making separate commitments — the thing gets bought once,
-and only the participants are plural. Keeping the Claim singular keeps "is this taken?"
-a single fact rather than a count a reader has to interpret, and keeps unclaiming mean
-"I am out" rather than ambiguously "it is available again". There is no partially-claimed
-state: a Claim is a Claim from the moment the first person makes it.
+and only the participants are plural. Keeping the Claim singular keeps unclaiming mean
+"I am out" rather than ambiguously "it is available again".
+
+A Claim is **a term with no table**, like [Wishlist](#wishlist). Stripped down it has no
+field of its own — no name, no state, no date any reader consumes — so it is exactly *the
+set of people committed to a Wish*, and the model that holds it is a **`Claimer`**: one
+row per person, keyed by the Wish and the claimer together. Written that way, "at most one
+Claim per Wish" stops being a constraint to enforce and becomes a thing the schema cannot
+express, which is the same move that binds an [Exchange](#exchange) to one
+[Family](#family).
+
+**The row is named `Claimer` and the word does the work.** A row per person named `Claim`
+would say a Wish has several Claims, which is exactly what makes duplicate buying
+representable again. Named `Claimer`, the row is a membership edge *in* the one Claim.
+
+**Splitting is headcount.** Several people going in on one thing is several `Claimer`
+rows and nothing else — *"Jon started this, 2 others joined"* falls out of the row count
+and the order they were created in. No share, no amount, no price on the Wish: the moment
+the schema knows an amount it owes an answer about whether the money arrived, and it has
+no way to know. Settlement happens where it already happens, in the group chat.
+
+**Quantity makes a Claim partial.** A Wish may be wanted several times over — five pairs
+of socks — and a claimer may speak for some of them, so "is this taken?" is
+`SUM(claimers.quantity) >= wish.quantity` rather than a fact. That is a count a reader has
+to interpret, and it is accepted deliberately: what matters is that there is **one Claim
+and no duplicate buying**, and the singular thing is the *claim*, not the *count*. It is
+affordable because claim state has left the `where` clause (below), and the sum can be
+arithmetic over rows already in hand instead of a `SUM` comparison Prisma cannot express.
 
 Claimers can see each other, because they cannot coordinate otherwise. The subject sees
-nothing, ever. Everyone else who can see the Wish sees only **that** it is claimed —
-which is a widening, since today a claimed Wish disappears from their view entirely, and
-a Claim nobody can see is a Claim nobody can join.
+nothing, ever. Everyone else who can see the Wish sees only **that** it is claimed, and
+by how many — which is a widening, since today a claimed Wish disappears from their view
+entirely, and a Claim nobody can see is a Claim nobody can join.
+
+That widening moves where the secret is kept. No query filters on claim state any more,
+because there is nowhere for such a filter to go: a subject sees their own list, so
+removing a claimed Wish from it would make the row **vanish**, and absence is a louder
+signal than a badge. So Surprise is not defensible by a `where` clause and becomes a
+property of `lib/db/projections.ts` — see [Surprise](#surprise).
 
 - **Grounded**: the vocabulary is already the app's own — `claimGift`, `unclaimGift`,
   the `/claimed` route, "Claimed Gifts" in the UI. The two facts already coexist on one
-  row with different owners and opposite visibility.
-- **Anticipated**: that a Claim is worth its own row rather than staying a flag pair
-  ([#149](https://github.com/jonpulsifer/wishlist/issues/149)), and that several claimers
-  are wanted at all — nothing in the app expresses chipping in today. Decided in
-  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+  row with different owners and opposite visibility. **Splitting and quantity are wanted
+  by the owner**, which makes them the only entries in this glossary asked for rather than
+  charted.
+- **Anticipated**: that several claimers are wanted at all — nothing in the app expresses
+  chipping in today ([#152](https://github.com/jonpulsifer/wishlist/issues/152)) — and the
+  shape of the row ([#161](https://github.com/jonpulsifer/wishlist/issues/161)).
 - **Rejected**: several Claims against one Wish — it makes duplicate buying representable
-  again, which is the thing claiming exists to prevent.
+  again, which is the thing claiming exists to prevent. A `Claim` table with claimers
+  hanging off it — two tables, and the Claim row outlives its last claimer, so "claimed"
+  and "has a claim row" drift apart. An implicit many-to-many — the cheapest schema of the
+  three, but Prisma names the table `_WishToUser` with columns `A` and `B`, and it cannot
+  carry the timestamp that orders a split. `Claimer.share` — enough structure to look like
+  it is tracking something, not enough to be right. A price on the Wish and an amount on
+  the claimer — half the live Wishes are links with no price, prices go stale, and a
+  wishlist that knows a debt it cannot collect has become a payments app.
+- **Schema today**: the `claimed` boolean and `claimedById` on `model Gift` — one claimer,
+  and the boolean is redundant with the id, kept in step by hand in both actions. A
+  claimed Wish is **removed** from every other viewer rather than badged: rule 2 of
+  `lib/db/visibility.ts` is `claimed: false OR claimedById: viewer OR createdById: viewer`,
+  so the row is simply not returned.
 - **Schema today**: the `claimed` boolean and `claimedById` on `model Gift` — one claimer,
   and the boolean is redundant with the id, kept in step by hand in both actions. A
   claimed Wish is **removed** from every other viewer rather than badged: rule 2 of
@@ -134,7 +185,15 @@ That is the whole point, and it is why a Suggestion is not on the subject's
 A Suggestion is not a separate kind of row. It is the state a Wish is in when its two
 people differ, so a [Claim](#claim) attaches to it exactly as to any other Wish, and
 **adopting** one — the subject deciding they do want it — is setting the proposer to
-the subject.
+the subject. Every Wish records a proposer, so the state is exactly
+`proposerId != subjectId` with no third case: a Wish that names no proposer is the
+subject's own, and says so.
+
+Typing someone's list in **for** them is therefore not a Suggestion, and the difference is
+not cosmetic. Someone who cannot work the app — the grandmother, or a person who has not
+signed in yet — needs Wishes that land on *their* [Wishlist](#wishlist), which means the
+proposer recorded is the subject, not whoever held the keyboard. Suggest instead and they
+can never see their own list.
 
 A subject may **decline Suggestions**: one setting on their [User](#user), on or off for
 everyone who can see them, defaulting to accepting. It is the only thing anyone declares
@@ -163,7 +222,10 @@ The setting gates the **write**: it is a check on the adding, never a `where` cl
   hand-written as a branch in `visibility.ts` rather than named. Nothing gates the adding
   at all: `addGift` takes `recipientId` from the client and never asks whether the viewer
   may see that person, so today anyone holding a uuid can suggest for a stranger
-  ([#182](https://github.com/jonpulsifer/wishlist/issues/182)).
+  ([#182](https://github.com/jonpulsifer/wishlist/issues/182)). There is also no way to
+  add a Wish *as* someone: `addGift` always records the viewer as creator, so helping
+  another person fill their list produces Suggestions they will never see
+  ([#190](https://github.com/jonpulsifer/wishlist/issues/190)).
 
 ## Surprise
 
@@ -183,12 +245,25 @@ Naming it matters mostly for what it rules out. There is no *third* way to keep 
 surprise, so any future proposal to hide a Wish is either a Claim, a Suggestion, or a new
 concept that has to justify itself.
 
+**Surprise cannot be defended by a `where` clause, and this is forced rather than
+chosen.** A subject sees their own list, so filtering a claimed Wish out of it would make
+the row *disappear* — and a Wish vanishing from your own list is a louder signal than a
+badge saying someone has it. Absence is itself the leak. So the half of Surprise that
+concerns [Claims](#claim) lives in `lib/db/projections.ts`: a subject's payload must not
+carry claim state **at all**, rather than carrying it set to a safe value. The half that
+concerns [Suggestions](#suggestion) stays in `lib/db/visibility.ts`, where a person's own
+view is the Wishes they proposed.
+
+That makes the projection load-bearing rather than tidy, which is why
+[#179](https://github.com/jonpulsifer/wishlist/issues/179) is not a small bug.
+
 - **Grounded**: the behaviour, all of it. A Wish added for you is hidden from you, and you
   are never told a Claim exists.
 - **Anticipated**: that surprise needs no mechanism once
   [#149](https://github.com/jonpulsifer/wishlist/issues/149) and
   [#156](https://github.com/jonpulsifer/wishlist/issues/156) land. Decided in
-  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152); the move into the projection
+  in [#161](https://github.com/jonpulsifer/wishlist/issues/161).
 - **Rejected**: one name for the four flags on `Gift` collectively — `published`,
   `archived`, `claimed` and proposer-≠-subject are three unrelated things and one dead
   column, so any collective name would assert a coherence the row does not have.
@@ -248,6 +323,13 @@ The only way in is an [Invite](#invite).
 
 Membership is **mutual**: you see everyone who can see you. There is no way to be seen
 without seeing, so a Family cannot express a one-directional view.
+
+Membership is a **row of its own** — a `Membership` naming the Family, the person and when
+they joined — rather than an anonymous link between the two. It is the app's only
+visibility edge, so it is worth being able to read at a database prompt and worth knowing
+the date of; and writing it explicitly is what keeps a migration from silently inverting
+every membership in the app, which an implicit join table invites by naming its columns
+`A` and `B` in an order that changes when the models are renamed.
 
 The word is chosen for what the app is actually for — helping big families track the
 wants of their peeps. A friend group or a set of coworkers is modelled as a Family too,
@@ -421,6 +503,13 @@ serialised, so it is declared as a shape and not assembled as a template.
   for one Grandma cannot recover from. Redemption behind the inviter's approval, which
   restores an undo before the irreversible step by giving up the finding that the link
   *is* the consent.
+Single-use is two nullable columns — when it was redeemed and by whom — against a token
+that today records neither. Expiry is the column that already exists and that nothing
+writes; it becomes **required**, which is affordable only because every live token is
+deleted rather than kept. A token minted when one link admitted everyone, still live under
+a membership ratchet that admits no removal, is not worth carrying forward: what it holds
+is a token, a creator and a date, and no reader consumes any of them.
+
 - **Schema today**: `model WishlistInvite`, reachable only by an admin —
   `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
   all, so no ordinary member can invite anyone or start a family. A token is multi-use:
@@ -508,7 +597,13 @@ Draw shaped by constraints they cannot inspect or override.
 - **Schema today**: `model SecretSantaEvent`, carrying the `year` it is held for and no
   Family at all. `lib/season.ts` owns the reading of the year: `occasionYearOf` falls a
   null back to `createdAt`, and the Occasion in play turns over on April 1st rather than
-  New Year, so an Exchange opened on January 2nd is for the Christmas just gone.
+  New Year, so an Exchange opened on January 2nd is for the Christmas just gone. That
+  fallback exists only because `year` is nullable, and `year` is nullable only because
+  there were no migrations to backfill it with — so both retire together
+  ([#161](https://github.com/jonpulsifer/wishlist/issues/161)). Because no Exchange
+  records a Family, whether every past Exchange's participants still share one is
+  **unknown**; where they do not, a santa cannot see the Wishes of the person they were
+  assigned, and the backfill is what would reveal it.
   Exclusions are the `secretSantaDoNotMatchWith` self-relation on `User`, created and
   deleted only behind `manage:secret-santa`, so today they are an administrator's setting
   rather than the subject's.
@@ -522,6 +617,14 @@ from the [Family](#family) it is held for, firing the [Draw](#draw), and deletin
 Nothing else and nowhere else. Organising one Exchange confers nothing over another, over
 a Family, or over a person, so this is ownership of an object rather than a rank someone
 holds.
+
+Being an Organiser is one of exactly **three** things anyone is: the Organiser of an
+Exchange, the **subject** of a Wish, or a **member** of a Family. Those three predicates
+are the whole of who may act on what, and they live in `lib/db/authority.ts` — a sibling
+to `lib/db/visibility.ts`, the same shape and the other question. `visibility.ts` answers
+*what may this viewer see*; `authority.ts` answers *what may this viewer act on*. Both
+return Prisma `where` builders, so a row the viewer may not act on is never loaded, rather
+than being loaded and then judged.
 
 The Organiser is the creator and **cannot be changed**: no transfer, no co-organisers, no
 succession. An Exchange lives for one [Occasion](#occasion), which is short enough that an
@@ -650,6 +753,14 @@ constraint shaping it.
   audience to decide and therefore the half that would need the channel. Nobody has yet
   failed to use the app for want of an email, and it is opened in December regardless, so
   it stays unbuilt and unnamed.
+- **Price** / **contribution** / **share** — never introduced, by
+  [#161](https://github.com/jonpulsifer/wishlist/issues/161). Splitting is real and
+  wanted, but it is **headcount**: the [Claimers](#claim) on a [Wish](#wish), and nothing
+  about money. A price on a Wish goes stale and is absent from half the live rows, which
+  are links; an amount on a claimer makes the app know a debt it has no way to collect or
+  confirm, so it would owe an answer it cannot give. The people going in on a bike are in
+  the same [Family](#family) and already in the same group chat. The app's job is to stop
+  the second bike being bought, and a count does that completely.
 - **Share link** — retired by
   [#158](https://github.com/jonpulsifer/wishlist/issues/158), which went looking for a
   view-granting bearer token and found a [Family](#family). The case it was for —
@@ -673,4 +784,12 @@ constraint shaping it.
   [#160](https://github.com/jonpulsifer/wishlist/issues/160) the instance has nothing to
   administer: the last job on offer was deleting an [Exchange](#exchange) whose
   [Organiser](#organiser) has left, and a stranded Exchange is inert rather than a
-  problem. Operator work is `psql`, not a screen.
+  problem.
+
+  **There is no operator work either.** Every act that a role holds today becomes a
+  button owned by the person the act is about — exclusions on your own profile, creating a
+  Family and inviting to it by any member, the [Draw](#draw) and the deletion by the
+  [Organiser](#organiser), deletion of a Family by the last member leaving. The count goes
+  *up*, and none of them sits behind a capability check. Retiring roles and wanting
+  buttons rather than a database prompt are the same answer, not opposite ones
+  ([#161](https://github.com/jonpulsifer/wishlist/issues/161)).
