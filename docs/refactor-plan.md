@@ -80,8 +80,14 @@ Every step that touches `prisma/schema.prisma` adds:
 That last one is the check a hand-edited `RENAME` needs: it replays the history
 into a shadow database and compares the end state to `schema.prisma`, so an
 index or constraint the rename left behind under its old name shows up as a
-non-empty diff. It needs a local Postgres with `CREATEDB`, which `mise run
-db:up` provides.
+non-empty diff.
+
+**`--from-migrations` refuses to run without an explicitly configured shadow
+database, and 7.9.1 has no CLI flag for one.** It reads
+`datasource.shadowDatabaseUrl` from `prisma.config.ts`, which Step 1 wires to
+`SHADOW_DATABASE_URL` and `mise run db:up` creates. The scratch database must
+already exist — Migrate resets it but does not create it — and it must not be
+the database being migrated, which `migrate deploy` checks and rejects.
 
 ### The standing disclosure proof
 
@@ -203,12 +209,19 @@ bookkeeping row without executing any of it.
 7. `mise.toml`: `db:push` → `db:migrate` (`prisma migrate dev`), `db:reset`
    becomes `prisma migrate reset`, and `setup` follows. Locally the data is
    disposable, so local environments migrate from empty rather than baselining.
-8. Correct `.agents/skills/schema-change/SKILL.md` (the whole "There are no
+   `db:migrate` keeps `depends = ["generate"]`: `migrate dev` runs the
+   generators only when it creates a migration, so its "already in sync" path
+   leaves a stale client behind.
+8. `prisma.config.ts` gains `datasource.shadowDatabaseUrl`, and `db:up` creates
+   the database it points at — see the standing gate above.
+9. Correct `.agents/skills/schema-change/SKILL.md` (the whole "There are no
    migrations" section, and the false claim at line 18),
    `.agents/skills/local-dev/SKILL.md` (lines 30, 66, 82) and
-   `.agents/skills/validate-build/SKILL.md` (line 20).
-9. `prisma/migrations/` is not gitignored — only `prisma/generated` is. Commit
-   the whole folder.
+   `.agents/skills/validate-build/SKILL.md` (line 20). `CONTEXT.md`,
+   `prisma.config.ts` and `.claude/settings.json`'s allowlist each name
+   `db push` once as well.
+10. `prisma/migrations/` is not gitignored — only `prisma/generated` is. Commit
+    the whole folder.
 
 **The order of operations is the whole risk in this step.** Run
 `prisma migrate resolve --applied 0_init` against **production** — and against

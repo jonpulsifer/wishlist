@@ -27,7 +27,7 @@ exports the same variable.
 Why any of this is needed: Prisma publishes no schema engine binary for the
 `linux-nixos` target — `binaries.prisma.sh` returns a 404 and
 `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` does not help. The nixpkgs build is
-the only one that runs here. Only `db push` and the other schema commands need
+the only one that runs here. Only `migrate` and the other schema commands need
 it; the client itself talks to Postgres through the `@prisma/adapter-pg` driver
 adapter, with no engine involved.
 
@@ -63,9 +63,9 @@ comes out of the nix store and its cluster lives in `.pgdata/`.
 | --- | --- |
 | `mise run db:up` | initdb if needed, start, create the `wishlist` database |
 | `mise run db:down` | stop |
-| `mise run db:push` | push `schema.prisma` into the database and regenerate the client |
+| `mise run db:migrate` | create and apply a migration, and regenerate the client |
 | `mise run db:seed` | faker data |
-| `mise run db:reset` | destroy `.pgdata/` and rebuild from the schema |
+| `mise run db:reset` | drop the database and replay the migration chain from empty |
 | `mise run db:psql` | psql shell |
 
 `db:up` is idempotent — run it whenever you are unsure. Server logs go to
@@ -79,8 +79,8 @@ CLI; mise does not need to.
 ## Running and building
 
 - `mise run dev` — dev server on :3000.
-- `mise run build` — the real build. Runs `prisma db push`, so it needs a live
-  database. Start one first.
+- `mise run build` — the real build. Runs `prisma migrate deploy`, so it needs a
+  live database. Start one first.
 - `mise run build:next` — `next build` alone. No database needed, because every
   data route is dynamic. This is the one to use for a quick compile check.
 

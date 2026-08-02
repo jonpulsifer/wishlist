@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "bun run --bun next dev",
-    "build": "bunx --bun prisma generate --no-hints && bunx --bun prisma db push && bun run --bun next build",
+    "build": "bunx --bun prisma generate --no-hints && bunx --bun prisma migrate deploy && bun run --bun next build",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",

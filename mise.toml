@@ -8,6 +8,7 @@
 [tools]
 bun = "1.3.14"
 node = "24"
+vercel = { version = "latest", allow_builds = ["esbuild"], trust_policy_excludes = ["undici"] }
 
 [env]
 # Prisma engines + $PGBIN, resolved from flake.nix on NixOS. No-op elsewhere.
@@ -28,9 +29,17 @@ description = "First run: install deps, write .env, start and seed the database"
 depends = ["install"]
 run = '''
 set -euo pipefail
-[ -f .env ] || { cp .env.example .env; echo "wrote .env from .env.example"; }
+if [ ! -f .env ]; then
+  # AUTH_SECRET has no dev fallback — Auth.js refuses to start without one, so
+  # generate it here rather than leaving a fresh clone unable to sign in.
+  # bun rather than `openssl rand`, which is not on PATH on NixOS.
+  secret=$(bun -e 'process.stdout.write(Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64"))')
+  sed "s|^AUTH_SECRET=$|AUTH_SECRET=$secret|" .env.example > .env
+  echo "wrote .env from .env.example, with a generated AUTH_SECRET"
+  echo "   still needed: AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET"
+fi
 mise run db:up
-mise run db:push
+mise run db:migrate
 echo "ready — 'mise run dev' to start"
 '''
 
@@ -71,7 +80,7 @@ description = "Everything CI runs except the build — lint, types, tests"
 depends = ["lint", "typecheck", "test"]
 
 [tasks.build]
-description = "Full production build (generate + db push + next build; needs a database)"
+description = "Full production build (generate + migrate deploy + next build; needs a database)"
 run = "bun run build"
 
 [tasks."build:next"]
@@ -100,10 +109,14 @@ else
   "$PGBIN/pg_ctl" --pgdata="$PGDATA" --log="$PGDATA/server.log" --wait --options="-p $PGPORT -k $PGDATA -c listen_addresses=$PGHOST" start
 fi
 
-if ! PGDATABASE=postgres "$PGBIN/psql" -lqt | cut -d'|' -f1 | grep -qw "$PGDATABASE"; then
-  PGDATABASE=postgres "$PGBIN/createdb" "$PGDATABASE"
-  echo "==> created database $PGDATABASE"
-fi
+# The second database is the shadow Migrate replays the chain into; see
+# prisma.config.ts.
+for db in "$PGDATABASE" "${PGDATABASE}_shadow"; do
+  if ! PGDATABASE=postgres "$PGBIN/psql" -lqt | cut -d'|' -f1 | grep -qw "$db"; then
+    PGDATABASE=postgres "$PGBIN/createdb" "$db"
+    echo "==> created database $db"
+  fi
+done
 '''
 
 [tasks."db:down"]
@@ -119,11 +132,13 @@ else
 fi
 '''
 
-[tasks."db:push"]
-description = "Push prisma/schema.prisma into the database (no migrations in this repo)"
-# v7 does not regenerate the client as a side effect of a push.
+[tasks."db:migrate"]
+description = "Apply pending migrations, creating one from schema.prisma if it has drifted"
+# migrate dev generates only when it actually creates a migration — its
+# "already in sync" path exits before the generators run, which leaves a stale
+# client after an edit that turned out to be a no-op.
 depends = ["generate"]
-run = "bunx --bun prisma db push"
+run = "bunx --bun prisma migrate dev"
 
 [tasks."db:seed"]
 description = "Fill the database with faker data"
@@ -138,12 +153,8 @@ description = "psql shell on the local database"
 run = "$PGBIN/psql"
 
 [tasks."db:reset"]
-description = "Destroy the local cluster and rebuild it from schema.prisma"
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-mise run db:down || true
-rm -rf "$PGDATA"
-mise run db:up
-mise run db:push
-'''
+description = "Drop the local database and replay the migration chain from empty"
+# Local data is disposable, so local environments migrate from empty rather
+# than baselining the way production does. This is also the gate that proves the
+# chain still applies from scratch — including any hand-edited RENAME.
+run = "bunx --bun prisma migrate reset --force"

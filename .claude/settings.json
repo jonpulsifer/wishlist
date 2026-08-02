@@ -10,7 +10,7 @@
       "Bash(mise run generate)",
       "Bash(mise run build:next)",
       "Bash(mise run db:up)",
-      "Bash(mise run db:push)",
+      "Bash(mise run db:migrate)",
       "Bash(mise tasks ls)",
       "Bash(mise env)",
       "Bash(bun run lint)",

@@ -17,7 +17,7 @@ fast and needs no database.
 | `mise run typecheck` | generated client | `tsc --noEmit`. Run `mise run generate` first on a fresh clone. |
 | `mise run test` | nothing | `bun test lib` — the pure modules only. |
 | `mise run build:next` | `.env` with `DATABASE_URL` | `next build` alone. No live database: every data route is dynamic. |
-| `mise run build` | a live database | The real build — runs `prisma db push` first. `mise run db:up`. |
+| `mise run build` | a live database | The real build — runs `prisma migrate deploy` first. `mise run db:up`. |
 
 CI (`.github/workflows/ci.yml`) does install → lint → test → build against a
 throwaway Postgres service. Matching it locally means `mise run check` plus
