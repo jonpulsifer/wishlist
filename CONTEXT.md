@@ -108,10 +108,11 @@ A Wishlist is what its owner **asked for**, which is precisely why a
 
 - **Grounded**: the collection exists this way already — it is `ownerId`, queried.
 - **Anticipated**: that one per person is enough.
-  [#151](https://github.com/jonpulsifer/wishlist/issues/151) removed occasion as a way
-  to tell two apart, and audience belongs to interaction policy
-  ([#157](https://github.com/jonpulsifer/wishlist/issues/157)) rather than to a list.
-  Decided in
+  [#151](https://github.com/jonpulsifer/wishlist/issues/151) removed occasion as a way to
+  tell two apart, and [#157](https://github.com/jonpulsifer/wishlist/issues/157) removed
+  audience: who sees a Wish follows from which [Families](#family) its subject is in, so
+  showing different things to different people is joining a different Family rather than
+  keeping a second list. Decided in
   [#156](https://github.com/jonpulsifer/wishlist/issues/156).
 - **Rejected**: `Wishlist` as the name of the **[Family](#family)** — that is the
   meaning the schema carries today, and it retires in
@@ -135,15 +136,34 @@ people differ, so a [Claim](#claim) attaches to it exactly as to any other Wish,
 **adopting** one — the subject deciding they do want it — is setting the proposer to
 the subject.
 
+A subject may **decline Suggestions**: one setting on their [User](#user), on or off for
+everyone who can see them, defaulting to accepting. It is the only thing anyone declares
+about how they are interacted with; the three levels and four dimensions it collapsed from
+are recorded under [Terms this project does not use](#terms-this-project-does-not-use).
+Declaring is the only enforcement available, because [Surprise](#surprise) means the
+subject can never observe a Suggestion being made and so can never object to one socially.
+The setting gates the **write**: it is a check on the adding, never a `where` clause, so
+`lib/db/visibility.ts` is not involved.
+
 - **Grounded**: the behaviour exists. `lib/db/visibility.ts` narrows a viewer looking
   at their own list to `createdById: viewerId`, so a Wish added for you is already
   hidden from you.
-- **Anticipated**: the name, and adoption. Decided in
-  [#156](https://github.com/jonpulsifer/wishlist/issues/156).
+- **Anticipated**: the name, adoption, and declining. Decided in
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156) and
+  [#157](https://github.com/jonpulsifer/wishlist/issues/157). Declining is
+  **defined and deliberately not built** — no column, no toggle, no reader, and nobody
+  has asked for it. It is additive when it lands (a `Boolean` with a default, which
+  `db push` applies without data loss and which does not break first sign-in), so it
+  waits on nothing.
 - **Rejected**: a separate `Suggestion` model — it would force a [Claim](#claim) to
   point at either kind, splitting 600+ rows across two tables to express one rule.
+  Declining *per Wish* or *per Family* — the finer grains buy nothing a single answer
+  does not, and each costs a row or a join table over live data.
 - **Schema today**: `Gift.createdById` differing from `Gift.ownerId`. The rule is
-  hand-written as a branch in `visibility.ts` rather than named.
+  hand-written as a branch in `visibility.ts` rather than named. Nothing gates the adding
+  at all: `addGift` takes `recipientId` from the client and never asks whether the viewer
+  may see that person, so today anyone holding a uuid can suggest for a stranger
+  ([#182](https://github.com/jonpulsifer/wishlist/issues/182)).
 
 ## Surprise
 
@@ -416,3 +436,15 @@ parameter.
   [#151](https://github.com/jonpulsifer/wishlist/issues/151). It named the container
   people join, which is an [Exchange](#exchange), and it names nothing specific enough
   to be worth keeping alongside a dated [Occasion](#occasion).
+- **Interaction policy** — investigated by
+  [#157](https://github.com/jonpulsifer/wishlist/issues/157) and retired as a name,
+  because the thing it named turned out not to exist. Three levels were proposed and one
+  survived: a [Wishlist](#wishlist) is a view with one per person, so a setting on it is a
+  setting on the [User](#user), and no case was found for a [Family](#family) that forbids
+  anything. Four dimensions were proposed and one survived: *who may see* is already
+  answered by which Families you belong to, *who may claim* contradicts the receivable
+  boundary that makes a [Wish](#wish) a Wish, and all three arms of *who may see that I
+  claimed* were forced by [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+  What is left is one boolean — declining [Suggestions](#suggestion), above. There is no
+  composition, no precedence and no most-restrictive-wins rule, so there is no policy, and
+  a name promising that machinery would assert a shape the domain does not have.
