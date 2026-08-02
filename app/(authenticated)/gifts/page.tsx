@@ -64,7 +64,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
                 View My Gifts
               </Link>
             </Button>
-            <AddGiftDialog users={users} currentUser={viewer} />
+            <AddGiftDialog users={users} currentUserId={viewer.id} />
           </div>
         </div>
         <Suspense fallback={<Skeleton className="h-full w-full" />}>
