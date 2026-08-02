@@ -378,6 +378,25 @@ a [Wishlist](#wishlist) and can be given [Suggestions](#suggestion) before they 
 of the app, and their first Google sign-in adopts the row that is already waiting. This is
 the half of joining that has no mechanism at all today.
 
+Push is the one act that has to **speak out of the app**, and it is the only one. A person
+who has not heard of wishin.app has no screen to be told on, so the email that says *so-and-so
+added you, here is the app* is not the best way they find out but the only way, and without
+it push is a feature that silently does nothing.
+
+That message is **written for the stranger**, not for the member it is aimed at. The address
+is typed by a member and
+[#153](https://github.com/jonpulsifer/wishlist/issues/153) accepts mistyping — detection
+over prevention — which held while a mistake stayed inside the app; an email leaves and
+cannot be recalled. So the message carries the **sender's name**, the app and a sign-in
+link, and nothing else. It never names the [Family](#family), which is the one place a
+non-member could otherwise learn one exists; it never lists
+[Wishes](#wish), because [Suggestions](#suggestion) are the thing their subject may not
+see, and an email of them would break [Surprise](#surprise) before first sign-in; it never
+lists members. What is left is the sender's name, which is the whole of why it reads as an
+invitation rather than as spam. What may cross into it belongs with
+`lib/db/projections.ts` — the seam is outbound and irrevocable rather than merely
+serialised, so it is declared as a shape and not assembled as a template.
+
 - **Grounded**: the token, its revocation, the cookie that carries it through sign-in, and
   the join-on-click route all exist and work.
 - **Anticipated**: that an Invite is the only door, that any member may create one, and
@@ -386,7 +405,10 @@ the half of joining that has no mechanism at all today.
   [#160](https://github.com/jonpulsifer/wishlist/issues/160) confirms who may create one —
   nobody runs a Family, so there is no narrower answer available — and makes it
   single-use. That an unaddressed token is the deliberate shape rather than the
-  unfinished one is [#158](https://github.com/jonpulsifer/wishlist/issues/158).
+  unfinished one is [#158](https://github.com/jonpulsifer/wishlist/issues/158). The
+  message push sends is anticipated in every part — there is no mail dependency, no
+  sender and nothing that writes one
+  ([#159](https://github.com/jonpulsifer/wishlist/issues/159)).
 - **Rejected**: a shared pin. It is not a second mechanism but a worse Invite — a bearer
   secret that grants membership, four digits long, shared, permanent, reusable, stored in
   plaintext and guessable in ten thousand tries. Joining by email domain — a Family is not
@@ -605,6 +627,29 @@ constraint shaping it.
   added an axis to `lib/db/visibility.ts` that is not membership, to express acts that
   turned out not to need permission. Authority stays a property of objects and of
   subjects, never of people.
+- **Notification** — retired by
+  [#159](https://github.com/jonpulsifer/wishlist/issues/159), which found one message
+  where it expected a system. The only thing that must speak out of the app is the email
+  push sends, because a provisional [User](#user) has no screen to be told on — see
+  [Invite](#invite). One message is not a notification system, and the name promises
+  events, subscribers, an inbox and preferences that nothing here has.
+
+  The name is worth refusing rather than merely leaving unused. Every disclosure in this
+  app is a **pull**: a query whose `where` clause is composed from `lib/db/visibility.ts`,
+  which is what defends it. A notification is a **push** — it leaves unbidden, carrying
+  content, with no query in the path and so nothing defending it. A general channel is by
+  construction the thing that reads around the one safeguard, and naming the category is
+  how the channel gets built. One message can be read end to end and shown to be safe.
+
+  [Surprise](#surprise) never became the hard part, though the ticket expected it to.
+  It is an invariant rather than a rule, so *someone claimed your Wish* is not a message
+  that must be suppressed but one with no way to exist.
+- **Engagement mail** — goes with the above, and is the alternative it was weighed
+  against: telling a Family that a [Wish](#wish) was added, that an
+  [Occasion](#occasion) is near, that a [Draw](#draw) is done. It is the half with an
+  audience to decide and therefore the half that would need the channel. Nobody has yet
+  failed to use the app for want of an email, and it is opened in December regardless, so
+  it stays unbuilt and unnamed.
 - **Share link** — retired by
   [#158](https://github.com/jonpulsifer/wishlist/issues/158), which went looking for a
   view-granting bearer token and found a [Family](#family). The case it was for —
