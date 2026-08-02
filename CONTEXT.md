@@ -64,14 +64,34 @@ lifecycles and opposite visibility. Holding both on one row is why "who may see 
 currently has to be defended by hand in `lib/db/visibility.ts` rather than falling out
 of the model.
 
+A Wish has **at most one Claim**, and a Claim may have **several claimers**. People
+chipping in together are not making separate commitments — the thing gets bought once,
+and only the participants are plural. Keeping the Claim singular keeps "is this taken?"
+a single fact rather than a count a reader has to interpret, and keeps unclaiming mean
+"I am out" rather than ambiguously "it is available again". There is no partially-claimed
+state: a Claim is a Claim from the moment the first person makes it.
+
+Claimers can see each other, because they cannot coordinate otherwise. The subject sees
+nothing, ever. Everyone else who can see the Wish sees only **that** it is claimed —
+which is a widening, since today a claimed Wish disappears from their view entirely, and
+a Claim nobody can see is a Claim nobody can join.
+
 - **Grounded**: the vocabulary is already the app's own — `claimGift`, `unclaimGift`,
   the `/claimed` route, "Claimed Gifts" in the UI. The two facts already coexist on one
   row with different owners and opposite visibility.
-- **Anticipated**: that a Claim is worth its own row rather than staying a flag pair.
-  Decided in [#149](https://github.com/jonpulsifer/wishlist/issues/149).
-- **Schema today**: the `claimed` boolean and `claimedById` on `model Gift`. Whether
-  several Claims may exist against one Wish — people chipping in together — is open in
+- **Anticipated**: that a Claim is worth its own row rather than staying a flag pair
+  ([#149](https://github.com/jonpulsifer/wishlist/issues/149)), and that several claimers
+  are wanted at all — nothing in the app expresses chipping in today. Decided in
   [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+- **Rejected**: several Claims against one Wish — it makes duplicate buying representable
+  again, which is the thing claiming exists to prevent.
+- **Schema today**: the `claimed` boolean and `claimedById` on `model Gift` — one claimer,
+  and the boolean is redundant with the id, kept in step by hand in both actions. A
+  claimed Wish is **removed** from every other viewer rather than badged: rule 2 of
+  `lib/db/visibility.ts` is `claimed: false OR claimedById: viewer OR createdById: viewer`,
+  so the row is simply not returned. Letting claimers find each other means changing that,
+  and [#161](https://github.com/jonpulsifer/wishlist/issues/161) prices it alongside the
+  widening from [#156](https://github.com/jonpulsifer/wishlist/issues/156).
 
 ## Wishlist
 
@@ -124,6 +144,67 @@ the subject.
   point at either kind, splitting 600+ rows across two tables to express one rule.
 - **Schema today**: `Gift.createdById` differing from `Gift.ownerId`. The rule is
   hand-written as a branch in `visibility.ts` rather than named.
+
+## Surprise
+
+That a person does not learn what they are getting.
+
+Precisely: the **subject** of a [Wish](#wish) learns neither that a [Claim](#claim) exists
+against it, nor that a [Suggestion](#suggestion) was made for them.
+
+Surprise is an **invariant, not a mechanism**. It has no flag, no column and no rule of
+its own — it is what falls out of who owns which row. A Claim belongs to the claimer and
+is never projected to the subject; a Suggestion is a Wish whose proposer is not its
+subject, and a person's own view is the Wishes they proposed. Those two facts are the
+whole of it. Nothing else on a Wish defends it, and in particular
+[Archived](#archived) does not: that is a lifecycle state, not a secret.
+
+Naming it matters mostly for what it rules out. There is no *third* way to keep a
+surprise, so any future proposal to hide a Wish is either a Claim, a Suggestion, or a new
+concept that has to justify itself.
+
+- **Grounded**: the behaviour, all of it. A Wish added for you is hidden from you, and you
+  are never told a Claim exists.
+- **Anticipated**: that surprise needs no mechanism once
+  [#149](https://github.com/jonpulsifer/wishlist/issues/149) and
+  [#156](https://github.com/jonpulsifer/wishlist/issues/156) land. Decided in
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+- **Rejected**: one name for the four flags on `Gift` collectively — `published`,
+  `archived`, `claimed` and proposer-≠-subject are three unrelated things and one dead
+  column, so any collective name would assert a coherence the row does not have.
+- **Schema today**: nothing holds this. It is restored after the fact by rules 2 and 5 of
+  `lib/db/visibility.ts` — a claim filter, and an own-profile branch narrowing to
+  `createdById: viewerId`. The branch cannot filter claims (archived-on-your-own-page
+  needs it not to), so `claimed` reaches the subject's own browser through
+  `giftRowSelect`; surprise holds there only because no component reads the field.
+
+## Archived
+
+A [Wish](#wish) its subject has taken off their list.
+
+Archiving says *I have this now* or *never mind*. It is a lifecycle state of the Wish and
+has nothing to do with [Surprise](#surprise) — the giveaway is that un-archiving releases
+the [Claim](#claim), which is a rule about fulfilment, not about secrecy.
+
+Archiving is not deletion. The Wish stays, and it stays visible **to its subject**, which
+is what makes it worth having: last year's list is how anyone remembers what was already
+given.
+
+Only the **subject** archives. A [Suggestion](#suggestion) is not the proposer's to retire
+— withdrawing one is deleting it, because a Wish its subject cannot see and its proposer
+has archived is a row no one can reach.
+
+- **Grounded**: the state, the word, the owner-visible archive section, and the
+  claim-release on un-archiving all exist today.
+- **Anticipated**: that archiving narrows to the subject. Decided in
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152).
+- **Rejected**: `Retired` — truer to the act, but `archived` is already the column, the
+  actions and the UI section, and the meaning is not the part that changes.
+- **Schema today**: `Gift.archived`. `loadEditableGift` lets **owner or creator** archive,
+  so a proposer can archive their own Suggestion and strand it — the subject cannot see
+  Suggestions, every other query filters `archived: false`, and
+  `getGiftWithAccessCheck`'s own-profile escape hatch requires owner and creator to be the
+  same person. Tracked as a defect.
 
 ## Family
 
@@ -269,6 +350,11 @@ parameter.
   person; the higher-level concept the product needed turned out to be
   [Family](#family). "Person" survives in prose where it reads naturally, but no model
   or type is named for it.
+- **Published** — never a concept. `Gift.published` exists in
+  `prisma/schema.prisma`, defaults to `false`, and outside the generated client nothing
+  in the repo reads or writes it: not the seed, not an action, not a query, not a
+  component. Every live row is `false`. It is a column, not a term, and
+  [#152](https://github.com/jonpulsifer/wishlist/issues/152) drops it.
 - **Event** — retired by
   [#151](https://github.com/jonpulsifer/wishlist/issues/151). It named the container
   people join, which is an [Exchange](#exchange), and it names nothing specific enough
