@@ -135,14 +135,8 @@ property of `lib/db/projections.ts` — see [Surprise](#surprise).
   and the boolean is redundant with the id, kept in step by hand in both actions. A
   claimed Wish is **removed** from every other viewer rather than badged: rule 2 of
   `lib/db/visibility.ts` is `claimed: false OR claimedById: viewer OR createdById: viewer`,
-  so the row is simply not returned.
-- **Schema today**: the `claimed` boolean and `claimedById` on `model Gift` — one claimer,
-  and the boolean is redundant with the id, kept in step by hand in both actions. A
-  claimed Wish is **removed** from every other viewer rather than badged: rule 2 of
-  `lib/db/visibility.ts` is `claimed: false OR claimedById: viewer OR createdById: viewer`,
-  so the row is simply not returned. Letting claimers find each other means changing that,
-  and [#161](https://github.com/jonpulsifer/wishlist/issues/161) prices it alongside the
-  widening from [#156](https://github.com/jonpulsifer/wishlist/issues/156).
+  so the row is simply not returned, and there is no way for one claimer to discover
+  another. Nothing expresses quantity: a Wish is wanted once and claimed once.
 
 ## Wishlist
 
@@ -185,9 +179,9 @@ That is the whole point, and it is why a Suggestion is not on the subject's
 A Suggestion is not a separate kind of row. It is the state a Wish is in when its two
 people differ, so a [Claim](#claim) attaches to it exactly as to any other Wish, and
 **adopting** one — the subject deciding they do want it — is setting the proposer to
-the subject. Every Wish records a proposer, so the state is exactly
-`proposerId != subjectId` with no third case: a Wish that names no proposer is the
-subject's own, and says so.
+the subject. **Every Wish records a proposer**, so the state is exactly
+`proposerId != subjectId`, with no third case for a reader to forget: a Wish nobody else
+proposed names its own subject rather than naming nobody.
 
 Typing someone's list in **for** them is therefore not a Suggestion, and the difference is
 not cosmetic. Someone who cannot work the app — the grandmother, or a person who has not
@@ -269,9 +263,11 @@ That makes the projection load-bearing rather than tidy, which is why
   column, so any collective name would assert a coherence the row does not have.
 - **Schema today**: nothing holds this. It is restored after the fact by rules 2 and 5 of
   `lib/db/visibility.ts` — a claim filter, and an own-profile branch narrowing to
-  `createdById: viewerId`. The branch cannot filter claims (archived-on-your-own-page
-  needs it not to), so `claimed` reaches the subject's own browser through
-  `giftRowSelect`; surprise holds there only because no component reads the field.
+  `createdById: viewerId`. The own-profile branch does **not** filter claims, and cannot:
+  a claimed Wish removed from your own list is a hole where a row used to be. So `claimed`
+  reaches the subject's own browser through `giftRowSelect`, and surprise holds there only
+  because no component reads the field
+  ([#179](https://github.com/jonpulsifer/wishlist/issues/179)).
 
 ## Archived
 
@@ -299,7 +295,7 @@ has archived is a row no one can reach.
   so a proposer can archive their own Suggestion and strand it — the subject cannot see
   Suggestions, every other query filters `archived: false`, and
   `getGiftWithAccessCheck`'s own-profile escape hatch requires owner and creator to be the
-  same person. Tracked as a defect.
+  same person ([#178](https://github.com/jonpulsifer/wishlist/issues/178)).
 
 ## Family
 
@@ -446,6 +442,11 @@ Wishlist without making them a member —
 a [Family](#family) instead. See *Share link* under
 [Terms this project does not use](#terms-this-project-does-not-use).
 
+Single-use is recorded on the token itself — when it was redeemed and by whom — against a
+token that today records neither. Expiry is the column that already exists and that
+nothing writes; it stops being optional, because an Invite that never expires is a
+standing grant of the one irreversible act in the model.
+
 An Invite is **unaddressed** — a bearer link, naming no recipient, so whoever holds it
 joins. Binding it to an email is dominated by push, below: it demands the same thing you
 would already have to know, then waits for a click that push does not wait for, and gives
@@ -503,13 +504,6 @@ serialised, so it is declared as a shape and not assembled as a template.
   for one Grandma cannot recover from. Redemption behind the inviter's approval, which
   restores an undo before the irreversible step by giving up the finding that the link
   *is* the consent.
-Single-use is two nullable columns — when it was redeemed and by whom — against a token
-that today records neither. Expiry is the column that already exists and that nothing
-writes; it becomes **required**, which is affordable only because every live token is
-deleted rather than kept. A token minted when one link admitted everyone, still live under
-a membership ratchet that admits no removal, is not worth carrying forward: what it holds
-is a token, a creator and a date, and no reader consumes any of them.
-
 - **Schema today**: `model WishlistInvite`, reachable only by an admin —
   `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
   all, so no ordinary member can invite anyone or start a family. A token is multi-use:
@@ -603,10 +597,10 @@ Draw shaped by constraints they cannot inspect or override.
   ([#161](https://github.com/jonpulsifer/wishlist/issues/161)). Because no Exchange
   records a Family, whether every past Exchange's participants still share one is
   **unknown**; where they do not, a santa cannot see the Wishes of the person they were
-  assigned, and the backfill is what would reveal it.
-  Exclusions are the `secretSantaDoNotMatchWith` self-relation on `User`, created and
-  deleted only behind `manage:secret-santa`, so today they are an administrator's setting
-  rather than the subject's.
+  assigned, and the backfill is what would reveal it. Exclusions are the
+  `secretSantaDoNotMatchWith` self-relation on `User`, created and deleted only behind
+  `manage:secret-santa`, so today they are an administrator's setting rather than the
+  subject's — and `/admin/secret-santa` is the only place in the app one can be made.
 
 ## Organiser
 
