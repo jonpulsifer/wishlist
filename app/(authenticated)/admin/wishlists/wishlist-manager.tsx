@@ -47,7 +47,6 @@ type WishlistRow = {
   name: string;
   _count: {
     members: number;
-    gifts: number;
   };
 };
 
@@ -144,7 +143,6 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Members</TableHead>
-              <TableHead>Gifts</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -153,7 +151,6 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
               <TableRow key={w.id}>
                 <TableCell className="font-medium">{w.name}</TableCell>
                 <TableCell>{w._count.members}</TableCell>
-                <TableCell>{w._count.gifts}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Button
@@ -177,8 +174,9 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete wishlist</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will delete “{w.name}” and remove it from all
-                            users and gifts. This cannot be undone.
+                            This will delete “{w.name}” and remove everyone from
+                            it. Their gifts survive, but stop being visible to
+                            each other through this list. This cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -199,7 +197,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
 
             {wishlists.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
+                <TableCell colSpan={3} className="text-muted-foreground">
                   No wishlists found.
                 </TableCell>
               </TableRow>

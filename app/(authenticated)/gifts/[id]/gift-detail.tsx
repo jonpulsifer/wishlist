@@ -10,7 +10,6 @@ import {
   Trash,
   X,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { startTransition, useOptimistic, useState } from 'react';
 import {
@@ -28,11 +27,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useAction } from '@/hooks/use-action';
-import type { GiftDetail as GiftDetailData } from '@/lib/db/projections';
+import type { GiftCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
 interface GiftDetailProps {
-  gift: GiftDetailData;
+  gift: GiftCard;
   currentUserId: string;
   canEdit: boolean;
 }
@@ -275,25 +274,6 @@ export function GiftDetail({
                 </Button>
               )}
             </div>
-
-            {gift.wishlists.length > 0 && (
-              <div className="space-y-2">
-                <Label>Wishlists</Label>
-                <div className="flex flex-wrap gap-2">
-                  {gift.wishlists.map((wishlist) => (
-                    <Link
-                      key={wishlist.id}
-                      href={`/wishlists/${wishlist.id}`}
-                      className="inline-flex items-center"
-                    >
-                      <Badge variant="outline" className="hover:bg-secondary">
-                        {wishlist.name}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

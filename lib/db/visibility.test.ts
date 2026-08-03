@@ -29,8 +29,8 @@ describe('visibleGiftsWhere', () => {
   it('scopes the browse feed by the owner’s wishlist membership', () => {
     const where = visibleGiftsWhere(VIEWER, { excludeOwn: true, now });
     assert.deepEqual(where.owner, GIFT_MEMBERSHIP.owner);
-    // The pin is not consulted. Visibility follows the subject.
-    assert.equal(where.wishlists, undefined);
+    // The pin cannot be consulted: `Gift.wishlists` is gone from the schema, so
+    // `GiftWhereInput` has no such field and the assertion is now `tsc`'s.
   });
 
   it('hides archived gifts from everyone but their owner', () => {

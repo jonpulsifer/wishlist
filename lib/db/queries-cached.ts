@@ -11,7 +11,6 @@ import { unstable_cache } from 'next/cache';
 import prisma from './client';
 import {
   type GiftCard,
-  type GiftDetail,
   giftRowSelect,
   type PersonCard,
   type PersonRef,
@@ -251,7 +250,7 @@ const getSecretSantaEvents = unstable_cache(
 
 /** One Gift, or `null` if the viewer may not see it. */
 const getGiftWithAccessCheck = unstable_cache(
-  async (giftId: string, viewerId: string): Promise<GiftDetail | null> => {
+  async (giftId: string, viewerId: string): Promise<GiftCard | null> => {
     const gift = await prisma.gift.findFirst({
       where: {
         AND: [
@@ -266,16 +265,11 @@ const getGiftWithAccessCheck = unstable_cache(
           },
         ],
       },
-      select: {
-        ...giftRowSelect,
-        wishlists: { select: { id: true, name: true } },
-      },
+      select: giftRowSelect,
     });
 
     if (!gift) return null;
-
-    const { wishlists, ...row } = gift;
-    return { ...toGiftCard(row, viewerId), wishlists };
+    return toGiftCard(gift, viewerId);
   },
   ['giftWithAccess'],
   { tags: ['gifts', 'users', 'wishlists'] },

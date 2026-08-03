@@ -95,7 +95,7 @@ components import their types from here — never from `@/prisma/generated/clien
 — so a column added to a model cannot silently start shipping to the client.
 
 Select with `personRefSelect`, `giftRowSelect`, `profileSelect`; hand across
-`PersonRef`, `GiftCard`, `GiftDetail`, `PersonCard`, `Profile`. Filter on the
+`PersonRef`, `GiftCard`, `PersonCard`, `Profile`. Filter on the
 server and pass the minimum. A client component that receives a whole Prisma row
 is a bug even when nothing renders the sensitive fields.
 

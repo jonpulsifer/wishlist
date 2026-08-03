@@ -77,7 +77,9 @@ export async function getAllWishlists(viewer: Viewer) {
     select: {
       id: true,
       name: true,
-      _count: { select: { members: true, gifts: true } },
+      // No gift count: Gifts belong to people, not to Wishlists. The old column
+      // counted pins, and the pin is gone.
+      _count: { select: { members: true } },
     },
     orderBy: { name: 'asc' },
   });

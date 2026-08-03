@@ -3,12 +3,15 @@ import type { User, Wishlist } from '@/prisma/generated/client';
 
 import prisma from '../lib/db/client';
 
+// A Gift is not pinned to a Wishlist any more: who may see it follows from its
+// owner's memberships. The `wishlist` argument stays because it is what decides
+// the audience — through `user`, who is a member of it.
 const createRandomGift = async (
   user: User,
   wishlist: Wishlist,
   recipient?: User,
 ) => {
-  console.log('creating gift for', user, wishlist);
+  console.log('creating gift for', user.email, 'seen via', wishlist.name);
   const sender = recipient ? recipient : user;
   return prisma.gift.upsert({
     where: { id: faker.string.uuid() },
@@ -19,7 +22,6 @@ const createRandomGift = async (
       url: faker.internet.url(),
       owner: { connect: user },
       createdBy: { connect: sender },
-      wishlists: { connect: wishlist },
     },
   });
 };
