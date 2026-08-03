@@ -27,9 +27,10 @@ export type PersonRef = Prisma.UserGetPayload<{
 /**
  * Server-side select for a Gift row.
  *
- * `claimedById` is read but never forwarded — `toGiftCard` turns it into the
- * single boolean the view needs. Who claimed a Gift is the one secret this app
- * keeps, and it should not be sitting in the page source.
+ * The claimer ids are read but never forwarded — `toGiftCard` reduces them to
+ * two booleans, and to none at all for the person the Gift is for. Who claimed
+ * a Gift is the one secret this app keeps, and it should not be sitting in the
+ * page source.
  */
 export const giftRowSelect = {
   id: true,
@@ -38,27 +39,22 @@ export const giftRowSelect = {
   description: true,
   createdAt: true,
   archived: true,
-  claimed: true,
-  claimedById: true,
   ownerId: true,
   createdById: true,
   owner: { select: personRefSelect },
   createdBy: { select: personRefSelect },
+  claimers: { select: { userId: true } },
 } satisfies Prisma.GiftSelect;
 
 type GiftRow = Prisma.GiftGetPayload<{ select: typeof giftRowSelect }>;
 
-/** A Gift as rendered in a list. No `claimedBy`, by construction. */
-export type GiftCard = {
+type GiftCardBase = {
   id: string;
   name: string;
   url: string | null;
   description: string | null;
   createdAt: Date;
   archived: boolean;
-  claimed: boolean;
-  /** True only when the viewer is the claimer. Others' claims read as `claimed`. */
-  claimedByViewer: boolean;
   ownerId: string;
   owner: PersonRef;
   createdBy: PersonRef | null;
@@ -66,12 +62,44 @@ export type GiftCard = {
   canEdit: boolean;
 };
 
+/**
+ * A Gift as rendered in a list.
+ *
+ * Surprise is the shape of this type, not a value inside it. The person a Gift
+ * is *for* receives a payload with no claim state at all — not `false`,
+ * **absent** — so no component can read it and no future component can start
+ * (ADR-0004). Everyone else's payload says whether it is claimed, because a
+ * claimed Gift has to stay visible-as-claimed or nobody can find the claim to
+ * join it.
+ *
+ * `yours` is the discriminant, so the compiler is the proof rather than a code
+ * review.
+ */
+export type GiftCard = GiftCardBase &
+  (
+    | { yours: true }
+    | {
+        yours: false;
+        claimed: boolean;
+        /** True only when the viewer is a claimer. Others' claims read as `claimed`. */
+        claimedByViewer: boolean;
+      }
+  );
+
 export function toGiftCard(row: GiftRow, viewerId: string): GiftCard {
-  const { claimedById, createdById, ...rest } = row;
-  return {
+  const { claimers, createdById, ...rest } = row;
+  const base = {
     ...rest,
-    claimedByViewer: claimedById === viewerId,
     canEdit: row.ownerId === viewerId || createdById === viewerId,
+  };
+
+  if (row.ownerId === viewerId) return { ...base, yours: true };
+
+  return {
+    ...base,
+    yours: false,
+    claimed: claimers.length > 0,
+    claimedByViewer: claimers.some((c) => c.userId === viewerId),
   };
 }
 

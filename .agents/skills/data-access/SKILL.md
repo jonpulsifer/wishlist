@@ -99,6 +99,15 @@ Select with `personRefSelect`, `giftRowSelect`, `profileSelect`; hand across
 server and pass the minimum. A client component that receives a whole Prisma row
 is a bug even when nothing renders the sensitive fields.
 
+**Claim secrecy is this module's job, not visibility's.** Do not add a claim
+clause to a `where` — a subject sees their own list, so filtering a claimed Gift
+out of it makes the row *vanish*, and absence is a louder signal than a badge.
+`GiftCard` is a union on `yours`: the person a Gift is *for* gets a payload with
+no `claimed` and no `claimedByViewer` at all — absent, not `false` — so no
+component can read it, and `tsc` is the proof rather than a code review.
+Everyone else's payload says whether it is claimed, because a claimed Gift has
+to stay visible-as-claimed or nobody can find the claim to join it.
+
 ## Caching
 
 Read paths that are cached live in `lib/db/queries-cached.ts` under the

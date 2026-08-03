@@ -131,7 +131,7 @@ const getUsersForPeoplePage = unstable_cache(
       select: {
         ...personRefSelect,
         _count: {
-          select: { gifts: { where: visibleGiftCountWhere(viewerId) } },
+          select: { gifts: { where: visibleGiftCountWhere() } },
         },
       },
       where: visiblePeopleWhere(viewerId, { excludeSelf: true }),
