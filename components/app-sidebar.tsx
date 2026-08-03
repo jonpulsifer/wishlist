@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { Suspense } from 'react';
+import { SnowfallBackground } from '@/components/snowfall-background';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -246,7 +247,7 @@ function ChristmasPanel({ sorted, total }: SidebarProgress) {
         />
         {total > 0 && (
           <p className="mt-2 text-xs text-sidebar-foreground/70">
-            {left === 0 ? 'Everyone sorted 🎉' : `${left} left to shop for`}
+            {left === 0 ? 'Everyone covered 🎉' : `${left} left to shop for`}
           </p>
         )}
       </SidebarGroupContent>
@@ -286,7 +287,14 @@ export function AppSidebar({ progress }: { progress: SidebarProgress }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      {/* Snow lives here and only here: over the sidebar's own background it
+          is actually visible, and it stays out of the way of the content. */}
+      <SidebarContent className="relative">
+        <SnowfallBackground
+          contained
+          intensity="light"
+          showBackground={false}
+        />
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>

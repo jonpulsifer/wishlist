@@ -12,6 +12,20 @@
 type Person = { id: string; giftCount: number };
 type ClaimedGift = { owner: { id: string } };
 
+/** A Gift as far as this module cares: does it carry a claim by the viewer. */
+type MaybeClaimed =
+  | { yours: true }
+  | { yours: false; claimedByViewer: boolean };
+
+/**
+ * The same rule as `shoppingProgress`, asked of one person's Gifts rather than
+ * of the viewer's claims. Home needs this arm so the tick can update
+ * optimistically the moment a claim is made, without waiting for a refetch.
+ */
+export function sortedForPerson(gifts: MaybeClaimed[]): boolean {
+  return gifts.some((gift) => !gift.yours && gift.claimedByViewer);
+}
+
 export type ShoppingProgress<P, G> = {
   /** People with no claim from the viewer yet, most-actionable first. */
   toShopFor: P[];

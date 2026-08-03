@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { shoppingProgress } from './shopping-progress';
+import { shoppingProgress, sortedForPerson } from './shopping-progress';
 
 const person = (id: string, giftCount = 0) => ({ id, giftCount });
 const claim = (ownerId: string) => ({ owner: { id: ownerId } });
@@ -45,5 +45,32 @@ describe('shoppingProgress', () => {
 
   it('reports 0 percent rather than NaN when there is nobody to shop for', () => {
     assert.equal(shoppingProgress([], []).percent, 0);
+  });
+});
+
+describe('sortedForPerson', () => {
+  it('is true once the viewer has claimed any one of the Gifts', () => {
+    assert.equal(
+      sortedForPerson([
+        { yours: false, claimedByViewer: false },
+        { yours: false, claimedByViewer: true },
+      ]),
+      true,
+    );
+  });
+
+  it('ignores Gifts claimed by somebody else', () => {
+    assert.equal(
+      sortedForPerson([{ yours: false, claimedByViewer: false }]),
+      false,
+    );
+  });
+
+  it("never counts the viewer's own Gifts, which carry no claim state", () => {
+    assert.equal(sortedForPerson([{ yours: true }, { yours: true }]), false);
+  });
+
+  it('is false for an empty list', () => {
+    assert.equal(sortedForPerson([]), false);
   });
 });

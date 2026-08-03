@@ -3,7 +3,6 @@ import { SessionProvider } from 'next-auth/react';
 import { auth } from '@/app/auth';
 import { AppSidebar } from '@/components/app-sidebar';
 import { GlobalSearchProvider } from '@/components/global-search/global-search-provider';
-import { SnowfallBackground } from '@/components/snowfall-background';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import {
   getClaimedGiftsForMe,
@@ -30,8 +29,6 @@ async function Layout({ children }: { children: React.ReactNode }) {
     <SessionProvider session={session}>
       <GlobalSearchProvider>
         <SidebarProvider defaultOpen={false}>
-          {/* Light, no backdrop — the app keeps its own background. */}
-          <SnowfallBackground intensity="light" showBackground={false} />
           <AppSidebar
             progress={{ sorted: sortedPeople.length, total, percent }}
           />

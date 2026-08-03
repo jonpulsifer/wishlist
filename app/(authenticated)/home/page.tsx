@@ -17,19 +17,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
-  getClaimedGiftsForMe,
   getLatestVisibleGiftsForUserById,
   getPeopleForNewGiftModal,
+  getSortedVisibleGiftsForUser,
   getUsersForPeoplePage,
   getVisibleGiftsForUserById,
 } from '@/lib/db/queries-cached';
@@ -38,8 +33,9 @@ import {
   daysUntilChristmas,
   heldForCurrentOccasion,
 } from '@/lib/season';
-import { shoppingProgress } from '@/lib/shopping-progress';
+import { sortedForPerson } from '@/lib/shopping-progress';
 import { getInitials } from '@/lib/utils';
+import { PeopleList } from './people-list';
 
 /**
  * Home answers, in order: how long have I got, who have I not sorted yet, and
@@ -52,14 +48,16 @@ export default async function HomePage() {
   const [
     addGiftDialogUsers,
     people,
-    claimedByMe,
+    visibleGifts,
     myGifts,
     latestGifts,
     secretSantaParticipations,
   ] = await Promise.all([
     getPeopleForNewGiftModal(viewer.id),
     getUsersForPeoplePage(viewer.id),
-    getClaimedGiftsForMe(viewer.id),
+    // Everyone's Gifts in one query rather than one per person, grouped by
+    // owner in the client so claiming can update the tick optimistically.
+    getSortedVisibleGiftsForUser({ userId: viewer.id }),
     getVisibleGiftsForUserById(viewer.id, viewer.id),
     getLatestVisibleGiftsForUserById(viewer.id),
     db.secretSantaParticipant.findMany({
@@ -72,10 +70,11 @@ export default async function HomePage() {
     }),
   ]);
 
-  const { toShopFor, sortedPeople, claimedFor, total } = shoppingProgress(
-    people,
-    claimedByMe,
-  );
+  // Actionable first: people with ideas on their list, longest list first.
+  const ordered = [...people].sort((a, b) => b.giftCount - a.giftCount);
+  const sortedCount = people.filter((p) =>
+    sortedForPerson(visibleGifts.filter((g) => g.ownerId === p.id)),
+  ).length;
   const sleeps = daysUntilChristmas();
 
   return (
@@ -90,9 +89,9 @@ export default async function HomePage() {
         </Breadcrumb>
       </AppHeader>
 
-      {/* p-4 matches PeekingSanta's 1rem overhang, so he never pushes the
-          document sideways on a phone. */}
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-4">
+      {/* p-6 matches the -translate-x-6 overhang below, so Santa pokes well
+          clear of the cards without pushing the document sideways. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-6">
         {/* The clock and the score — the two numbers that actually motivate. */}
         <section className="px-1 pt-1">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -110,115 +109,40 @@ export default async function HomePage() {
           />
         </section>
 
-        {/* The job: who still needs something from you. */}
-        <Card className="relative isolate">
-          {toShopFor.length === 0 && <PeekingSanta className="top-16" />}
-          <CardHeader>
-            <CardTitle>Still to shop for</CardTitle>
-            <CardDescription>
-              {toShopFor.length === 0
-                ? 'Nothing left on your list.'
-                : `${sortedPeople.length} of ${total} sorted — tap someone to see what they asked for.`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2">
-            {toShopFor.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="font-medium">
-                  {people.length === 0
-                    ? 'Nobody on your wishlists yet'
-                    : "Everyone's sorted"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {people.length === 0
-                    ? 'Join or create a wishlist to start shopping.'
-                    : 'Go put your feet up.'}
-                </p>
-              </div>
-            ) : (
-              <ul>
-                {toShopFor.map((person) => (
-                  <li key={person.id}>
-                    <Link
-                      href={`/people/${person.id}`}
-                      className="flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent active:bg-accent"
-                    >
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={person.image ?? undefined} />
-                        <AvatarFallback>{getInitials(person)}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">
-                          {person.name ?? person.email}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {person.giftCount === 0
-                            ? 'No ideas on their list yet'
-                            : `${person.giftCount} idea${person.giftCount === 1 ? '' : 's'} to pick from`}
-                        </p>
-                      </div>
-                      <ChevronRightIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Done is worth showing, but folded away. */}
-        {sortedPeople.length > 0 && (
-          <Collapsible>
-            <Card>
-              <CollapsibleTrigger className="w-full text-left">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between gap-2 text-base">
-                    <span>Already sorted ({sortedPeople.length})</span>
-                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
-                  </CardTitle>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="px-2">
-                  <ul>
-                    {sortedPeople.map((person) => (
-                      <li key={person.id}>
-                        <Link
-                          href={`/people/${person.id}`}
-                          className="flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent"
-                        >
-                          <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={person.image ?? undefined} />
-                            <AvatarFallback>
-                              {getInitials(person)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {person.name ?? person.email}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              You claimed{' '}
-                              {claimedFor
-                                .get(person.id)
-                                ?.map((g) => g.name)
-                                .join(', ')}
-                            </p>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        )}
+        {/* The job: who still needs something from you. Everyone lives in
+            one list now — a tick marks done, rather than a second card. */}
+        <div className="relative">
+          {/* Clear of the card entirely at his full 36px width, so its left
+              edge does not cut through him. Held to the 24px page gutter on
+              mobile, where the container is the viewport and any more would
+              scroll the document sideways. */}
+          <PeekingSanta className="top-20 z-10 -translate-x-6 sm:-translate-x-9" />
+          <Card>
+            <CardHeader>
+              <CardTitle>Who you're shopping for</CardTitle>
+              <CardDescription>
+                {people.length === 0
+                  ? 'Nobody on your wishlists yet.'
+                  : `${sortedCount} of ${people.length} covered — tap someone to claim from their list.`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-2">
+              {people.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="font-medium">Nobody on your wishlists yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Join or create a wishlist to start shopping.
+                  </p>
+                </div>
+              ) : (
+                <PeopleList people={ordered} gifts={visibleGifts} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* The other half of the app: can anyone shop for you. */}
-        <Card className="relative isolate">
-          {/* He only turns up when the list is empty — a nudge, not wallpaper. */}
-          {myGifts.length === 0 && <PeekingSanta className="top-6" />}
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Your list</CardTitle>
             <CardDescription>

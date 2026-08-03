@@ -15,12 +15,19 @@ interface SnowfallBackgroundProps {
   className?: string;
   intensity?: 'light' | 'normal' | 'heavy';
   showBackground?: boolean;
+  /**
+   * Fall inside the nearest positioned ancestor instead of the viewport. The
+   * viewport-fixed default sits *behind* an opaque page background, so the
+   * flakes are invisible everywhere except a 1px gap.
+   */
+  contained?: boolean;
 }
 
 export function SnowfallBackground({
   className = '',
   intensity = 'normal',
   showBackground = true,
+  contained = false,
 }: SnowfallBackgroundProps) {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const { resolvedTheme } = useTheme();
@@ -62,7 +69,9 @@ export function SnowfallBackground({
       )}
 
       {/* Snowfall effect */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+      <div
+        className={`${contained ? 'absolute' : 'fixed'} inset-0 pointer-events-none overflow-hidden z-0`}
+      >
         {snowflakes.map((flake) => (
           <div
             key={flake.id}
