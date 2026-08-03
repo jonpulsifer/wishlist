@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  christmasProgress,
   currentSeason,
   daysUntilChristmas,
   heldForCurrentOccasion,
@@ -211,5 +212,27 @@ describe('nextChristmas', () => {
 
   it('counts whole days remaining', () => {
     assert.equal(daysUntilChristmas(new Date(2026, 11, 18)), 7);
+  });
+});
+
+describe('christmasProgress', () => {
+  it('is full on the day itself', () => {
+    assert.equal(christmasProgress(new Date(2026, 11, 25)), 100);
+  });
+
+  it('restarts the day after', () => {
+    assert.equal(christmasProgress(new Date(2026, 11, 26)), 0);
+  });
+
+  it('is about half way by midsummer', () => {
+    const half = christmasProgress(new Date(2026, 5, 25));
+    assert.ok(half > 45 && half < 55, `expected ~50, got ${half}`);
+  });
+
+  it('climbs as the day approaches', () => {
+    assert.ok(
+      christmasProgress(new Date(2026, 11, 18)) >
+        christmasProgress(new Date(2026, 9, 18)),
+    );
   });
 });

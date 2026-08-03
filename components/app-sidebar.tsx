@@ -33,6 +33,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import {
   Sidebar,
   SidebarContent,
@@ -48,9 +49,16 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
-import { daysUntilChristmas } from '@/lib/season';
+import { christmasProgress, daysUntilChristmas } from '@/lib/season';
 import { getInitials } from '@/lib/utils';
 import santaIcon from '@/public/santaicon.png';
+
+/** Counts only — the shape crossing from the server layout must serialise. */
+export type SidebarProgress = {
+  sorted: number;
+  total: number;
+  percent: number;
+};
 
 // Menu items.
 const items = [
@@ -214,7 +222,39 @@ function UserSection() {
   );
 }
 
-export function AppSidebar() {
+/** The countdown, in the one place that is on every screen. */
+function ChristmasPanel({ sorted, total }: SidebarProgress) {
+  const days = daysUntilChristmas();
+  const left = total - sorted;
+  return (
+    // Hidden when the rail collapses to icons — there is no room for prose.
+    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+      <SidebarGroupContent className="rounded-lg bg-sidebar-accent/60 p-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-semibold">
+            {days === 0 ? '🎄 Today!' : `${days} sleep${days === 1 ? '' : 's'}`}
+          </span>
+          <span className="text-xs text-sidebar-foreground/70">
+            till Christmas
+          </span>
+        </div>
+        <ProgressBar
+          value={christmasProgress()}
+          label="Progress through the year to Christmas"
+          className="mt-2 bg-sidebar-border"
+          fillClassName="bg-sidebar-primary"
+        />
+        {total > 0 && (
+          <p className="mt-2 text-xs text-sidebar-foreground/70">
+            {left === 0 ? 'Everyone sorted 🎉' : `${left} left to shop for`}
+          </p>
+        )}
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
+export function AppSidebar({ progress }: { progress: SidebarProgress }) {
   const { data: session } = useSession();
   // The session carries capabilities, not roles — resolved server-side against
   // the same table the pages gate on, so the link and the page agree.
@@ -299,6 +339,7 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+        <ChristmasPanel {...progress} />
       </SidebarContent>
       <SidebarFooter>
         <Suspense fallback={<div>Loading...</div>}>

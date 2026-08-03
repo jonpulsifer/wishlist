@@ -54,7 +54,10 @@ export function SnowfallBackground({
       {/* Animated background */}
       {showBackground && (
         <div
-          className={`fixed inset-0 bg-gradient-to-br from-slate-200 via-blue-300 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift ${className}`}
+          // Dark in both themes on purpose: the only screens that use this
+          // backdrop put white text on it, and the old light variant started
+          // at sky-200, which made the wordmark unreadable.
+          className={`fixed inset-0 bg-gradient-to-br from-indigo-950 via-rose-950 to-slate-950 animate-gradient-shift ${className}`}
         />
       )}
 

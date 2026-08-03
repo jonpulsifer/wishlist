@@ -3,16 +3,38 @@ import { SessionProvider } from 'next-auth/react';
 import { auth } from '@/app/auth';
 import { AppSidebar } from '@/components/app-sidebar';
 import { GlobalSearchProvider } from '@/components/global-search/global-search-provider';
+import { SnowfallBackground } from '@/components/snowfall-background';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import {
+  getClaimedGiftsForMe,
+  getUsersForPeoplePage,
+} from '@/lib/db/queries-cached';
+import { shoppingProgress } from '@/lib/shopping-progress';
 
 async function Layout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect('/');
+
+  // Both reads are cached and tagged, so the pages that ask the same questions
+  // do not pay twice. Only the counts cross to the client sidebar.
+  const [people, claimedByMe] = await Promise.all([
+    getUsersForPeoplePage(session.user.id),
+    getClaimedGiftsForMe(session.user.id),
+  ]);
+  const { sortedPeople, total, percent } = shoppingProgress(
+    people,
+    claimedByMe,
+  );
+
   return (
     <SessionProvider session={session}>
       <GlobalSearchProvider>
         <SidebarProvider defaultOpen={false}>
-          <AppSidebar />
+          {/* Light, no backdrop — the app keeps its own background. */}
+          <SnowfallBackground intensity="light" showBackground={false} />
+          <AppSidebar
+            progress={{ sorted: sortedPeople.length, total, percent }}
+          />
           <main className="flex flex-1">{children}</main>
         </SidebarProvider>
       </GlobalSearchProvider>
