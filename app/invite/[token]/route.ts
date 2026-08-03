@@ -31,7 +31,7 @@ export async function GET(
 
   const response = NextResponse.redirect(new URL('/wishlists', request.url));
 
-  // Signed in: validate token and join wishlist (bypasses pin).
+  // Signed in: validate the token and join. This is the only door in.
   const invite = await db.wishlistInvite.findFirst({
     where: {
       token,

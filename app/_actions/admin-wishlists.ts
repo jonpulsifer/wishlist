@@ -7,8 +7,6 @@ import db from '@/lib/db/client';
 
 const WISHLIST_CACHES = ['gifts', 'users', 'wishlists'] as const;
 
-const WishlistPinSchema = z.string().regex(/^\d{4}$/, 'Pin must be 4 digits');
-
 const wishlistIdSchema = z.object({
   wishlistId: z.string().min(1, 'Wishlist ID is required'),
 });
@@ -18,30 +16,14 @@ export const createWishlistAdmin = defineAction(
     capability: 'manage:wishlists',
     input: z.object({
       name: z.string().trim().min(1, 'Wishlist name is required').max(255),
-      pin: WishlistPinSchema,
     }),
     invalidates: WISHLIST_CACHES,
   },
   async ({ input }) => {
-    await db.wishlist.create({
-      data: { name: input.name, password: input.pin },
-    });
+    // `password` is a vestigial NOT NULL column with no default; step 13 drops
+    // it. Nothing reads it, and no code path chooses its value any more.
+    await db.wishlist.create({ data: { name: input.name, password: '' } });
     return { message: 'Wishlist created' };
-  },
-);
-
-export const updateWishlistPinAdmin = defineAction(
-  {
-    capability: 'manage:wishlists',
-    input: wishlistIdSchema.extend({ pin: WishlistPinSchema }),
-    invalidates: WISHLIST_CACHES,
-  },
-  async ({ input }) => {
-    await db.wishlist.update({
-      where: { id: input.wishlistId },
-      data: { password: input.pin },
-    });
-    return { message: 'Wishlist pin updated' };
   },
 );
 
