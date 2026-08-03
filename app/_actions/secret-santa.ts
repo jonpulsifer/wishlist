@@ -2,7 +2,9 @@
 
 import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
+import { organiserOfWhere } from '@/lib/db/authority';
 import db from '@/lib/db/client';
+import { visiblePeopleWhere } from '@/lib/db/visibility';
 import { currentSeason, withinDrawHistory } from '@/lib/season';
 import {
   drawAssignments,
@@ -25,6 +27,20 @@ import {
 export const openSecretSantaEvent = defineAction(
   { input: openEventSchema, invalidates: ['secretSanta'] },
   async ({ viewer, input }) => {
+    // The participant list arrives from the client, so every id in it is
+    // re-derived against what the viewer may actually see. Without this, any
+    // signed-in person could name strangers by uuid and then read back their
+    // assignments — they are the Organiser of the event they just opened.
+    const visible = await db.user.count({
+      where: {
+        id: { in: input.participantIds },
+        ...visiblePeopleWhere(viewer.id),
+      },
+    });
+    if (visible !== input.participantIds.length) {
+      throw new ActionError('Some of those people are not in your families');
+    }
+
     const event = await db.$transaction(async (tx) => {
       const created = await tx.secretSantaEvent.create({
         data: {
@@ -59,17 +75,15 @@ export const openSecretSantaEvent = defineAction(
 export const assignSecretSantaParticipants = defineAction(
   { input: eventIdSchema, invalidates: ['secretSanta'] },
   async ({ viewer, input: { eventId } }) => {
-    const event = await db.secretSantaEvent.findUnique({
-      where: { id: eventId },
+    // Organiser-or-nothing, as a `where` rather than a comparison: an event
+    // the viewer did not open is not loaded, so "not yours" and "no such
+    // event" are the same answer.
+    const event = await db.secretSantaEvent.findFirst({
+      where: { id: eventId, ...organiserOfWhere(viewer.id) },
       include: { participants: true },
     });
 
     if (!event) throw new ActionError('Secret Santa event not found');
-    if (event.createdById !== viewer.id) {
-      throw new ActionError(
-        'You do not have permission to modify this Secret Santa event',
-      );
-    }
     if (event.participants.some((p) => p.assignedToId !== null)) {
       throw new ActionError('Participants have already been assigned');
     }

@@ -18,6 +18,9 @@ after the fact is too late. Every one exists because the opposite shipped.
   Six hand-written copies had drifted into three real disclosure defects.
 - **Never look a person up by id alone.** A bare `findUnique` hands shipping
   addresses and clothing sizes to anyone holding a uuid. Scope it.
+- **Never decide who may change a row after loading it.** "Which rows may this
+  viewer act on" lives in `lib/db/authority.ts`. Spread its builders into the
+  `where` so the row is never loaded, rather than comparing `ownerId` in memory.
 - **Never name a role.** Ask `viewer.can('manage:secret-santa')`. The
   role → capability table is `lib/auth/capabilities.ts`; roles are its
   implementation detail, and the session carries capabilities so a role name
@@ -79,6 +82,7 @@ rest of the codebase is not allowed to re-derive:
 | `lib/actions/define.ts` | The server-action prologue — session, capability gate, zod parsing, error normalisation, cache invalidation. Behaviour is in `prologue.ts`, which takes its dependencies as parameters and is tested. |
 | `hooks/use-action.ts` | The browser half of that seam — the unwrap, the notification, the optimistic revert. |
 | `lib/db/visibility.ts` | Who may see what, as Prisma `where` builders. |
+| `lib/db/authority.ts` | Who may change what, in the same shape. |
 | `lib/db/projections.ts` | What may cross to the browser. |
 | `lib/auth/viewer.ts` | Who is asking. One interface, three adapters. |
 | `lib/auth/capabilities.ts` | Role → capability. Pure, and covered by tests. |
