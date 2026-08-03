@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
-import { visibleGiftsWhere, visiblePeopleWhere } from '@/lib/db/visibility';
+import {
+  visibleGiftsWhere,
+  visiblePeopleWhere,
+  visibleWishlistsWhere,
+} from '@/lib/db/visibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,17 +69,9 @@ export async function GET(req: NextRequest) {
       orderBy: [{ updatedAt: 'desc' }],
       take: 12,
     }),
-    // Wishlists are deliberately discoverable by name: the app lets you find a
-    // list you are not in and join it with its PIN, which is also what
-    // `/wishlists` shows. Membership only controls the subtitle.
     db.wishlist.findMany({
-      select: {
-        id: true,
-        name: true,
-        _count: { select: { members: true } },
-        members: { where: { id: userId }, select: { id: true } },
-      },
-      where: { name: contains },
+      select: { id: true, name: true, _count: { select: { members: true } } },
+      where: { AND: [visibleWishlistsWhere(userId), { name: contains }] },
       orderBy: [{ name: 'asc' }],
       take: 10,
     }),
@@ -106,18 +102,13 @@ export async function GET(req: NextRequest) {
     href: `/gifts/${g.id}`,
   }));
 
-  const wishlistItems: SearchItem[] = wishlists.map((w) => {
-    const isMember = w.members.length > 0;
-    return {
-      id: w.id,
-      type: 'wishlist',
-      title: w.name,
-      subtitle: isMember
-        ? `${w._count.members} member${w._count.members === 1 ? '' : 's'}`
-        : 'Private wishlist • Enter PIN to join',
-      href: `/wishlists#wishlist-${w.id}`,
-    };
-  });
+  const wishlistItems: SearchItem[] = wishlists.map((w) => ({
+    id: w.id,
+    type: 'wishlist',
+    title: w.name,
+    subtitle: `${w._count.members} member${w._count.members === 1 ? '' : 's'}`,
+    href: `/wishlists#wishlist-${w.id}`,
+  }));
 
   return NextResponse.json({
     users: userItems,

@@ -26,6 +26,7 @@ import {
   visibleGiftsWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
+  visibleWishlistsWhere,
 } from './visibility';
 
 /** People the viewer may add a Gift for. */
@@ -52,10 +53,11 @@ const getVisiblePeopleRefs = unstable_cache(
   { tags: ['users', 'wishlists'] },
 );
 
-/** All Wishlists, with members. Membership redaction happens at the call site. */
+/** The viewer's own Wishlists, with members. */
 const getWishlistsWithMembers = unstable_cache(
-  async () =>
+  async (viewerId: string) =>
     prisma.wishlist.findMany({
+      where: visibleWishlistsWhere(viewerId),
       select: {
         id: true,
         name: true,
