@@ -55,8 +55,6 @@ export default async function HomePage() {
   ] = await Promise.all([
     getPeopleForNewGiftModal(viewer.id),
     getUsersForPeoplePage(viewer.id),
-    // Everyone's Gifts in one query rather than one per person, grouped by
-    // owner in the client so claiming can update the tick optimistically.
     getSortedVisibleGiftsForUser({ userId: viewer.id }),
     getVisibleGiftsForUserById(viewer.id, viewer.id),
     getLatestVisibleGiftsForUserById(viewer.id),
@@ -70,7 +68,6 @@ export default async function HomePage() {
     }),
   ]);
 
-  // Actionable first: people with ideas on their list, longest list first.
   const ordered = [...people].sort((a, b) => b.giftCount - a.giftCount);
   const sortedCount = people.filter((p) =>
     sortedForPerson(visibleGifts.filter((g) => g.ownerId === p.id)),
@@ -89,8 +86,7 @@ export default async function HomePage() {
         </Breadcrumb>
       </AppHeader>
 
-      {/* p-6 matches the -translate-x-6 overhang below, so Santa pokes well
-          clear of the cards without pushing the document sideways. */}
+      {/* p-6 is the gutter PeekingSanta's overhang is measured against. */}
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-6">
         {/* The clock and the score — the two numbers that actually motivate. */}
         <section className="px-1 pt-1">
@@ -109,13 +105,8 @@ export default async function HomePage() {
           />
         </section>
 
-        {/* The job: who still needs something from you. Everyone lives in
-            one list now — a tick marks done, rather than a second card. */}
         <div className="relative">
-          {/* Clear of the card entirely at his full 36px width, so its left
-              edge does not cut through him. Held to the 24px page gutter on
-              mobile, where the container is the viewport and any more would
-              scroll the document sideways. */}
+          {/* Full width clear of the card, held to the page gutter on mobile. */}
           <PeekingSanta className="top-20 z-10 -translate-x-6 sm:-translate-x-9" />
           <Card>
             <CardHeader>

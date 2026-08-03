@@ -260,7 +260,7 @@ export function GiftDetail({
               </div>
               {!canEdit && !gift.yours && (
                 <Button
-                  variant={gift.claimedByViewer ? 'destructive' : 'default'}
+                  variant={gift.claimedByViewer ? 'outline' : 'default'}
                   onClick={handleClaimToggle}
                   disabled={isPending}
                 >

@@ -228,7 +228,6 @@ function ChristmasPanel({ sorted, total }: SidebarProgress) {
   const days = daysUntilChristmas();
   const left = total - sorted;
   return (
-    // Hidden when the rail collapses to icons — there is no room for prose.
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupContent className="rounded-lg bg-sidebar-accent/60 p-3">
         <div className="flex items-baseline justify-between gap-2">
@@ -287,8 +286,6 @@ export function AppSidebar({ progress }: { progress: SidebarProgress }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      {/* Snow lives here and only here: over the sidebar's own background it
-          is actually visible, and it stays out of the way of the content. */}
       <SidebarContent className="relative">
         <SnowfallBackground
           contained

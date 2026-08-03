@@ -17,11 +17,7 @@ type MaybeClaimed =
   | { yours: true }
   | { yours: false; claimedByViewer: boolean };
 
-/**
- * The same rule as `shoppingProgress`, asked of one person's Gifts rather than
- * of the viewer's claims. Home needs this arm so the tick can update
- * optimistically the moment a claim is made, without waiting for a refetch.
- */
+/** The same rule as `shoppingProgress`, asked of one person's Gifts. */
 export function sortedForPerson(gifts: MaybeClaimed[]): boolean {
   return gifts.some((gift) => !gift.yours && gift.claimedByViewer);
 }
@@ -49,7 +45,6 @@ export function shoppingProgress<P extends Person, G extends ClaimedGift>(
     claimedFor.set(gift.owner.id, forOwner);
   }
 
-  // People with ideas on their list first — those are the ones you can act on.
   const toShopFor = people
     .filter((p) => !claimedFor.has(p.id))
     .sort((a, b) => b.giftCount - a.giftCount);

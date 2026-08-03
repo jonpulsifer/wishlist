@@ -14,8 +14,6 @@ async function Layout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect('/');
 
-  // Both reads are cached and tagged, so the pages that ask the same questions
-  // do not pay twice. Only the counts cross to the client sidebar.
   const [people, claimedByMe] = await Promise.all([
     getUsersForPeoplePage(session.user.id),
     getClaimedGiftsForMe(session.user.id),

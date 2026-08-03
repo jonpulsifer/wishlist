@@ -17,14 +17,8 @@ import { sortedForPerson } from '@/lib/shopping-progress';
 import { getInitials } from '@/lib/utils';
 
 /**
- * Everyone the viewer shops for, each row opening onto their Gifts.
- *
- * Claiming happens here rather than on a detour to the person's page, which is
- * the whole point: the job is "sort this person out", and it should take one
- * tap and no navigation.
- *
- * The tick is derived from the Gifts held in optimistic state, not passed in
- * from the server, so it appears the instant a claim is made.
+ * Everyone the viewer shops for, each row opening onto their Gifts so a claim
+ * takes one tap and no navigation. Covered people fold away.
  */
 export function PeopleList({
   people,
@@ -69,8 +63,6 @@ export function PeopleList({
     const owned = byOwner.get(person.id) ?? [];
     return { person, owned, sorted: sortedForPerson(owned) };
   });
-  // Sorted people sink and grey out rather than staying interleaved. With a
-  // twenty-person family the actionable list is the only part worth scanning.
   const todo = rows.filter((r) => !r.sorted);
   const done = rows.filter((r) => r.sorted);
 
@@ -114,9 +106,6 @@ export function PeopleList({
                   {!gift.yours &&
                     (gift.claimedByViewer ? (
                       <Button
-                        // Unclaiming is a reversible toggle, not a
-                        // destructive act — and `destructive` is now the
-                        // same red as `primary`, so it read as "Claim".
                         variant="outline"
                         size="sm"
                         className="w-20 shrink-0"
@@ -128,8 +117,6 @@ export function PeopleList({
                       <Button
                         size="sm"
                         className="w-20 shrink-0"
-                        // Claimed by someone else: still listed, but not
-                        // the viewer's to take.
                         disabled={gift.claimed}
                         onClick={() => claim.run(gift.id)}
                       >
@@ -155,8 +142,6 @@ export function PeopleList({
         <ul>{todo.map(row)}</ul>
       )}
 
-      {/* Folded away by default: with a twenty-person family the people you
-          have already handled are the ones you never need to look at. */}
       {done.length > 0 && (
         <Collapsible className="group/done mt-1">
           <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent">
