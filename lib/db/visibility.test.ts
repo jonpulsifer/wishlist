@@ -6,6 +6,7 @@ import {
   visibleGiftsWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
+  visibleWishlistsWhere,
 } from './visibility.ts';
 
 const VIEWER = 'viewer-1';
@@ -124,6 +125,14 @@ describe('visibleProfileWhere', () => {
     const where = visibleProfileWhere(VIEWER, OTHER);
     assert.equal(where.id, OTHER);
     assert.deepEqual(where.wishlists, MEMBERSHIP.wishlists);
+  });
+});
+
+describe('visibleWishlistsWhere', () => {
+  it('is the membership clause, so /wishlists is your Families and not a directory', () => {
+    assert.deepEqual(visibleWishlistsWhere(VIEWER), {
+      members: { some: { id: VIEWER } },
+    });
   });
 });
 

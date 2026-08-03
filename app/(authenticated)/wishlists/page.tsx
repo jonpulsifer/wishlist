@@ -30,7 +30,7 @@ export default async function WishlistsPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Wishlists</h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Browse and join wishlists to see what gifts people want.
+              The wishlists you belong to, and who else is in them.
             </p>
           </div>
         </div>
@@ -59,13 +59,13 @@ function WishlistsLoading() {
 }
 
 async function WishlistsContent({ userId }: { userId: string }) {
-  const wishlists = await getWishlistsWithMembers();
+  const wishlists = await getWishlistsWithMembers(userId);
 
   if (wishlists.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-lg text-muted-foreground">
-          There are no wishlists yet.
+          You are not in any wishlists yet.
         </p>
       </div>
     );
@@ -73,24 +73,9 @@ async function WishlistsContent({ userId }: { userId: string }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {wishlists.map((wishlist) => {
-        // Determine if the current viewer is a member of this wishlist
-        const isMember = wishlist.members.some(
-          (member) => member.id === userId,
-        );
-
-        if (!isMember) {
-          wishlist.members = [];
-        }
-
-        return (
-          <WishlistCard
-            key={wishlist.id}
-            wishlist={wishlist}
-            isMember={isMember}
-          />
-        );
-      })}
+      {wishlists.map((wishlist) => (
+        <WishlistCard key={wishlist.id} wishlist={wishlist} />
+      ))}
     </div>
   );
 }
