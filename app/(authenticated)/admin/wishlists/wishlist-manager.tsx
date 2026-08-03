@@ -1,13 +1,12 @@
 'use client';
 
-import { KeyRound, Link2, Plus, Trash2 } from 'lucide-react';
+import { Link2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   createWishlistAdmin,
   createWishlistInviteAdmin,
   deleteWishlistAdmin,
-  updateWishlistPinAdmin,
 } from '@/app/_actions/admin-wishlists';
 import {
   AlertDialog,
@@ -55,25 +54,11 @@ type WishlistRow = {
 export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newPin, setNewPin] = useState('');
-
-  const [pinDialogWishlistId, setPinDialogWishlistId] = useState<string | null>(
-    null,
-  );
-  const [pinDialogPin, setPinDialogPin] = useState('');
 
   const create = useAction(createWishlistAdmin, {
     onSuccess: () => {
       setNewName('');
-      setNewPin('');
       setIsCreateDialogOpen(false);
-    },
-  });
-
-  const updatePin = useAction(updateWishlistPinAdmin, {
-    onSuccess: () => {
-      setPinDialogPin('');
-      setPinDialogWishlistId(null);
     },
   });
 
@@ -94,11 +79,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
     },
   });
 
-  const isPending =
-    create.isPending ||
-    updatePin.isPending ||
-    destroy.isPending ||
-    invite.isPending;
+  const isPending = create.isPending || destroy.isPending || invite.isPending;
 
   const handleCreate = () => {
     const name = newName.trim();
@@ -106,19 +87,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
       toast.error('Wishlist name is required');
       return;
     }
-    if (!/^\d{4}$/.test(newPin)) {
-      toast.error('Pin must be 4 digits');
-      return;
-    }
-    create.run({ name, pin: newPin });
-  };
-
-  const handleUpdatePin = (wishlistId: string) => {
-    if (!/^\d{4}$/.test(pinDialogPin)) {
-      toast.error('Pin must be 4 digits');
-      return;
-    }
-    updatePin.run({ wishlistId, pin: pinDialogPin });
+    create.run({ name });
   };
 
   const handleDelete = (wishlistId: string) => destroy.run({ wishlistId });
@@ -140,7 +109,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
             <DialogHeader>
               <DialogTitle>Create Wishlist</DialogTitle>
               <DialogDescription>
-                New wishlists require a 4-digit pin.
+                An invite link is the only way in.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -151,18 +120,6 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g., Christmas 2026"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="wishlistPin">Pin</Label>
-                <Input
-                  id="wishlistPin"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="0000"
-                  maxLength={4}
-                  inputMode="numeric"
-                  pattern="[0-9]{4}"
                 />
               </div>
             </div>
@@ -204,60 +161,11 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
                       size="sm"
                       onClick={() => handleCreateInviteLink(w.id)}
                       disabled={isPending}
-                      title="Create an invite link (bypasses pin)"
+                      title="Create an invite link"
                     >
                       <Link2 className="h-4 w-4 mr-2" />
                       Invite link
                     </Button>
-
-                    <Dialog
-                      open={pinDialogWishlistId === w.id}
-                      onOpenChange={(open) => {
-                        setPinDialogWishlistId(open ? w.id : null);
-                        setPinDialogPin('');
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <KeyRound className="h-4 w-4 mr-2" />
-                          Set pin
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Set pin</DialogTitle>
-                          <DialogDescription>
-                            Update the 4-digit pin for “{w.name}”.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-2">
-                          <Label htmlFor="updatePin">New pin</Label>
-                          <Input
-                            id="updatePin"
-                            value={pinDialogPin}
-                            onChange={(e) => setPinDialogPin(e.target.value)}
-                            placeholder="0000"
-                            maxLength={4}
-                            inputMode="numeric"
-                            pattern="[0-9]{4}"
-                          />
-                        </div>
-                        <DialogFooter>
-                          <Button
-                            variant="outline"
-                            onClick={() => setPinDialogWishlistId(null)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={() => handleUpdatePin(w.id)}
-                            disabled={isPending}
-                          >
-                            Save
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
