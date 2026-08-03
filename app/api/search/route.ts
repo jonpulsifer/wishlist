@@ -49,8 +49,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         name: true,
-        claimed: true,
-        claimedById: true,
+        claimers: { where: { userId }, select: { userId: true } },
         owner: { select: { id: true, name: true, email: true } },
       },
       where: {
@@ -94,10 +93,10 @@ export async function GET(req: NextRequest) {
     id: g.id,
     type: 'gift',
     title: g.name,
-    // Only surface "claimed" for the viewer's own claim; whether someone else
-    // claimed a gift is not theirs to know.
+    // Only the viewer's own claim is selected, so this cannot surface someone
+    // else's — including to the person the gift is for.
     subtitle: `For ${g.owner.name || g.owner.email}${
-      g.claimedById === userId ? ' • claimed by you' : ''
+      g.claimers.length > 0 ? ' • claimed by you' : ''
     }`,
     href: `/gifts/${g.id}`,
   }));

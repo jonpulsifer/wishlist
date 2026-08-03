@@ -16,6 +16,10 @@ after the fact is too late. Every one exists because the opposite shipped.
 - **Never hand-write a visibility `where` clause.** "Which gifts or people may
   this viewer see" lives in `lib/db/visibility.ts`. Compose from its builders.
   Six hand-written copies had drifted into three real disclosure defects.
+- **Never filter a query by claim state.** Who claimed a Gift is withheld by the
+  *shape* of the payload, not by a `where` — dropping the row from a subject's
+  own list makes it vanish, and absence is a louder signal than a badge.
+  `lib/db/projections.ts` owns it, and `GiftCard`'s `yours` arm is the proof.
 - **Never look a person up by id alone.** A bare `findUnique` hands shipping
   addresses and clothing sizes to anyone holding a uuid. Scope it.
 - **Never decide who may change a row after loading it.** "Which rows may this

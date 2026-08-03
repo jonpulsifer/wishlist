@@ -5,7 +5,9 @@ import prisma from '@/lib/db/client';
 export async function GET() {
   const gifts = await prisma.gift.count();
   const users = await prisma.user.count();
-  const claimed = await prisma.gift.count({ where: { claimed: true } });
+  const claimed = await prisma.gift.count({
+    where: { claimers: { some: {} } },
+  });
   return NextResponse.json(
     { gifts, users, claimed },
     {

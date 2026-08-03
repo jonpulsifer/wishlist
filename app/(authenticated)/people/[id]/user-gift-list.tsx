@@ -38,10 +38,15 @@ export function UserGiftList({
   const flipClaim = (giftId: string) => {
     startTransition(() =>
       setGifts((prev) =>
-        prev.map((g) =>
-          g.id === giftId
-            ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
-            : g,
+        prev.map(
+          (g): GiftCard =>
+            g.id === giftId && !g.yours
+              ? {
+                  ...g,
+                  claimed: !g.claimed,
+                  claimedByViewer: !g.claimedByViewer,
+                }
+              : g,
         ),
       ),
     );
@@ -74,14 +79,14 @@ export function UserGiftList({
   });
 
   const handleClaimToggle = (gift: GiftCard) =>
-    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
+    !gift.yours && gift.claimedByViewer
+      ? unclaim.run(gift.id)
+      : claim.run(gift.id);
 
   const handleArchiveToggle = (gift: GiftCard) =>
     gift.archived ? unarchive.run(gift.id) : archive.run(gift.id);
 
   const renderGiftRow = (gift: GiftCard) => {
-    const isOwner = gift.ownerId === currentUserId;
-
     return (
       <div
         key={gift.id}
@@ -116,7 +121,9 @@ export function UserGiftList({
         </div>
 
         <div className="flex gap-2 justify-end">
-          {isOwner ? (
+          {/* `yours` is the owner check *and* the proof there is no claim state
+              to read on this branch. */}
+          {gift.yours ? (
             <>
               <Button
                 variant="outline"

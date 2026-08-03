@@ -44,8 +44,6 @@ async function loadEditableGift(giftId: string, viewerId: string) {
       id: true,
       name: true,
       archived: true,
-      claimed: true,
-      claimedById: true,
       ownerId: true,
       createdById: true,
     },
@@ -67,10 +65,13 @@ export const addGift = defineAction(
     });
     if (!recipient) throw new ActionError('Recipient not found');
 
-    // The recipient's Wishlists, not the adder's. Visibility is "sits on a
-    // Wishlist the viewer belongs to", so resolving these from the viewer shares
-    // the Gift with groups the recipient may not even be in, and withholds it
-    // from the ones they are.
+    // Nothing reads this pin any more — visibility follows the subject. It is
+    // still written so the old rule's inputs stay intact and a revert of that
+    // step is one commit rather than a restore. It goes with the table.
+    //
+    // The recipient's Wishlists, not the adder's, which is what the old rule
+    // meant: resolving these from the viewer shared the Gift with groups the
+    // recipient may not even be in, and withheld it from the ones they are.
     const wishlists = await db.wishlist.findMany({
       select: { id: true },
       where: { members: { some: { id: input.recipientId } } },
@@ -119,14 +120,17 @@ export const unarchiveGift = defineAction(
 
     // Unarchiving also releases any claim: the gift is going back on the list
     // as available.
-    await db.gift.update({
-      where: { id },
-      data: {
-        archived: false,
-        claimed: false,
-        claimedBy: { disconnect: true },
-      },
-    });
+    await db.$transaction([
+      db.claimer.deleteMany({ where: { wishId: id } }),
+      db.gift.update({
+        where: { id },
+        data: {
+          archived: false,
+          claimed: false,
+          claimedBy: { disconnect: true },
+        },
+      }),
+    ]);
     return { message: `${gift.name} has been unarchived` };
   },
 );
@@ -154,24 +158,39 @@ export const updateGift = defineAction(
   },
 );
 
+/**
+ * Claiming writes both shapes.
+ *
+ * `Claimer` is what the reads consume; `Gift.claimed` and `Gift.claimedById`
+ * are still written so a revert of this step resumes the old rule exactly.
+ * Both columns leave in the step that drops them, and these two writes go with
+ * them.
+ */
 export const claimGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
     const gift = await db.gift.findUnique({
       where: { id },
-      select: { name: true, ownerId: true, claimedById: true },
+      select: {
+        name: true,
+        ownerId: true,
+        claimers: { select: { userId: true } },
+      },
     });
 
     if (!gift) throw new ActionError('Gift not found');
-    if (gift.claimedById)
+    if (gift.claimers.length > 0)
       throw new ActionError('This gift has already been claimed');
     if (gift.ownerId === viewer.id)
       throw new ActionError('You cannot claim your own gift');
 
-    await db.gift.update({
-      where: { id },
-      data: { claimed: true, claimedBy: { connect: { id: viewer.id } } },
-    });
+    await db.$transaction([
+      db.claimer.create({ data: { wishId: id, userId: viewer.id } }),
+      db.gift.update({
+        where: { id },
+        data: { claimed: true, claimedBy: { connect: { id: viewer.id } } },
+      }),
+    ]);
     return { message: `You claimed ${gift.name}` };
   },
 );
@@ -181,18 +200,26 @@ export const unclaimGift = defineAction(
   async ({ viewer, input: id }) => {
     const gift = await db.gift.findUnique({
       where: { id },
-      select: { name: true, claimedById: true },
+      select: {
+        name: true,
+        claimers: { where: { userId: viewer.id }, select: { userId: true } },
+      },
     });
 
     if (!gift) throw new ActionError('Gift not found');
-    if (gift.claimedById !== viewer.id) {
+    if (gift.claimers.length === 0) {
       throw new ActionError('You have not claimed this gift');
     }
 
-    await db.gift.update({
-      where: { id },
-      data: { claimed: false, claimedBy: { disconnect: true } },
-    });
+    await db.$transaction([
+      db.claimer.delete({
+        where: { wishId_userId: { wishId: id, userId: viewer.id } },
+      }),
+      db.gift.update({
+        where: { id },
+        data: { claimed: false, claimedBy: { disconnect: true } },
+      }),
+    ]);
     return { message: `You unclaimed ${gift.name}` };
   },
 );

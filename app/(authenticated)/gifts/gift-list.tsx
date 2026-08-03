@@ -87,10 +87,11 @@ export function GiftList({
   }, [gifts, search, sort, direction]);
 
   // Toggling a claim flips the same two flags whichever direction it goes, so
-  // applying it twice is its own undo.
+  // applying it twice is its own undo. Your own Gifts carry no claim state to
+  // flip.
   const toggleClaim = (giftId: string) => {
-    const flip = (g: GiftCard) =>
-      g.id === giftId
+    const flip = (g: GiftCard): GiftCard =>
+      g.id === giftId && !g.yours
         ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
         : g;
     startTransition(() => setGifts((prev) => prev.map(flip)));
@@ -114,7 +115,9 @@ export function GiftList({
   });
 
   const handleClaimToggle = (gift: GiftCard) =>
-    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
+    !gift.yours && gift.claimedByViewer
+      ? unclaim.run(gift.id)
+      : claim.run(gift.id);
 
   return (
     <div className="space-y-4">
@@ -223,7 +226,7 @@ export function GiftList({
                   >
                     Delete
                   </Button>
-                ) : (
+                ) : gift.yours ? null : (
                   <Button
                     variant={gift.claimedByViewer ? 'destructive' : 'default'}
                     onClick={() => handleClaimToggle(gift)}

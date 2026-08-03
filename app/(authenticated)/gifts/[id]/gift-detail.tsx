@@ -61,11 +61,11 @@ export function GiftDetail({
 
   const flipClaim = () => {
     startTransition(() =>
-      setGift((g) => ({
-        ...g,
-        claimed: !g.claimed,
-        claimedByViewer: !g.claimedByViewer,
-      })),
+      setGift((g) =>
+        g.yours
+          ? g
+          : { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer },
+      ),
     );
     return flipClaim;
   };
@@ -86,7 +86,9 @@ export function GiftDetail({
   const handleSave = () => update.run({ id: gift.id, name, description, url });
 
   const handleClaimToggle = () =>
-    gift.claimedByViewer ? unclaim.run(gift.id) : claim.run(gift.id);
+    !gift.yours && gift.claimedByViewer
+      ? unclaim.run(gift.id)
+      : claim.run(gift.id);
 
   const handleDelete = () => destroy.run(gift.id);
 
@@ -256,7 +258,7 @@ export function GiftDetail({
                   </p>
                 </div>
               </div>
-              {!canEdit && (
+              {!canEdit && !gift.yours && (
                 <Button
                   variant={gift.claimedByViewer ? 'destructive' : 'default'}
                   onClick={handleClaimToggle}

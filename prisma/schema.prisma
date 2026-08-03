@@ -55,6 +55,7 @@ model User {
   hasCompletedOnboarding    Boolean                  @default(false)
   gifts                     Gift[]
   claimed                   Gift[]                   @relation("ClaimedByUser")
+  claimers                  Claimer[]
   createdGifts              Gift[]                   @relation("CreatedByUser")
   wishlists                 Wishlist[]
   accounts                  Account[]
@@ -105,6 +106,7 @@ model Gift {
   createdBy   User?      @relation("CreatedByUser", fields: [createdById], references: [id])
   createdById String?    @db.Uuid
   wishlists   Wishlist[]
+  claimers    Claimer[]
 
   @@index([createdAt])
   @@index([ownerId, createdAt])
@@ -112,6 +114,21 @@ model Gift {
   @@index([claimed, createdAt])
   @@index([createdById, createdAt])
   @@index([archived])
+}
+
+/// A Claim has no field of its own: it is the set of people committed to a
+/// Wish, one row per person (ADR-0003). Named `Claimer` and not `Claim`
+/// deliberately — a row-per-person called `Claim` would say a Wish has
+/// several, which is the thing claiming exists to prevent.
+model Claimer {
+  wishId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  wish      Gift     @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([wishId, userId])
+  @@index([userId])
 }
 
 model Wishlist {
