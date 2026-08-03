@@ -149,3 +149,16 @@ export function daysUntilChristmas(now: Date = new Date()): number {
   const millis = nextChristmas(now).getTime() - now.getTime();
   return Math.floor(millis / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * How far the year has run from one Christmas to the next, 0–100.
+ *
+ * Measured across the whole cycle rather than from December 1st, so the bar it
+ * drives means the same thing in August as it does on the 24th.
+ */
+export function christmasProgress(now: Date = new Date()): number {
+  const next = nextChristmas(now);
+  const previous = new Date(next.getFullYear() - 1, 11, 25);
+  const span = next.getTime() - previous.getTime();
+  return Math.round(((now.getTime() - previous.getTime()) / span) * 100);
+}

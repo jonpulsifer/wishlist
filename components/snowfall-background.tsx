@@ -15,12 +15,19 @@ interface SnowfallBackgroundProps {
   className?: string;
   intensity?: 'light' | 'normal' | 'heavy';
   showBackground?: boolean;
+  /**
+   * Fall inside the nearest positioned ancestor instead of the viewport. The
+   * viewport-fixed default sits *behind* an opaque page background, so the
+   * flakes are invisible everywhere except a 1px gap.
+   */
+  contained?: boolean;
 }
 
 export function SnowfallBackground({
   className = '',
   intensity = 'normal',
   showBackground = true,
+  contained = false,
 }: SnowfallBackgroundProps) {
   const [snowflakes, setSnowflakes] = useState<Snowflake[]>([]);
   const { resolvedTheme } = useTheme();
@@ -54,12 +61,17 @@ export function SnowfallBackground({
       {/* Animated background */}
       {showBackground && (
         <div
-          className={`fixed inset-0 bg-gradient-to-br from-slate-200 via-blue-300 to-blue-900 dark:from-blue-900 dark:via-slate-900 dark:to-black animate-gradient-shift ${className}`}
+          // Dark in both themes on purpose: the only screens that use this
+          // backdrop put white text on it, and the old light variant started
+          // at sky-200, which made the wordmark unreadable.
+          className={`fixed inset-0 bg-gradient-to-br from-indigo-950 via-rose-950 to-slate-950 animate-gradient-shift ${className}`}
         />
       )}
 
       {/* Snowfall effect */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+      <div
+        className={`${contained ? 'absolute' : 'fixed'} inset-0 pointer-events-none overflow-hidden z-0`}
+      >
         {snowflakes.map((flake) => (
           <div
             key={flake.id}

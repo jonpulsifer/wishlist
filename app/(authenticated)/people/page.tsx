@@ -71,7 +71,7 @@ export default async function PeoplePage() {
                         </div>
                         <Badge
                           variant={
-                            person.giftCount < 3 ? 'destructive' : 'default'
+                            person.giftCount < 3 ? 'destructive' : 'secondary'
                           }
                         >
                           {person.giftCount} gift

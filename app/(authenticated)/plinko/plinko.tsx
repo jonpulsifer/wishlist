@@ -593,7 +593,7 @@ export default function Plinko() {
           label="Session"
           value={`${profit >= 0 ? '+' : ''}${money(profit)}`}
           className={
-            profit > 0 ? 'text-primary' : profit < 0 ? 'text-destructive' : ''
+            profit > 0 ? 'text-chart-4' : profit < 0 ? 'text-destructive' : ''
           }
         />
         <Stat label="Best hit" value={best ? `${best}x` : '—'} />

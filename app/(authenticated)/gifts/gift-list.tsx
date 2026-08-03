@@ -228,7 +228,7 @@ export function GiftList({
                   </Button>
                 ) : gift.yours ? null : (
                   <Button
-                    variant={gift.claimedByViewer ? 'destructive' : 'default'}
+                    variant={gift.claimedByViewer ? 'outline' : 'default'}
                     onClick={() => handleClaimToggle(gift)}
                     size="sm"
                     className="w-20 md:w-24"

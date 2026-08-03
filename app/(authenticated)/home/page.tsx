@@ -1,22 +1,15 @@
-import {
-  ChevronRightIcon,
-  GiftIcon,
-  SearchIcon,
-  Sparkles,
-  UserIcon,
-} from 'lucide-react';
+import { ChevronRightIcon, GiftIcon } from 'lucide-react';
 import Link from 'next/link';
 import { AddGiftDialog } from '@/components/add-gift-dialog';
 import { AppHeader } from '@/components/app-header';
-import { GlobalSearchTrigger } from '@/components/global-search/global-search-trigger';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { PeekingSanta } from '@/components/peeking-santa';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -24,35 +17,62 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
   getLatestVisibleGiftsForUserById,
   getPeopleForNewGiftModal,
+  getSortedVisibleGiftsForUser,
+  getUsersForPeoplePage,
+  getVisibleGiftsForUserById,
 } from '@/lib/db/queries-cached';
-import { heldForCurrentOccasion } from '@/lib/season';
+import {
+  christmasProgress,
+  daysUntilChristmas,
+  heldForCurrentOccasion,
+} from '@/lib/season';
+import { sortedForPerson } from '@/lib/shopping-progress';
+import { getInitials } from '@/lib/utils';
+import { PeopleList } from './people-list';
 
+/**
+ * Home answers, in order: how long have I got, who have I not sorted yet, and
+ * can anyone shop for me. Search is a way to reach a thing you can already
+ * name, so it stays in the header where navigation lives.
+ */
 export default async function HomePage() {
   const viewer = await requireViewerOrRedirect();
 
-  // Fetch data for the dashboard
-  const [addGiftDialogUsers, latestGifts, secretSantaParticipations] =
-    await Promise.all([
-      getPeopleForNewGiftModal(viewer.id),
-      getLatestVisibleGiftsForUserById(viewer.id),
-      db.secretSantaParticipant.findMany({
-        where: {
-          userId: viewer.id,
-          event: heldForCurrentOccasion(),
-        },
-        include: {
-          event: { select: { id: true, name: true } },
-          assignedTo: { select: { id: true, name: true, email: true } },
-        },
-        orderBy: { event: { createdAt: 'desc' } },
-      }),
-    ]);
+  const [
+    addGiftDialogUsers,
+    people,
+    visibleGifts,
+    myGifts,
+    latestGifts,
+    secretSantaParticipations,
+  ] = await Promise.all([
+    getPeopleForNewGiftModal(viewer.id),
+    getUsersForPeoplePage(viewer.id),
+    getSortedVisibleGiftsForUser({ userId: viewer.id }),
+    getVisibleGiftsForUserById(viewer.id, viewer.id),
+    getLatestVisibleGiftsForUserById(viewer.id),
+    db.secretSantaParticipant.findMany({
+      where: { userId: viewer.id, event: heldForCurrentOccasion() },
+      include: {
+        event: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { event: { createdAt: 'desc' } },
+    }),
+  ]);
+
+  const ordered = [...people].sort((a, b) => b.giftCount - a.giftCount);
+  const sortedCount = people.filter((p) =>
+    sortedForPerson(visibleGifts.filter((g) => g.ownerId === p.id)),
+  ).length;
+  const sleeps = daysUntilChristmas();
 
   return (
     <SidebarInset>
@@ -65,204 +85,150 @@ export default async function HomePage() {
           </BreadcrumbList>
         </Breadcrumb>
       </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-2 max-w-screen overflow-hidden">
-        {/* Welcome Header with festive elements */}
-        <div className="flex flex-col gap-4 w-full justify-center items-center">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold break-words min-w-0">
-                Welcome back, {viewer.name || viewer.email}
-              </h1>
-              <Sparkles className="h-5 w-5 text-yellow-500/70 flex-shrink-0" />
-            </div>
+
+      {/* p-6 is the gutter PeekingSanta's overhang is measured against. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-6">
+        {/* The clock and the score — the two numbers that actually motivate. */}
+        <section className="px-1 pt-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h1 className="text-2xl font-bold sm:text-3xl">
+              {sleeps === 0
+                ? "It's Christmas 🎄"
+                : `${sleeps} sleep${sleeps === 1 ? '' : 's'} to go`}
+            </h1>
+            <p className="text-sm text-muted-foreground">till Christmas</p>
           </div>
-          <Card className="w-full border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-sm">
+          <ProgressBar
+            value={christmasProgress()}
+            label="Progress through the year to Christmas"
+            className="mt-2"
+          />
+        </section>
+
+        <div className="relative">
+          {/* Full width clear of the card, held to the page gutter on mobile. */}
+          <PeekingSanta className="top-20 z-10 -translate-x-6 sm:-translate-x-9" />
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SearchIcon className="h-5 w-5 text-primary" />
-                Search everything
-              </CardTitle>
+              <CardTitle>Who you're shopping for</CardTitle>
               <CardDescription>
-                The fastest way to find people, gifts, and wishlists. Try{' '}
-                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
-                  Ctrl+K
-                </span>{' '}
-                /{' '}
-                <span className="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
-                  ⌘K
-                </span>
-                .
+                {people.length === 0
+                  ? 'Nobody on your wishlists yet.'
+                  : `${sortedCount} of ${people.length} covered — tap someone to claim from their list.`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <GlobalSearchTrigger variant="hero" />
+            <CardContent className="px-2">
+              {people.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="font-medium">Nobody on your wishlists yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Join or create a wishlist to start shopping.
+                  </p>
+                </div>
+              ) : (
+                <PeopleList people={ordered} gifts={visibleGifts} />
+              )}
             </CardContent>
           </Card>
-          <div className="flex flex-col sm:flex-row gap-2 w-full justify-center items-center">
+        </div>
+
+        {/* The other half of the app: can anyone shop for you. */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Your list</CardTitle>
+            <CardDescription>
+              {myGifts.length === 0
+                ? "It's empty — nobody can shop for you yet."
+                : myGifts.length < 3
+                  ? `${myGifts.length} idea${myGifts.length === 1 ? '' : 's'}. A few more gives people a choice.`
+                  : `${myGifts.length} ideas. Looking good.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 sm:flex-row">
             <AddGiftDialog
               currentUserId={viewer.id}
               users={addGiftDialogUsers}
             />
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/claimed">
-                <GiftIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">View Claimed Gifts</span>
-                <span className="sm:hidden">Claimed</span>
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/people/me">
-                <UserIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">View My Profile</span>
-                <span className="sm:hidden">Profile</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
-        {/* Festive Stats Cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🎅 Secret Santa
-            </CardTitle>
-            <CardDescription>
-              Your Secret Santa assignments for the year
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {secretSantaParticipations.length === 0 ? (
-              <Link href="/secret-santa" className="block">
-                <div className="text-center py-4 hover:opacity-80 transition-opacity">
-                  <div className="text-4xl sm:text-5xl mb-3">🎅</div>
-                  <div className="text-base sm:text-lg font-semibold text-red-600 dark:text-red-400 mb-1">
-                    No Secret Santa Yet
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Create or join a Secret Santa event!
-                  </p>
-                </div>
-              </Link>
-            ) : (
-              <div className="space-y-3 sm:space-y-4">
-                {secretSantaParticipations.slice(0, 2).map((p) => (
-                  <div key={p.event.id} className="space-y-2">
-                    <div className="text-xs font-semibold text-red-600/80 dark:text-red-400/80 uppercase tracking-wide truncate">
-                      {p.event.name || 'Event'}
-                    </div>
-                    {p.assignedTo ? (
-                      <Link
-                        href={`/people/${p.assignedTo.id}`}
-                        className="block group w-full min-w-0"
-                      >
-                        <div className="bg-background/60 rounded-lg p-3 border border-red-200/30 dark:border-red-800/30 hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/50 transition-all duration-200 w-full min-w-0">
-                          <div className="flex items-center gap-3 w-full min-w-0">
-                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-red-200/50 dark:ring-red-800/50 group-hover:ring-red-300/70 dark:group-hover:ring-red-700/70 transition-all flex-shrink-0">
-                              <AvatarFallback className="bg-gradient-to-br from-red-500/70 to-pink-500/70 text-white text-xs sm:text-sm">
-                                {p.assignedTo.name
-                                  ? p.assignedTo.name.charAt(0).toUpperCase()
-                                  : p.assignedTo.email.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs text-muted-foreground mb-1">
-                                You're Secret Santa for:
-                              </div>
-                              <div className="text-sm font-semibold group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate">
-                                {p.assignedTo.name || p.assignedTo.email}
-                              </div>
-                            </div>
-                            <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5 text-red-500/40 group-hover:text-red-500/70 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                          </div>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="bg-background/60 rounded-lg p-3 border border-red-200/30 dark:border-red-800/30">
-                        <div className="text-center text-sm text-muted-foreground italic">
-                          Assignments not yet made
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {secretSantaParticipations.length > 2 && (
-                  <Link
-                    href="/secret-santa"
-                    className="block text-xs text-center text-muted-foreground pt-2 border-t border-red-200/20 dark:border-red-800/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  >
-                    + {secretSantaParticipations.length - 2} more event
-                    {secretSantaParticipations.length - 2 !== 1 ? 's' : ''}
-                  </Link>
-                )}
-                <Link
-                  href="/secret-santa"
-                  className="text-xs text-red-600 dark:text-red-400 flex items-center justify-end font-medium hover:underline mt-2"
-                >
-                  View all details
-                  <ChevronRightIcon className="h-3 w-3 ml-1" />
-                </Link>
-              </div>
-            )}
+            <Link
+              href="/people/me"
+              className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
+            >
+              <GiftIcon className="h-4 w-4" />
+              See my list
+            </Link>
           </CardContent>
         </Card>
 
-        {/* Latest Gifts Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              ✨ Latest Gifts
-            </CardTitle>
-            <CardDescription>
-              Recently added gifts from people on your wishlists 🎁
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {latestGifts.length === 0 ? (
-              <div className="text-center py-4 sm:py-6">
-                <div className="text-3xl sm:text-4xl mb-2">🎁</div>
-                <p className="text-sm text-muted-foreground">
-                  No recent gifts found.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Be the first to add some holiday magic! ✨
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 sm:space-y-3">
-                {latestGifts.slice(0, 5).map((gift) => (
-                  <Link
-                    href={`/gifts/${gift.id}`}
-                    key={gift.id}
-                    className="flex items-center border-b border-muted pb-2 hover:bg-accent/30 rounded p-2 transition-colors w-full min-w-0"
-                  >
-                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8 mr-2 ring-1 ring-green-200/50 dark:ring-green-800/50 flex-shrink-0">
-                      <AvatarFallback className="bg-gradient-to-br from-green-500/70 to-emerald-500/70 text-white text-xs">
-                        {gift.owner.name
-                          ? gift.owner.name.charAt(0).toUpperCase()
-                          : gift.owner.email.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1 min-w-0">
-                      <p className="text-sm font-medium leading-none text-ellipsis truncate">
-                        {gift.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Added by {gift.owner.name || gift.owner.email}
-                      </p>
-                    </div>
-                    <ChevronRightIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
-                  </Link>
+        {/* Only rendered when there is something to say. */}
+        {secretSantaParticipations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">🎅 Secret Santa</CardTitle>
+            </CardHeader>
+            <CardContent className="px-2">
+              <ul>
+                {secretSantaParticipations.map((p) => (
+                  <li key={p.event.id}>
+                    <Link
+                      href={
+                        p.assignedTo
+                          ? `/people/${p.assignedTo.id}`
+                          : '/secret-santa'
+                      }
+                      className="flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
+                          {p.event.name || 'Event'}
+                        </p>
+                        <p className="truncate text-sm font-medium">
+                          {p.assignedTo
+                            ? `You have ${p.assignedTo.name || p.assignedTo.email}`
+                            : 'Assignments not drawn yet'}
+                        </p>
+                      </div>
+                      <ChevronRightIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
                 ))}
-                <Link
-                  href="/gifts"
-                  className="text-xs text-green-600 dark:text-green-400 flex items-center justify-end font-medium hover:underline mt-2"
-                >
-                  View all gifts
-                  <ChevronRightIcon className="h-3 w-3 ml-1" />
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Ambient, so it sits last. */}
+        {latestGifts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Just added</CardTitle>
+            </CardHeader>
+            <CardContent className="px-2">
+              <ul>
+                {latestGifts.slice(0, 5).map((gift) => (
+                  <li key={gift.id}>
+                    <Link
+                      href={`/gifts/${gift.id}`}
+                      className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent"
+                    >
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarImage src={gift.owner.image ?? undefined} />
+                        <AvatarFallback className="text-xs">
+                          {getInitials(gift.owner)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">{gift.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {gift.owner.name || gift.owner.email}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </SidebarInset>
   );
