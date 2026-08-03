@@ -3,7 +3,9 @@
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
+import { editableGiftWhere } from '@/lib/db/authority';
 import db from '@/lib/db/client';
+import { visibleProfileWhere } from '@/lib/db/visibility';
 
 // Reached from the invite route handler as well as from actions, so this stays
 // on `revalidateTag` — `updateTag` is only legal inside a Server Action.
@@ -30,11 +32,14 @@ const giftIdSchema = z.object({ id: z.string().min(1, 'Gift ID is required') });
  * Load a Gift the viewer is allowed to change, or throw.
  *
  * Owner-or-creator was written out four times across this file, each with its
- * own copy of the same message.
+ * own copy of the same message. The rule itself now lives in
+ * `lib/db/authority.ts`, so a Gift the viewer may not touch is never loaded —
+ * and "not yours" and "not there" are one answer, which is the one that does
+ * not confirm a uuid exists.
  */
 async function loadEditableGift(giftId: string, viewerId: string) {
-  const gift = await db.gift.findUnique({
-    where: { id: giftId },
+  const gift = await db.gift.findFirst({
+    where: { id: giftId, ...editableGiftWhere(viewerId) },
     select: {
       id: true,
       name: true,
@@ -47,15 +52,21 @@ async function loadEditableGift(giftId: string, viewerId: string) {
   });
 
   if (!gift) throw new ActionError('Gift not found');
-  if (gift.ownerId !== viewerId && gift.createdById !== viewerId) {
-    throw new ActionError('You are not the owner or creator of this gift');
-  }
   return gift;
 }
 
 export const addGift = defineAction(
   { input: GiftSchema, invalidates: GIFT_CACHES },
   async ({ viewer, input }) => {
+    // `recipientId` is client state, so it is re-derived here rather than
+    // trusted: the picker is scoped by `visiblePeopleWhere`, but an action is a
+    // POST endpoint and a uuid is all it takes to reach this one.
+    const recipient = await db.user.findFirst({
+      where: visibleProfileWhere(viewer.id, input.recipientId),
+      select: { id: true },
+    });
+    if (!recipient) throw new ActionError('Recipient not found');
+
     // The recipient's Wishlists, not the adder's. Visibility is "sits on a
     // Wishlist the viewer belongs to", so resolving these from the viewer shares
     // the Gift with groups the recipient may not even be in, and withholds it

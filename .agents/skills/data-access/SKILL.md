@@ -10,9 +10,9 @@ description: >-
 # Data access
 
 This app holds shipping addresses, clothing sizes and who bought whom a
-present. Three modules own the rules, and nothing else is allowed to re-derive
-them. All three are pure enough to read in a minute — read them before writing
-a query.
+present. A handful of modules own the rules, and nothing else is allowed to
+re-derive them. They are pure enough to read in a minute — read them before
+writing a query.
 
 ## Visibility: `lib/db/visibility.ts`
 
@@ -34,6 +34,21 @@ anywhere else. `currentSeason(now?)` returns `year`, `giftWindow`, `eventWindow`
 and `drawHistoryWindow`; `partitionBySeason` splits a list into this year and
 past. Every window takes `now` as a parameter, so they are assertable and a
 process alive across New Year cannot keep serving the old Season.
+
+## Authority: `lib/db/authority.ts`
+
+Visibility's sibling, and the other question: *what may this viewer change*.
+Same shape — pure functions returning Prisma `where` builders, so a row the
+viewer may not act on is never loaded rather than loaded by id and judged in
+memory.
+
+`subjectOfWhere` (the Gift is about you), `editableGiftWhere` (subject or
+creator, for now), `organiserOfWhere` (you opened the Event).
+
+**Spread it into the `where`, do not compare after the read.** A `findUnique`
+by id followed by `if (row.ownerId !== viewer.id)` confirms the row exists to
+anyone holding a uuid, and it is one `select` away from returning fields that
+check never covered.
 
 ## Capabilities: `lib/auth/capabilities.ts`
 
