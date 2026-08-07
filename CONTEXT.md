@@ -4,17 +4,15 @@ The domain language of wishin.app. `docs/agents/domain.md` points every agent sk
 here before it explores, so the terms below are the ones to use in issue titles,
 hypotheses, test names and code.
 
-**This glossary runs ahead of the schema.** It is being written by
-[the domain-language map](https://github.com/jonpulsifer/wishlist/issues/148) one
-decision at a time, and the refactor that makes `prisma/schema.prisma` match it has
-not landed — `docs/refactor-plan.md` is the sequence that lands it. Each entry
-therefore carries a **Schema today** line where the code still
-says something else. When the two disagree, the glossary is the intent and the schema
-is the fact — write new prose in glossary terms, and read code in schema terms.
+**The schema speaks this language.** `prisma/schema.prisma` and these terms are the
+same vocabulary now, so an entry's **In the schema** line points at the model and
+columns that hold it rather than translating between two dialects. Write prose and read
+code in the same words.
 
 Each entry marks whether it is **grounded** (true of the app as it runs today) or
 **anticipated** (chosen to accommodate a future the map decided to model). Anticipated
-detail ages badly; treat it as revisable.
+detail ages badly; treat it as revisable — and where an anticipated thing is deliberately
+not built, the entry says so.
 
 ---
 
@@ -52,7 +50,7 @@ Nothing is pinned or filed — a Wish is visible wherever its subject is.
   [#161](https://github.com/jonpulsifer/wishlist/issues/161).
 - **Rejected**: `Gift` — too specific, and it names the giving rather than the wanting.
   `Want` — no natural collection noun. `Item` — carries no meaning.
-- **Schema today**: `model Wish`, with `subjectId` and a required `proposerId`, so "is
+- **In the schema**: `model Wish`, with `subjectId` and a required `proposerId`, so "is
   this a Suggestion?" is exactly `proposerId != subjectId`. Visibility **is** derived: a
   viewer sees a Wish when they share a Family with the person it is for, answered at read
   time rather than snapshotted when the Wish was added. Quantity is the one field the
@@ -130,7 +128,7 @@ property of `lib/db/projections.ts` — see [Surprise](#surprise).
   it is tracking something, not enough to be right. A price on the Wish and an amount on
   the claimer — half the live Wishes are links with no price, prices go stale, and a
   wishlist that knows a debt it cannot collect has become a payments app.
-- **Schema today**: `model Claimer`, one row per person committed to a Wish, keyed
+- **In the schema**: `model Claimer`, one row per person committed to a Wish, keyed
   `(wishId, userId)`. A claimed Wish stays visible to everyone and is badged rather than
   removed — no query filters on claim state, and `lib/db/projections.ts` withholds who
   claimed it. Nothing expresses quantity or a split: the timestamp that would order one
@@ -162,7 +160,7 @@ A Wishlist is what its owner **asked for**, which is precisely why a
   [#150](https://github.com/jonpulsifer/wishlist/issues/150). Naming a person's
   collection anything else, when wishin.app is named for this word and every user
   already uses it this way.
-- **Schema today**: no model. A person's collection is `Wish.subjectId`, queried —
+- **In the schema**: no model. A person's collection is `Wish.subjectId`, queried —
   `model Family` is the group, and holds nothing of this.
 
 ## Suggestion
@@ -210,7 +208,7 @@ The setting gates the **write**: it is a check on the adding, never a `where` cl
   point at either kind, splitting 600+ rows across two tables to express one rule.
   Declining *per Wish* or *per Family* — the finer grains buy nothing a single answer
   does not, and each costs a row or a join table over live data.
-- **Schema today**: `Wish.proposerId` differing from `Wish.subjectId`. The rule is
+- **In the schema**: `Wish.proposerId` differing from `Wish.subjectId`. The rule is
   hand-written as a branch in `visibility.ts` rather than named. Adding a Wish *as*
   someone is a checkbox on the add dialog and `proposerId = subjectId` in `addGift`;
   suggesting is the default.
@@ -242,26 +240,24 @@ carry claim state **at all**, rather than carrying it set to a safe value. The h
 concerns [Suggestions](#suggestion) stays in `lib/db/visibility.ts`, where a person's own
 view is the Wishes they proposed.
 
-That makes the projection load-bearing rather than tidy, which is why
-[#179](https://github.com/jonpulsifer/wishlist/issues/179) is not a small bug.
+That makes the projection load-bearing rather than tidy: it is the only thing standing
+between a subject and the one secret this app keeps.
 
 - **Grounded**: the behaviour, all of it. A Wish added for you is hidden from you, and you
   are never told a Claim exists.
-- **Anticipated**: that surprise needs no mechanism once
-  [#149](https://github.com/jonpulsifer/wishlist/issues/149) and
-  [#156](https://github.com/jonpulsifer/wishlist/issues/156) land. Decided in
+- **Anticipated**: nothing. Decided in
   [#152](https://github.com/jonpulsifer/wishlist/issues/152); the move into the projection
   in [#161](https://github.com/jonpulsifer/wishlist/issues/161).
 - **Rejected**: one name for the flags on a Wish collectively — `archived` and
   proposer-≠-subject are unrelated things, so any collective name would assert a
   coherence the row does not have.
-- **Schema today**: nothing holds this. It is restored after the fact by rules 2 and 5 of
-  `lib/db/visibility.ts` — a claim filter, and an own-profile branch narrowing to
-  `proposerId: viewerId`. The own-profile branch does **not** filter claims, and cannot:
-  a claimed Wish removed from your own list is a hole where a row used to be. So `claimed`
-  reaches the subject's own browser through `wishRowSelect`, and surprise holds there only
-  because no component reads the field
-  ([#179](https://github.com/jonpulsifer/wishlist/issues/179)).
+- **In the schema**: nothing holds it, and nothing should. No query filters on claim
+  state — a claimed Wish removed from your own list is a hole where a row used to be —
+  so the invariant is kept by the *shape* of what crosses the seam: `toWishCard` gives
+  the subject a payload with no claim state at all, and `WishCard`'s `yours` arm makes
+  reading one a type error (ADR-0004). The one `where` that serves Surprise is the
+  own-profile branch narrowing to `proposerId: viewerId`, which hides Suggestions from
+  the person they are about.
 
 ## Archived
 
@@ -284,7 +280,7 @@ has archived is a row no one can reach.
   Decided in [#152](https://github.com/jonpulsifer/wishlist/issues/152).
 - **Rejected**: `Retired` — truer to the act, but `archived` is already the column, the
   actions and the UI section, and the meaning is not the part that changes.
-- **Schema today**: `Wish.archived`. Archiving and un-archiving load through
+- **In the schema**: `Wish.archived`. Archiving and un-archiving load through
   `subjectOfWhere`, so a proposer cannot archive their Suggestion into a state no reader
   can reach; deleting is their way out and stays open to both people.
 
@@ -358,7 +354,7 @@ people still in it.
   see into without being seen. It is the second axis on `lib/db/visibility.ts` that
   per-Family roles were rejected for, wearing a different hat
   ([#158](https://github.com/jonpulsifer/wishlist/issues/158)).
-- **Schema today**: `model Family`, and `model Membership` — one row per person per
+- **In the schema**: `model Family`, and `model Membership` — one row per person per
   Family, keyed by the pair. The name is a label with no unique index, because an Invite
   is the only way in and nothing looks a Family up by name. There is no owner column,
   which [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate. Any
@@ -404,7 +400,7 @@ sign in an Account exists, they are a member like anyone else, and
   a table across ~60 call sites and the adapter binding in
   [#154](https://github.com/jonpulsifer/wishlist/issues/154) to express a state that is
   already expressible.
-- **Schema today**: `model User`, with `Account` and `Session` bound by the adapter.
+- **In the schema**: `model User`, with `Account` and `Session` bound by the adapter.
 
 ## Invite
 
@@ -492,7 +488,7 @@ serialised, so it is declared as a shape and not assembled as a template.
   for one Grandma cannot recover from. Redemption behind the inviter's approval, which
   restores an undo before the irreversible step by giving up the finding that the link
   *is* the consent.
-- **Schema today**: `model Invite`, minted by any member of the Family it points at and
+- **In the schema**: `model Invite`, minted by any member of the Family it points at and
   by nobody else. Single-use: `redeemedAt` and `redeemedById` are claimed by the same
   statement that reads the token, so of two people following one link exactly one joins
   and the other finds it dead. `expiresAt` is required and written — a fortnight, the
@@ -523,7 +519,7 @@ year.
 - **Rejected**: `Season` for this meaning — it names the look, below. `Event` — names
   nothing specific. Birthdays as Occasions — one receiver, and modelling them here
   would put a nullable "whose is it" discriminator on every reader.
-- **Schema today**: no table. An [Exchange](#exchange) names the Occasion it is held for
+- **In the schema**: no table. An [Exchange](#exchange) names the Occasion it is held for
   by year alone, in `Exchange.year`, which is required.
 
 ## Season
@@ -575,7 +571,7 @@ Draw shaped by constraints they cannot inspect or override.
   exclusions, and exclusions the Organiser sets — the first contradicts
   [#152](https://github.com/jonpulsifer/wishlist/issues/152)'s finding that they are
   permanent, and the second puts the shape of a draw in the hands of someone in it.
-- **Schema today**: `model Exchange`, with a required `year` and a required `familyId`.
+- **In the schema**: `model Exchange`, with a required `year` and a required `familyId`.
   `lib/season.ts` owns the reading of the year: the Occasion in play turns over on
   April 1st rather than New Year, so an Exchange opened on January 2nd is for the
   Christmas just gone. The Family bound was backfilled by rule — the one Family every
@@ -619,7 +615,7 @@ co-organising, and it is why nobody needed a per-Family role to get it.
   Exchange — the Draw is irreversible once assignments are written, and any of thirty
   people could fire it early. An instance administrator keeping the destructive acts as a
   backstop for an abandoned Exchange, which was the last job anything global had.
-- **Schema today**: `Exchange.organiserId`, and every act on the row composes
+- **In the schema**: `Exchange.organiserId`, and every act on the row composes
   `organiserOfWhere` into its `where` — the Draw and the deletion both. Opening one is
   gated by membership of the Family it is held for, and its participants must be members
   of that Family.
@@ -640,7 +636,7 @@ constraint shaping it.
   `DrawResult` and the tests already use this word for exactly this meaning, and
   `drawExchange` already refuses anyone but the Organiser and refuses a
   second run.
-- **Schema today**: the `assignedToId` and `assignedById` columns on `Participant`. The
+- **In the schema**: the `assignedToId` and `assignedById` columns on `Participant`. The
   act has no row of its own.
 
 ---
