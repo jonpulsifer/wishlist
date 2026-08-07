@@ -85,7 +85,10 @@ run = "bun run build"
 
 [tasks."build:next"]
 description = "next build only — no database needed, every data route is dynamic"
-run = "bun run --bun next build"
+# Not `--bun`: next 16.3 under the Bun runtime segfaults on exit, after the
+# build has succeeded and printed its route table. Bun is still the launcher
+# and the package manager; only `next build` itself runs on node.
+run = "bun run next build"
 
 # ─── Database ────────────────────────────────────────────────────────────────
 # A local Postgres out of the nix store, in $PGDATA. Docker is not available on
