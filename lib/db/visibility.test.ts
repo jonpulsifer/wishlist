@@ -91,6 +91,19 @@ describe('visibleWishesWhere', () => {
     assert.equal(where.archived, undefined);
   });
 
+  it('withholds Suggestions about the viewer from every unscoped read', () => {
+    // A viewer shares a Family with themselves, so the unscoped clause matches
+    // their own Wishes. The feeds only escaped this by passing `excludeOwn`;
+    // search and a Wish's own URL do not, and both handed over the surprises.
+    for (const scope of [{}, { excludeOwn: true }, { subjectId: OTHER }]) {
+      assert.deepEqual(
+        visibleWishesWhere(VIEWER, { ...scope, now }).NOT,
+        { subjectId: VIEWER, proposerId: { not: VIEWER } },
+        `surprises reachable via ${JSON.stringify(scope)}`,
+      );
+    }
+  });
+
   it('always constrains the year window', () => {
     for (const scope of [
       {},
