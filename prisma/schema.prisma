@@ -54,7 +54,6 @@ model User {
   shoe_size                 String?
   hasCompletedOnboarding    Boolean                  @default(false)
   gifts                     Gift[]
-  claimed                   Gift[]                   @relation("ClaimedByUser")
   claimers                  Claimer[]
   createdGifts              Gift[]                   @relation("CreatedByUser")
   wishlists                 Wishlist[]
@@ -100,9 +99,6 @@ model Gift {
   archived    Boolean    @default(false)
   owner       User       @relation(fields: [ownerId], references: [id])
   ownerId     String     @db.Uuid
-  claimed     Boolean    @default(false)
-  claimedBy   User?      @relation("ClaimedByUser", fields: [claimedById], references: [id])
-  claimedById String?    @db.Uuid
   createdBy   User?      @relation("CreatedByUser", fields: [createdById], references: [id])
   createdById String?    @db.Uuid
   wishlists   Wishlist[]
@@ -110,8 +106,6 @@ model Gift {
 
   @@index([createdAt])
   @@index([ownerId, createdAt])
-  @@index([claimedById, createdAt])
-  @@index([claimed, createdAt])
   @@index([createdById, createdAt])
   @@index([archived])
 }

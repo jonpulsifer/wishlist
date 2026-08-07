@@ -145,18 +145,21 @@ set -euo pipefail
 name="${1:-}"
 [ -n "$name" ] || { echo "usage: mise run db:migrate <name>" >&2; exit 2; }
 
-dir="prisma/migrations/$(date +%Y%m%d%H%M%S)_${name}"
-mkdir -p "$dir"
-bunx --bun prisma migrate diff \
+# Diff before mkdir: a failed diff (no database reachable) must not leave an
+# empty migration directory behind, which the chain would then apply as a no-op.
+sql="$(bunx --bun prisma migrate diff \
   --from-migrations ./prisma/migrations \
   --to-schema prisma/schema.prisma \
-  --script > "$dir/migration.sql"
+  --script)"
 
-if grep -q 'This is an empty migration' "$dir/migration.sql"; then
-  rm -rf "$dir"
+if printf '%s' "$sql" | grep -q 'This is an empty migration'; then
   echo "==> schema.prisma matches the migration history; nothing to write"
   exit 0
 fi
+
+dir="prisma/migrations/$(date +%Y%m%d%H%M%S)_${name}"
+mkdir -p "$dir"
+printf '%s\n' "$sql" > "$dir/migration.sql"
 
 echo "==> wrote $dir/migration.sql"
 echo

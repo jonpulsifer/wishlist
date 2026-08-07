@@ -23,8 +23,12 @@ elif [ "$root/flake.lock" -nt "$cache" ] || [ "$root/flake.nix" -nt "$cache" ]; 
 elif ! grep -q '^export PRISMA_SCHEMA_ENGINE_BINARY=' "$cache" 2>/dev/null; then
   _stale=1
 else
-  _bin="$(sed -n 's/^export PRISMA_SCHEMA_ENGINE_BINARY=//p' "$cache")"
-  [ -e "$_bin" ] || _stale=1
+  # Both paths, not just the engine: Postgres gets collected on its own and a
+  # cache that survives the check still points PGBIN at nothing.
+  for _var in PRISMA_SCHEMA_ENGINE_BINARY PGBIN; do
+    _bin="$(sed -n "s/^export ${_var}=//p" "$cache")"
+    [ -e "$_bin" ] || _stale=1
+  done
 fi
 
 if [ "$_stale" = 1 ]; then
