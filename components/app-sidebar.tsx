@@ -90,8 +90,8 @@ const items = [
     icon: CandyCane,
   },
   {
-    title: 'Wishlists',
-    url: '/wishlists',
+    title: 'Families',
+    url: '/families',
     icon: BookUser,
   },
 ];

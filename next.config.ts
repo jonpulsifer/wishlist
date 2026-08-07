@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
+  // `/wishlists` listed the groups people share, which a Wishlist is not: it is
+  // one person's collection, and the group is a Family. The word moved, so the
+  // route follows it — and thirty people have the old one bookmarked.
+  async redirects() {
+    return [
+      { source: '/wishlists', destination: '/families', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

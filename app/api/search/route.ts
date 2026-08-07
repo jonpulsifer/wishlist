@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type SearchItem = {
   id: string;
-  type: 'user' | 'gift' | 'wishlist';
+  type: 'user' | 'wish' | 'family';
   title: string;
   subtitle?: string | null;
   href: string;
@@ -25,13 +25,13 @@ export async function GET(req: NextRequest) {
 
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim();
   if (q.length < 2) {
-    return NextResponse.json({ users: [], gifts: [], wishlists: [] });
+    return NextResponse.json({ users: [], wishes: [], families: [] });
   }
 
   const userId = viewer.id;
   const contains = { contains: q, mode: 'insensitive' } as const;
 
-  const [users, gifts, wishlists] = await Promise.all([
+  const [users, wishes, families] = await Promise.all([
     db.user.findMany({
       select: { id: true, name: true, email: true },
       where: {
@@ -93,9 +93,9 @@ export async function GET(req: NextRequest) {
     href: u.id === userId ? '/people/me' : `/people/${u.id}`,
   }));
 
-  const giftItems: SearchItem[] = gifts.map((g) => ({
+  const wishItems: SearchItem[] = wishes.map((g) => ({
     id: g.id,
-    type: 'gift',
+    type: 'wish',
     title: g.name,
     // Only the viewer's own claim is selected, so this cannot surface someone
     // else's — including to the person the gift is for.
@@ -105,17 +105,17 @@ export async function GET(req: NextRequest) {
     href: `/gifts/${g.id}`,
   }));
 
-  const wishlistItems: SearchItem[] = wishlists.map((w) => ({
-    id: w.id,
-    type: 'wishlist',
-    title: w.name,
-    subtitle: `${w._count.memberships} member${w._count.memberships === 1 ? '' : 's'}`,
-    href: `/wishlists#wishlist-${w.id}`,
+  const familyItems: SearchItem[] = families.map((f) => ({
+    id: f.id,
+    type: 'family',
+    title: f.name,
+    subtitle: `${f._count.memberships} member${f._count.memberships === 1 ? '' : 's'}`,
+    href: `/families#family-${f.id}`,
   }));
 
   return NextResponse.json({
     users: userItems,
-    gifts: giftItems,
-    wishlists: wishlistItems,
+    wishes: wishItems,
+    families: familyItems,
   });
 }

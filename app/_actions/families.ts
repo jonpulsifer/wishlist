@@ -44,7 +44,7 @@ export const createFamily = defineAction(
  * last member leaving takes the Family with them, because a Family with nobody
  * in it is invisible to everyone and reachable by nothing.
  */
-export const leaveWishlist = defineAction(
+export const leaveFamily = defineAction(
   { input: familyIdSchema, invalidates: FAMILY_CACHES },
   async ({ viewer, input: familyId }) => {
     // Keyed by the pair, so this both scopes and acts: a viewer can only ever

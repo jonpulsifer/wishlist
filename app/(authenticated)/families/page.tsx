@@ -10,9 +10,9 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getFamiliesWithMembers } from '@/lib/db/queries-cached';
 import { CreateFamilyButton } from './family-actions';
-import { WishlistCard } from './wishlist-card';
+import { FamilyCard } from './family-card';
 
-export default async function WishlistsPage() {
+export default async function FamiliesPage() {
   const viewer = await requireViewerOrRedirect();
 
   return (
@@ -21,7 +21,7 @@ export default async function WishlistsPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbPage>Wishlists</BreadcrumbPage>
+              <BreadcrumbPage>Families</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -29,23 +29,23 @@ export default async function WishlistsPage() {
       <div className="flex flex-1 flex-col gap-4 p-2 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Wishlists</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Families</h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              The wishlists you belong to, and who else is in them.
+              The families you are in, and who else is in them.
             </p>
           </div>
           <CreateFamilyButton />
         </div>
 
-        <Suspense fallback={<WishlistsLoading />}>
-          <WishlistsContent userId={viewer.id} />
+        <Suspense fallback={<FamiliesLoading />}>
+          <FamiliesContent userId={viewer.id} />
         </Suspense>
       </div>
     </SidebarInset>
   );
 }
 
-function WishlistsLoading() {
+function FamiliesLoading() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {[1, 2, 3].map((i) => (
@@ -60,14 +60,14 @@ function WishlistsLoading() {
   );
 }
 
-async function WishlistsContent({ userId }: { userId: string }) {
-  const wishlists = await getFamiliesWithMembers(userId);
+async function FamiliesContent({ userId }: { userId: string }) {
+  const families = await getFamiliesWithMembers(userId);
 
-  if (wishlists.length === 0) {
+  if (families.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-lg text-muted-foreground">
-          You are not in any wishlists yet. Start one, or follow an invite link.
+          You are not in any families yet. Start one, or follow an invite link.
         </p>
       </div>
     );
@@ -75,8 +75,8 @@ async function WishlistsContent({ userId }: { userId: string }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {wishlists.map((wishlist) => (
-        <WishlistCard key={wishlist.id} wishlist={wishlist} />
+      {families.map((family) => (
+        <FamilyCard key={family.id} family={family} />
       ))}
     </div>
   );

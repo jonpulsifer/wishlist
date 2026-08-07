@@ -29,7 +29,7 @@ export async function GET(
     return response;
   }
 
-  const response = NextResponse.redirect(new URL('/wishlists', request.url));
+  const response = NextResponse.redirect(new URL('/families', request.url));
 
   // Signed in: validate the token and join. This is the only door in, and the
   // only irreversible act in the model — so a token that is spent, revoked or
