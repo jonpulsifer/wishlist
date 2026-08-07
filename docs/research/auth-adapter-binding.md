@@ -159,7 +159,7 @@ the upstream drift.
   `app/api/stats/route.ts`, `prisma/seed.ts` (plus 12 via the `db.user.` alias).
 - Generated type names: `Prisma.UserSelect`, `Prisma.UserGetPayload` are used in
   `lib/db/projections.ts:21,23,94,96` and would all become `Prisma.PersonSelect` etc.
-- Every relation field on the other 8 models that points at `User` (`Gift.owner`, `Gift.claimedBy`,
+- Every relation field on the other 8 models that points at `User` (`Gift.owner`, `Claimer.user`,
   `Wishlist.members`, `UserRole.user`, `SecretSantaParticipant.user/assignedTo/assignedBy`,
   `WishlistInvite.createdBy`, the self-relation `SecretSantaExclusions`) — the *type* changes even
   where the field name does not.

@@ -122,14 +122,7 @@ export const unarchiveGift = defineAction(
     // as available.
     await db.$transaction([
       db.claimer.deleteMany({ where: { wishId: id } }),
-      db.gift.update({
-        where: { id },
-        data: {
-          archived: false,
-          claimed: false,
-          claimedBy: { disconnect: true },
-        },
-      }),
+      db.gift.update({ where: { id }, data: { archived: false } }),
     ]);
     return { message: `${gift.name} has been unarchived` };
   },
@@ -158,14 +151,6 @@ export const updateGift = defineAction(
   },
 );
 
-/**
- * Claiming writes both shapes.
- *
- * `Claimer` is what the reads consume; `Gift.claimed` and `Gift.claimedById`
- * are still written so a revert of this step resumes the old rule exactly.
- * Both columns leave in the step that drops them, and these two writes go with
- * them.
- */
 export const claimGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
@@ -184,13 +169,7 @@ export const claimGift = defineAction(
     if (gift.ownerId === viewer.id)
       throw new ActionError('You cannot claim your own gift');
 
-    await db.$transaction([
-      db.claimer.create({ data: { wishId: id, userId: viewer.id } }),
-      db.gift.update({
-        where: { id },
-        data: { claimed: true, claimedBy: { connect: { id: viewer.id } } },
-      }),
-    ]);
+    await db.claimer.create({ data: { wishId: id, userId: viewer.id } });
     return { message: `You claimed ${gift.name}` };
   },
 );
@@ -211,15 +190,9 @@ export const unclaimGift = defineAction(
       throw new ActionError('You have not claimed this gift');
     }
 
-    await db.$transaction([
-      db.claimer.delete({
-        where: { wishId_userId: { wishId: id, userId: viewer.id } },
-      }),
-      db.gift.update({
-        where: { id },
-        data: { claimed: false, claimedBy: { disconnect: true } },
-      }),
-    ]);
+    await db.claimer.delete({
+      where: { wishId_userId: { wishId: id, userId: viewer.id } },
+    });
     return { message: `You unclaimed ${gift.name}` };
   },
 );
