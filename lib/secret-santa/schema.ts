@@ -41,16 +41,11 @@ export const exchangeIdSchema = z.object({
   exchangeId: z.string().uuid('Invalid exchange'),
 });
 
-export const exclusionPairSchema = z
-  .object({
-    user1Id: z.string().uuid('Invalid person'),
-    user2Id: z.string().uuid('Invalid person'),
-  })
-  .refine(
-    (p) => p.user1Id !== p.user2Id,
-    'Cannot exclude a user from themselves',
-  );
-
-export type ExclusionPair = z.infer<typeof exclusionPairSchema>;
+/**
+ * The other person in an exclusion. The viewer is always one end of it, taken
+ * from the session rather than the form, so there is nothing to check about
+ * whose exclusion this is.
+ */
+export const exclusionSchema = z.string().uuid('Invalid person');
 
 export { MINIMUM_PARTICIPANTS };

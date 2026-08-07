@@ -9,13 +9,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import {
-  getAllExchanges,
-  getAllPeople,
-  getSecretSantaExclusions,
-} from '@/lib/db/queries-admin';
+import { getAllExchanges } from '@/lib/db/queries-admin';
 import { SecretSantaEventList } from './event-list';
-import { ExclusionManager } from './exclusion-manager';
 
 export default async function AdminSecretSantaPage() {
   // Same capability the mutations on this screen require, so a role that reaches
@@ -23,11 +18,7 @@ export default async function AdminSecretSantaPage() {
   // while every action it called demanded `godmode`.
   const viewer = await requireViewerOrRedirect('manage:secret-santa');
 
-  const [events, exclusions, people] = await Promise.all([
-    getAllExchanges(viewer),
-    getSecretSantaExclusions(viewer),
-    getAllPeople(viewer, 'manage:secret-santa'),
-  ]);
+  const events = await getAllExchanges(viewer);
 
   return (
     <SidebarInset>
@@ -50,11 +41,9 @@ export default async function AdminSecretSantaPage() {
             Secret Santa Management
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            View and manage all Secret Santa events and exclusion pairs.
+            View and manage all Secret Santa events.
           </p>
         </div>
-
-        <ExclusionManager exclusions={exclusions} users={people} />
 
         <SecretSantaEventList events={events} />
       </div>
