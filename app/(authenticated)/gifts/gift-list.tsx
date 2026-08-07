@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { useAction } from '@/hooks/use-action';
 import { useDebounce } from '@/hooks/use-debounce';
-import type { WishCard } from '@/lib/db/projections';
+import { toggleViewerClaim, type WishCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
 interface GiftListProps {
@@ -86,15 +86,14 @@ export function GiftList({
       });
   }, [gifts, search, sort, direction]);
 
-  // Toggling a claim flips the same two flags whichever direction it goes, so
-  // applying it twice is its own undo. Your own Gifts carry no claim state to
-  // flip.
+  // Toggling a claim is its own undo, whichever direction it goes. Your own
+  // Gifts carry no claim state to toggle.
   const toggleClaim = (giftId: string) => {
-    const flip = (g: WishCard): WishCard =>
-      g.id === giftId && !g.yours
-        ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
-        : g;
-    startTransition(() => setGifts((prev) => prev.map(flip)));
+    startTransition(() =>
+      setGifts((prev) =>
+        prev.map((g) => (g.id === giftId ? toggleViewerClaim(g) : g)),
+      ),
+    );
   };
 
   const optimisticToggle = (giftId: string) => {
@@ -102,7 +101,9 @@ export function GiftList({
     return () => toggleClaim(giftId);
   };
 
-  const claim = useAction(claimGift, { optimistic: optimisticToggle });
+  const claim = useAction(claimGift, {
+    optimistic: ({ id }) => optimisticToggle(id),
+  });
   const unclaim = useAction(unclaimGift, { optimistic: optimisticToggle });
 
   const { run: handleDelete } = useAction(deleteGift, {
@@ -117,7 +118,7 @@ export function GiftList({
   const handleClaimToggle = (gift: WishCard) =>
     !gift.yours && gift.claimedByViewer
       ? unclaim.run(gift.id)
-      : claim.run(gift.id);
+      : claim.run({ id: gift.id });
 
   return (
     <div className="space-y-4">
@@ -242,7 +243,9 @@ export function GiftList({
                       ? 'Unclaim'
                       : gift.claimed
                         ? 'Claimed'
-                        : 'Claim'}
+                        : gift.quantity > 1
+                          ? `Claim (${gift.spokenFor}/${gift.quantity})`
+                          : 'Claim'}
                   </Button>
                 )}
               </div>

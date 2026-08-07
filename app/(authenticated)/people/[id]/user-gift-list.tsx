@@ -13,7 +13,7 @@ import {
 } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useAction } from '@/hooks/use-action';
-import type { WishCard } from '@/lib/db/projections';
+import { toggleViewerClaim, type WishCard } from '@/lib/db/projections';
 
 interface UserGiftListProps {
   gifts: WishCard[];
@@ -38,16 +38,7 @@ export function UserGiftList({
   const flipClaim = (giftId: string) => {
     startTransition(() =>
       setGifts((prev) =>
-        prev.map(
-          (g): WishCard =>
-            g.id === giftId && !g.yours
-              ? {
-                  ...g,
-                  claimed: !g.claimed,
-                  claimedByViewer: !g.claimedByViewer,
-                }
-              : g,
-        ),
+        prev.map((g) => (g.id === giftId ? toggleViewerClaim(g) : g)),
       ),
     );
     return () => flipClaim(giftId);
@@ -64,7 +55,7 @@ export function UserGiftList({
     return () => flipArchived(giftId);
   };
 
-  const claim = useAction(claimGift, { optimistic: flipClaim });
+  const claim = useAction(claimGift, { optimistic: ({ id }) => flipClaim(id) });
   const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
   const archive = useAction(archiveGift, { optimistic: flipArchived });
   const unarchive = useAction(unarchiveGift, { optimistic: flipArchived });
@@ -81,7 +72,7 @@ export function UserGiftList({
   const handleClaimToggle = (gift: WishCard) =>
     !gift.yours && gift.claimedByViewer
       ? unclaim.run(gift.id)
-      : claim.run(gift.id);
+      : claim.run({ id: gift.id });
 
   const handleArchiveToggle = (gift: WishCard) =>
     gift.archived ? unarchive.run(gift.id) : archive.run(gift.id);
@@ -159,7 +150,9 @@ export function UserGiftList({
                 ? 'Unclaim'
                 : gift.claimed
                   ? 'Claimed'
-                  : 'Claim'}
+                  : gift.quantity > 1
+                    ? `Claim (${gift.spokenFor}/${gift.quantity})`
+                    : 'Claim'}
             </Button>
           )}
         </div>

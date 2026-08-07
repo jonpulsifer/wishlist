@@ -111,14 +111,11 @@ removing a claimed Wish from it would make the row **vanish**, and absence is a 
 signal than a badge. So Surprise is not defensible by a `where` clause and becomes a
 property of `lib/db/projections.ts` — see [Surprise](#surprise).
 
-- **Grounded**: the vocabulary is already the app's own — `claimGift`, `unclaimGift`,
-  the `/claimed` route, "Claimed Gifts" in the UI. The row per claimer exists, and so
-  does the widening that comes with it. **Splitting and quantity are wanted
-  by the owner**, which makes them the only entries in this glossary asked for rather than
-  charted.
-- **Anticipated**: that several claimers are wanted at all — nothing in the app expresses
-  chipping in today ([#152](https://github.com/jonpulsifer/wishlist/issues/152)) — and the
-  shape of the row ([#161](https://github.com/jonpulsifer/wishlist/issues/161)).
+- **Grounded**: all of it. The row per claimer, the widening that comes with it,
+  quantity, partial claims, and claimers seeing each other. **Splitting and quantity were
+  wanted by the owner**, which makes them the only entries in this glossary asked for
+  rather than charted.
+- **Anticipated**: nothing.
 - **Rejected**: several Claims against one Wish — it makes duplicate buying representable
   again, which is the thing claiming exists to prevent. A `Claim` table with claimers
   hanging off it — two tables, and the Claim row outlives its last claimer, so "claimed"
@@ -129,10 +126,12 @@ property of `lib/db/projections.ts` — see [Surprise](#surprise).
   the claimer — half the live Wishes are links with no price, prices go stale, and a
   wishlist that knows a debt it cannot collect has become a payments app.
 - **In the schema**: `model Claimer`, one row per person committed to a Wish, keyed
-  `(wishId, userId)`. A claimed Wish stays visible to everyone and is badged rather than
-  removed — no query filters on claim state, and `lib/db/projections.ts` withholds who
-  claimed it. Nothing expresses quantity or a split: the timestamp that would order one
-  is there, and nothing reads it.
+  `(wishId, userId)` and carrying the `quantity` that person speaks for; `Wish.quantity`
+  is how many are wanted. A claimed Wish stays visible to everyone and is badged rather
+  than removed — no query filters on claim state, and `lib/db/projections.ts` withholds
+  who claimed it from everyone but the claimers themselves. `claimGift` locks the Wish
+  row for the length of its transaction, because two people reading the same sum at the
+  same time is exactly the duplicate-buying claiming exists to prevent.
 
 ## Wishlist
 
