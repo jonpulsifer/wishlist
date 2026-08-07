@@ -1,9 +1,9 @@
 /**
  * What crosses the seam to the browser.
  *
- * Prisma payload types (`include: { owner: true }`) put whole `User` rows —
+ * Prisma payload types (`include: { subject: true }`) put whole `User` rows —
  * shipping address, sizes, email, onboarding flags — into the HTML for every
- * Gift in a list. These projections describe what the views actually read, so
+ * Wish in a list. These projections describe what the views actually read, so
  * over-serialising becomes a type error rather than a habit.
  *
  * Rule: Prisma types stay behind this module. Client components import from
@@ -25,57 +25,57 @@ export type PersonRef = Prisma.UserGetPayload<{
 }>;
 
 /**
- * Server-side select for a Gift row.
+ * Server-side select for a Wish row.
  *
- * The claimer ids are read but never forwarded — `toGiftCard` reduces them to
- * two booleans, and to none at all for the person the Gift is for. Who claimed
- * a Gift is the one secret this app keeps, and it should not be sitting in the
+ * The claimer ids are read but never forwarded — `toWishCard` reduces them to
+ * two booleans, and to none at all for the person the Wish is for. Who claimed
+ * a Wish is the one secret this app keeps, and it should not be sitting in the
  * page source.
  */
-export const giftRowSelect = {
+export const wishRowSelect = {
   id: true,
   name: true,
   url: true,
   description: true,
   createdAt: true,
   archived: true,
-  ownerId: true,
-  createdById: true,
-  owner: { select: personRefSelect },
-  createdBy: { select: personRefSelect },
+  subjectId: true,
+  proposerId: true,
+  subject: { select: personRefSelect },
+  proposer: { select: personRefSelect },
   claimers: { select: { userId: true } },
-} satisfies Prisma.GiftSelect;
+} satisfies Prisma.WishSelect;
 
-type GiftRow = Prisma.GiftGetPayload<{ select: typeof giftRowSelect }>;
+type WishRow = Prisma.WishGetPayload<{ select: typeof wishRowSelect }>;
 
-type GiftCardBase = {
+type WishCardBase = {
   id: string;
   name: string;
   url: string | null;
   description: string | null;
   createdAt: Date;
   archived: boolean;
-  ownerId: string;
-  owner: PersonRef;
-  createdBy: PersonRef | null;
-  /** The viewer owns or created this Gift, so may edit, archive and delete it. */
+  subjectId: string;
+  subject: PersonRef;
+  proposer: PersonRef;
+  /** The viewer is the subject or the proposer, so may edit and delete it. */
   canEdit: boolean;
 };
 
 /**
- * A Gift as rendered in a list.
+ * A Wish as rendered in a list.
  *
- * Surprise is the shape of this type, not a value inside it. The person a Gift
+ * Surprise is the shape of this type, not a value inside it. The person a Wish
  * is *for* receives a payload with no claim state at all — not `false`,
  * **absent** — so no component can read it and no future component can start
  * (ADR-0004). Everyone else's payload says whether it is claimed, because a
- * claimed Gift has to stay visible-as-claimed or nobody can find the claim to
+ * claimed Wish has to stay visible-as-claimed or nobody can find the claim to
  * join it.
  *
  * `yours` is the discriminant, so the compiler is the proof rather than a code
  * review.
  */
-export type GiftCard = GiftCardBase &
+export type WishCard = WishCardBase &
   (
     | { yours: true }
     | {
@@ -86,14 +86,14 @@ export type GiftCard = GiftCardBase &
       }
   );
 
-export function toGiftCard(row: GiftRow, viewerId: string): GiftCard {
-  const { claimers, createdById, ...rest } = row;
+export function toWishCard(row: WishRow, viewerId: string): WishCard {
+  const { claimers, proposerId, ...rest } = row;
   const base = {
     ...rest,
-    canEdit: row.ownerId === viewerId || createdById === viewerId,
+    canEdit: row.subjectId === viewerId || proposerId === viewerId,
   };
 
-  if (row.ownerId === viewerId) return { ...base, yours: true };
+  if (row.subjectId === viewerId) return { ...base, yours: true };
 
   return {
     ...base,
@@ -104,7 +104,7 @@ export function toGiftCard(row: GiftRow, viewerId: string): GiftCard {
 }
 
 /** A person as shown on the People index. */
-export type PersonCard = PersonRef & { giftCount: number };
+export type PersonCard = PersonRef & { wishCount: number };
 
 /** A person's own profile, including the fields only they should see. */
 export const profileSelect = {

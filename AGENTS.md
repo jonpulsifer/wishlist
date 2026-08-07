@@ -13,18 +13,18 @@ comment explaining what they exist to prevent.
 Read these before your first edit. They are prohibitions — routing you to them
 after the fact is too late. Every one exists because the opposite shipped.
 
-- **Never hand-write a visibility `where` clause.** "Which gifts or people may
+- **Never hand-write a visibility `where` clause.** "Which wishes or people may
   this viewer see" lives in `lib/db/visibility.ts`. Compose from its builders.
   Six hand-written copies had drifted into three real disclosure defects.
-- **Never filter a query by claim state.** Who claimed a Gift is withheld by the
+- **Never filter a query by claim state.** Who claimed a Wish is withheld by the
   *shape* of the payload, not by a `where` — dropping the row from a subject's
   own list makes it vanish, and absence is a louder signal than a badge.
-  `lib/db/projections.ts` owns it, and `GiftCard`'s `yours` arm is the proof.
+  `lib/db/projections.ts` owns it, and `WishCard`'s `yours` arm is the proof.
 - **Never look a person up by id alone.** A bare `findUnique` hands shipping
   addresses and clothing sizes to anyone holding a uuid. Scope it.
 - **Never decide who may change a row after loading it.** "Which rows may this
   viewer act on" lives in `lib/db/authority.ts`. Spread its builders into the
-  `where` so the row is never loaded, rather than comparing `ownerId` in memory.
+  `where` so the row is never loaded, rather than comparing `subjectId` in memory.
 - **Never name a role.** Ask `viewer.can('manage:secret-santa')`. The
   role → capability table is `lib/auth/capabilities.ts`; roles are its
   implementation detail, and the session carries capabilities so a role name

@@ -4,12 +4,12 @@ import { startTransition, useOptimistic } from 'react';
 import { unclaimGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useAction } from '@/hooks/use-action';
-import type { GiftCard } from '@/lib/db/projections';
+import type { WishCard } from '@/lib/db/projections';
 
 export default function GiftList({
   gifts: initialGifts,
 }: {
-  gifts: GiftCard[];
+  gifts: WishCard[];
 }) {
   const [gifts, setGifts] = useOptimistic(initialGifts);
 
@@ -58,10 +58,10 @@ export default function GiftList({
             )}
           </div>
           <Link
-            href={`/people/${gift.owner.id}`}
+            href={`/people/${gift.subject.id}`}
             className="text-muted-foreground"
           >
-            {gift.owner.name || 'Unknown'}
+            {gift.subject.name || 'Unknown'}
           </Link>
           <div className="text-right">
             <Button

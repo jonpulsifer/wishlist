@@ -71,11 +71,11 @@ export default async function PeoplePage() {
                         </div>
                         <Badge
                           variant={
-                            person.giftCount < 3 ? 'destructive' : 'secondary'
+                            person.wishCount < 3 ? 'destructive' : 'secondary'
                           }
                         >
-                          {person.giftCount} gift
-                          {person.giftCount === 1 ? '' : 's'}
+                          {person.wishCount} gift
+                          {person.wishCount === 1 ? '' : 's'}
                         </Badge>
                       </Link>
                     </TableCell>

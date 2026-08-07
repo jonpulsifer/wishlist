@@ -1,8 +1,8 @@
 /**
- * Who may see which Gifts and which People.
+ * Who may see which Wishes and which People.
  *
  * This is the single place the visibility rules are written down. Every query
- * that returns Gifts or People composes its `where` clause from here rather
+ * that returns Wishes or People composes its `where` clause from here rather
  * than restating the rules, so the rules cannot drift apart.
  *
  * The functions are pure: they take a viewer id and return a Prisma `where`
@@ -11,15 +11,15 @@
  *
  * The rules:
  *   1. Wishlist membership — you only see People you share a Wishlist with,
- *      and only Gifts whose owner you share a Wishlist with. Visibility follows
- *      the subject, not a snapshot taken when the Gift was added.
- *   2. Archived Gifts are hidden, except on your own profile.
- *   3. Only Gifts from the current Season's gift window are in scope.
- *   4. Your own profile shows only the Gifts you added yourself, so Gifts other
- *      people added for you stay a surprise.
+ *      and only Wishes whose subject you share a Wishlist with. Visibility
+ *      follows the subject, not a snapshot taken when the Wish was added.
+ *   2. Archived Wishes are hidden, except on your own profile.
+ *   3. Only Wishes from the current Season's gift window are in scope.
+ *   4. Your own profile shows only the Wishes you are the proposer of, so
+ *      Suggestions other people made for you stay a surprise.
  *
  * Claim secrecy is deliberately not here. A subject sees their own list, so
- * filtering a claimed Gift out of it makes the row *vanish*, and absence is a
+ * filtering a claimed Wish out of it makes the row *vanish*, and absence is a
  * louder signal than a badge. It is a property of the payload instead —
  * `lib/db/projections.ts` (ADR-0004).
  *
@@ -36,47 +36,47 @@ function giftWindow(now?: Date): Prisma.DateTimeFilter {
 }
 
 /**
- * Gifts whose owner shares at least one Wishlist with the viewer.
+ * Wishes whose subject shares at least one Wishlist with the viewer.
  *
- * Derived from the subject, not from `Gift.wishlists`. That column pinned each
- * row to the Wishlists its owner belonged to at the moment it was added — a
- * cache of an answer that was true once, and stale in both directions.
+ * Derived from the subject, not from a column on the Wish. Such a column pinned
+ * each row to the Wishlists its subject belonged to at the moment it was added
+ * — a cache of an answer that was true once, and stale in both directions.
  */
-function ownerSharesAWishlistWithViewer(
+function subjectSharesAWishlistWithViewer(
   viewerId: string,
-): Prisma.GiftWhereInput {
+): Prisma.WishWhereInput {
   return {
-    owner: { wishlists: { some: { members: { some: { id: viewerId } } } } },
+    subject: { wishlists: { some: { members: { some: { id: viewerId } } } } },
   };
 }
 
-export type GiftScope = {
-  /** Restrict to Gifts owned by this person. */
-  ownerId?: string;
-  /** Drop the viewer's own Gifts — used by the browse and home feeds. */
+export type WishScope = {
+  /** Restrict to Wishes this person is the subject of. */
+  subjectId?: string;
+  /** Drop the viewer's own Wishes — used by the browse and home feeds. */
   excludeOwn?: boolean;
   /** Evaluate the year window against this instant. Tests pass a fixed date. */
   now?: Date;
 };
 
 /**
- * The `where` clause for "Gifts this viewer may see".
+ * The `where` clause for "Wishes this viewer may see".
  *
- * Viewing your own profile (`ownerId === viewerId`) takes the surprise-preserving
- * branch: archived Gifts become visible, but only Gifts you created yourself are
- * returned. Everything else takes the full rule set.
+ * Viewing your own profile (`subjectId === viewerId`) takes the surprise-
+ * preserving branch: archived Wishes become visible, but only the ones you
+ * proposed yourself are returned. Everything else takes the full rule set.
  */
-export function visibleGiftsWhere(
+export function visibleWishesWhere(
   viewerId: string,
-  scope: GiftScope = {},
-): Prisma.GiftWhereInput {
-  const { ownerId, excludeOwn, now } = scope;
+  scope: WishScope = {},
+): Prisma.WishWhereInput {
+  const { subjectId, excludeOwn, now } = scope;
   const createdAt = giftWindow(now);
 
-  if (ownerId && ownerId === viewerId) {
+  if (subjectId && subjectId === viewerId) {
     return {
-      ownerId: viewerId,
-      createdById: viewerId,
+      subjectId: viewerId,
+      proposerId: viewerId,
       createdAt,
     };
   }
@@ -84,22 +84,22 @@ export function visibleGiftsWhere(
   return {
     archived: false,
     createdAt,
-    ...(ownerId ? { ownerId } : {}),
-    ...(excludeOwn ? { ownerId: { not: viewerId } } : {}),
-    ...ownerSharesAWishlistWithViewer(viewerId),
+    ...(subjectId ? { subjectId } : {}),
+    ...(excludeOwn ? { subjectId: { not: viewerId } } : {}),
+    ...subjectSharesAWishlistWithViewer(viewerId),
   };
 }
 
-/** The `where` clause for "Gifts this viewer has claimed". */
+/** The `where` clause for "Wishes this viewer has claimed". */
 export function claimedByViewerWhere(
   viewerId: string,
   now?: Date,
-): Prisma.GiftWhereInput {
+): Prisma.WishWhereInput {
   return {
     archived: false,
     claimers: { some: { userId: viewerId } },
     createdAt: giftWindow(now),
-    ...ownerSharesAWishlistWithViewer(viewerId),
+    ...subjectSharesAWishlistWithViewer(viewerId),
   };
 }
 
@@ -144,11 +144,11 @@ export function visibleWishlistsWhere(
 }
 
 /**
- * Counting Gifts on a person's card. Shares the archive rule and the year
- * window with `visibleGiftsWhere`, but is scoped by the relation it hangs off
- * rather than by `ownerId` — the caller has already restricted the People it
+ * Counting Wishes on a person's card. Shares the archive rule and the year
+ * window with `visibleWishesWhere`, but is scoped by the relation it hangs off
+ * rather than by `subjectId` — the caller has already restricted the People it
  * counts for to `visiblePeopleWhere`, which is the same membership rule.
  */
-export function visibleGiftCountWhere(now?: Date): Prisma.GiftWhereInput {
+export function visibleWishCountWhere(now?: Date): Prisma.WishWhereInput {
   return { archived: false, createdAt: giftWindow(now) };
 }

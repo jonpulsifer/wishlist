@@ -5,7 +5,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { GlobalSearchProvider } from '@/components/global-search/global-search-provider';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import {
-  getClaimedGiftsForMe,
+  getClaimedWishesForMe,
   getUsersForPeoplePage,
 } from '@/lib/db/queries-cached';
 import { shoppingProgress } from '@/lib/shopping-progress';
@@ -16,7 +16,7 @@ async function Layout({ children }: { children: React.ReactNode }) {
 
   const [people, claimedByMe] = await Promise.all([
     getUsersForPeoplePage(session.user.id),
-    getClaimedGiftsForMe(session.user.id),
+    getClaimedWishesForMe(session.user.id),
   ]);
   const { sortedPeople, total, percent } = shoppingProgress(
     people,

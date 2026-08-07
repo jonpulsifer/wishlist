@@ -2,24 +2,24 @@
  * How far through their shopping the viewer is.
  *
  * "Sorted" is not a column and never should be — it is simply "the viewer has
- * claimed at least one Gift for this person". Two screens ask the question now
+ * claimed at least one Wish for this person". Two screens ask the question now
  * (Home and the sidebar), so the definition lives here once rather than being
  * re-derived at each call site.
  *
  * No Prisma import and no database: it takes the rows and answers.
  */
 
-type Person = { id: string; giftCount: number };
-type ClaimedGift = { owner: { id: string } };
+type Person = { id: string; wishCount: number };
+type ClaimedWish = { subject: { id: string } };
 
-/** A Gift as far as this module cares: does it carry a claim by the viewer. */
+/** A Wish as far as this module cares: does it carry a claim by the viewer. */
 type MaybeClaimed =
   | { yours: true }
   | { yours: false; claimedByViewer: boolean };
 
-/** The same rule as `shoppingProgress`, asked of one person's Gifts. */
-export function sortedForPerson(gifts: MaybeClaimed[]): boolean {
-  return gifts.some((gift) => !gift.yours && gift.claimedByViewer);
+/** The same rule as `shoppingProgress`, asked of one person's Wishes. */
+export function sortedForPerson(wishes: MaybeClaimed[]): boolean {
+  return wishes.some((wish) => !wish.yours && wish.claimedByViewer);
 }
 
 export type ShoppingProgress<P, G> = {
@@ -34,20 +34,20 @@ export type ShoppingProgress<P, G> = {
   percent: number;
 };
 
-export function shoppingProgress<P extends Person, G extends ClaimedGift>(
+export function shoppingProgress<P extends Person, G extends ClaimedWish>(
   people: P[],
   claimedByViewer: G[],
 ): ShoppingProgress<P, G> {
   const claimedFor = new Map<string, G[]>();
-  for (const gift of claimedByViewer) {
-    const forOwner = claimedFor.get(gift.owner.id) ?? [];
-    forOwner.push(gift);
-    claimedFor.set(gift.owner.id, forOwner);
+  for (const wish of claimedByViewer) {
+    const forSubject = claimedFor.get(wish.subject.id) ?? [];
+    forSubject.push(wish);
+    claimedFor.set(wish.subject.id, forSubject);
   }
 
   const toShopFor = people
     .filter((p) => !claimedFor.has(p.id))
-    .sort((a, b) => b.giftCount - a.giftCount);
+    .sort((a, b) => b.wishCount - a.wishCount);
   const sortedPeople = people.filter((p) => claimedFor.has(p.id));
 
   return {

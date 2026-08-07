@@ -5,6 +5,7 @@ import * as React from 'react';
 import type { GiftFormData } from '@/app/_actions/gifts';
 import { addGift } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,8 @@ type Props = {
 
 export function AddGiftDialog({ users, currentUserId }: Props) {
   const [open, setOpen] = React.useState(false);
+  const [recipientId, setRecipientId] = React.useState(currentUserId);
+  const [asSubject, setAsSubject] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
 
   // The dialog used to close and report "added successfully" whether or not the
@@ -60,15 +63,20 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
     onSuccess: () => {
       setOpen(false);
       formRef.current?.reset();
+      setRecipientId(currentUserId);
+      setAsSubject(false);
     },
   });
 
+  const forSomeoneElse = recipientId !== currentUserId;
+
   const handleAction = (formData: FormData) => {
     const data: GiftFormData = {
-      recipientId: formData.get('recipientId') as string,
+      recipientId,
       name: formData.get('name') as string,
       url: formData.get('url') as string,
       description: formData.get('description') as string,
+      asSubject: forSomeoneElse && asSubject,
     };
     run(data);
   };
@@ -106,7 +114,11 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
             <Label htmlFor="recipientId" className="font-bold">
               Recipient
             </Label>
-            <Select name="recipientId" defaultValue={currentUserId}>
+            <Select
+              name="recipientId"
+              value={recipientId}
+              onValueChange={setRecipientId}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -127,6 +139,22 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
             >
               Who is this gift for?
             </Label>
+            {forSomeoneElse && (
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="asSubject"
+                  checked={asSubject}
+                  onCheckedChange={(checked) => setAsSubject(checked === true)}
+                />
+                <Label
+                  htmlFor="asSubject"
+                  className="text-xs text-muted-foreground font-normal leading-snug"
+                >
+                  I'm filling in their list for them — put this on their own
+                  list, where they can see it. Otherwise it stays a surprise.
+                </Label>
+              </div>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="name" className="font-bold">

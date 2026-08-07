@@ -18,8 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
-  getVisibleGiftsForUserById,
   getVisibleProfile,
+  getVisibleWishesForUserById,
 } from '@/lib/db/queries-cached';
 import { getInitials } from '@/lib/utils';
 import { UserGiftList } from './user-gift-list';
@@ -43,7 +43,7 @@ export default async function UserPage({ params }: Props) {
   if (!user) {
     notFound();
   }
-  const gifts = await getVisibleGiftsForUserById(id, viewer.id);
+  const gifts = await getVisibleWishesForUserById(id, viewer.id);
 
   const isOwnProfile = user.id === viewer.id;
 

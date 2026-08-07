@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 
 export async function GET() {
-  const gifts = await prisma.gift.count();
+  const gifts = await prisma.wish.count();
   const users = await prisma.user.count();
-  const claimed = await prisma.gift.count({
+  const claimed = await prisma.wish.count({
     where: { claimers: { some: {} } },
   });
   return NextResponse.json(

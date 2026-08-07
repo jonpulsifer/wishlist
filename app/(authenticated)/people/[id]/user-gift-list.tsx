@@ -13,10 +13,10 @@ import {
 } from '@/app/_actions/gifts';
 import { Button } from '@/components/ui/button';
 import { useAction } from '@/hooks/use-action';
-import type { GiftCard } from '@/lib/db/projections';
+import type { WishCard } from '@/lib/db/projections';
 
 interface UserGiftListProps {
-  gifts: GiftCard[];
+  gifts: WishCard[];
   currentUserId: string;
 }
 
@@ -30,7 +30,7 @@ export function UserGiftList({
   const activeGifts = gifts.filter((g) => !g.archived);
   // Only show archived gifts to the owner
   const archivedGifts = gifts.filter(
-    (g) => g.archived && g.ownerId === currentUserId,
+    (g) => g.archived && g.subjectId === currentUserId,
   );
 
   // Both toggles are their own undo: applying the same flip twice restores the
@@ -39,7 +39,7 @@ export function UserGiftList({
     startTransition(() =>
       setGifts((prev) =>
         prev.map(
-          (g): GiftCard =>
+          (g): WishCard =>
             g.id === giftId && !g.yours
               ? {
                   ...g,
@@ -78,15 +78,15 @@ export function UserGiftList({
     },
   });
 
-  const handleClaimToggle = (gift: GiftCard) =>
+  const handleClaimToggle = (gift: WishCard) =>
     !gift.yours && gift.claimedByViewer
       ? unclaim.run(gift.id)
       : claim.run(gift.id);
 
-  const handleArchiveToggle = (gift: GiftCard) =>
+  const handleArchiveToggle = (gift: WishCard) =>
     gift.archived ? unarchive.run(gift.id) : archive.run(gift.id);
 
-  const renderGiftRow = (gift: GiftCard) => {
+  const renderGiftRow = (gift: WishCard) => {
     return (
       <div
         key={gift.id}
@@ -99,12 +99,12 @@ export function UserGiftList({
           >
             {gift.name}
           </Link>
-          {gift.createdBy?.id !== gift.ownerId && (
+          {gift.proposer.id !== gift.subjectId && (
             <div className="text-sm text-muted-foreground">
               Added by{' '}
-              {gift.createdBy?.id === currentUserId
+              {gift.proposer.id === currentUserId
                 ? 'you'
-                : gift.createdBy?.name || gift.createdBy?.email}
+                : gift.proposer.name || gift.proposer.email}
             </div>
           )}
           <div className="md:hidden text-sm text-muted-foreground">
@@ -137,7 +137,7 @@ export function UserGiftList({
                   <Archive className="h-4 w-4" />
                 )}
               </Button>
-              {gift.createdBy?.id === currentUserId && (
+              {gift.proposer.id === currentUserId && (
                 <Button
                   variant="destructive"
                   onClick={() => handleDelete(gift.id)}

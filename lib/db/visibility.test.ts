@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   claimedByViewerWhere,
-  visibleGiftCountWhere,
-  visibleGiftsWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
+  visibleWishCountWhere,
+  visibleWishesWhere,
   visibleWishlistsWhere,
 } from './visibility.ts';
 
@@ -18,40 +18,42 @@ const MEMBERSHIP = {
 };
 
 /**
- * The same rule for Gifts — reached through the owner, so it follows the
- * subject rather than a snapshot taken when the Gift was added.
+ * The same rule for Wishes — reached through the subject, so it follows the
+ * subject rather than a snapshot taken when the Wish was added.
  */
-const GIFT_MEMBERSHIP = { owner: MEMBERSHIP };
+const WISH_MEMBERSHIP = { subject: MEMBERSHIP };
 
-describe('visibleGiftsWhere', () => {
+describe('visibleWishesWhere', () => {
   const now = new Date('2026-08-01T00:00:00Z');
 
-  it('scopes the browse feed by the owner’s wishlist membership', () => {
-    const where = visibleGiftsWhere(VIEWER, { excludeOwn: true, now });
-    assert.deepEqual(where.owner, GIFT_MEMBERSHIP.owner);
+  it('scopes the browse feed by the subject’s wishlist membership', () => {
+    const where = visibleWishesWhere(VIEWER, { excludeOwn: true, now });
+    assert.deepEqual(where.subject, WISH_MEMBERSHIP.subject);
     // That the pin is not consulted is no longer assertable — `wishlists` is
-    // not a field of `GiftWhereInput` any more, so the compiler is the proof.
+    // not a field of `WishWhereInput` any more, so the compiler is the proof.
   });
 
-  it('hides archived gifts from everyone but their owner', () => {
-    assert.equal(visibleGiftsWhere(VIEWER, { now }).archived, false);
+  it('hides archived wishes from everyone but their subject', () => {
+    assert.equal(visibleWishesWhere(VIEWER, { now }).archived, false);
     assert.equal(
-      visibleGiftsWhere(VIEWER, { ownerId: OTHER, now }).archived,
+      visibleWishesWhere(VIEWER, { subjectId: OTHER, now }).archived,
       false,
     );
   });
 
   it('carries no claim clause at all', () => {
-    // Claim secrecy left the query layer: filtering a claimed Gift out of a
+    // Claim secrecy left the query layer: filtering a claimed Wish out of a
     // list makes the row vanish, and absence is a louder signal than a badge.
     // It is `projections.ts`'s job now, and this asserts nothing crept back.
     for (const scope of [
       {},
       { excludeOwn: true },
-      { ownerId: OTHER },
-      { ownerId: VIEWER },
+      { subjectId: OTHER },
+      { subjectId: VIEWER },
     ]) {
-      const json = JSON.stringify(visibleGiftsWhere(VIEWER, { ...scope, now }));
+      const json = JSON.stringify(
+        visibleWishesWhere(VIEWER, { ...scope, now }),
+      );
       assert.equal(json.includes('claim'), false, `claim clause in ${json}`);
     }
   });
@@ -59,31 +61,31 @@ describe('visibleGiftsWhere', () => {
   it('gives the browse and home feeds identical rules', () => {
     // These were two hand-written clauses that had drifted apart.
     assert.deepEqual(
-      visibleGiftsWhere(VIEWER, { excludeOwn: true, now }),
-      visibleGiftsWhere(VIEWER, { excludeOwn: true, now }),
+      visibleWishesWhere(VIEWER, { excludeOwn: true, now }),
+      visibleWishesWhere(VIEWER, { excludeOwn: true, now }),
     );
   });
 
-  it('excludes the viewer’s own gifts when asked', () => {
-    const where = visibleGiftsWhere(VIEWER, { excludeOwn: true, now });
-    assert.deepEqual(where.ownerId, { not: VIEWER });
+  it('excludes the viewer’s own wishes when asked', () => {
+    const where = visibleWishesWhere(VIEWER, { excludeOwn: true, now });
+    assert.deepEqual(where.subjectId, { not: VIEWER });
   });
 
-  it('scopes another person’s profile to that owner and to membership', () => {
-    const where = visibleGiftsWhere(VIEWER, { ownerId: OTHER, now });
-    assert.equal(where.ownerId, OTHER);
+  it('scopes another person’s profile to that subject and to membership', () => {
+    const where = visibleWishesWhere(VIEWER, { subjectId: OTHER, now });
+    assert.equal(where.subjectId, OTHER);
     // The old query had no membership clause at all here, which is how a
     // stranger's profile became readable.
-    assert.deepEqual(where.owner, GIFT_MEMBERSHIP.owner);
+    assert.deepEqual(where.subject, WISH_MEMBERSHIP.subject);
   });
 
   it('takes the surprise-preserving branch on the viewer’s own profile', () => {
-    const where = visibleGiftsWhere(VIEWER, { ownerId: VIEWER, now });
+    const where = visibleWishesWhere(VIEWER, { subjectId: VIEWER, now });
 
-    assert.equal(where.ownerId, VIEWER);
-    // Only gifts you added yourself: gifts others added for you stay hidden.
-    assert.equal(where.createdById, VIEWER);
-    // Archived gifts are yours to see.
+    assert.equal(where.subjectId, VIEWER);
+    // Only the Wishes you proposed yourself: Suggestions others made for you stay hidden.
+    assert.equal(where.proposerId, VIEWER);
+    // Archived Wishes are yours to see.
     assert.equal(where.archived, undefined);
   });
 
@@ -91,10 +93,10 @@ describe('visibleGiftsWhere', () => {
     for (const scope of [
       {},
       { excludeOwn: true },
-      { ownerId: OTHER },
-      { ownerId: VIEWER },
+      { subjectId: OTHER },
+      { subjectId: VIEWER },
     ]) {
-      const where = visibleGiftsWhere(VIEWER, { ...scope, now });
+      const where = visibleWishesWhere(VIEWER, { ...scope, now });
       assert.ok(
         where.createdAt,
         `missing year window for ${JSON.stringify(scope)}`,
@@ -108,7 +110,7 @@ describe('claimedByViewerWhere', () => {
     const where = claimedByViewerWhere(VIEWER);
     assert.deepEqual(where.claimers, { some: { userId: VIEWER } });
     assert.equal(where.archived, false);
-    assert.deepEqual(where.owner, GIFT_MEMBERSHIP.owner);
+    assert.deepEqual(where.subject, WISH_MEMBERSHIP.subject);
   });
 });
 
@@ -148,16 +150,16 @@ describe('visibleWishlistsWhere', () => {
   });
 });
 
-describe('visibleGiftCountWhere', () => {
-  it('hides archived gifts and stays inside the year window', () => {
-    const where = visibleGiftCountWhere(new Date('2026-08-01T00:00:00Z'));
+describe('visibleWishCountWhere', () => {
+  it('hides archived wishes and stays inside the year window', () => {
+    const where = visibleWishCountWhere(new Date('2026-08-01T00:00:00Z'));
     assert.equal(where.archived, false);
     assert.ok(where.createdAt);
   });
 
-  it('counts claimed gifts, because a claim no longer hides a row', () => {
+  it('counts claimed wishes, because a claim no longer hides a row', () => {
     assert.equal(
-      JSON.stringify(visibleGiftCountWhere()).includes('claim'),
+      JSON.stringify(visibleWishCountWhere()).includes('claim'),
       false,
     );
   });

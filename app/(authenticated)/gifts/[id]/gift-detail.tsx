@@ -27,11 +27,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useAction } from '@/hooks/use-action';
-import type { GiftCard } from '@/lib/db/projections';
+import type { WishCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
 interface GiftDetailProps {
-  gift: GiftCard;
+  gift: WishCard;
   currentUserId: string;
   canEdit: boolean;
 }
@@ -95,21 +95,21 @@ export function GiftDetail({
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Avatar className="h-20 w-20">
-          <AvatarImage src={gift.owner.image ?? undefined} />
+          <AvatarImage src={gift.subject.image ?? undefined} />
           <AvatarFallback className="text-2xl">
-            {getInitials(gift.owner)}
+            {getInitials(gift.subject)}
           </AvatarFallback>
         </Avatar>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">
-              {gift.owner.name ?? gift.owner.email}
+              {gift.subject.name ?? gift.subject.email}
             </h1>
             <Badge variant="secondary">Owner</Badge>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Mail className="h-4 w-4" />
-            <span>{gift.owner.email}</span>
+            <span>{gift.subject.email}</span>
           </div>
         </div>
       </div>
@@ -240,15 +240,15 @@ export function GiftDetail({
                 <p className="text-sm font-medium">Added by</p>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={gift.createdBy?.image ?? undefined} />
+                    <AvatarImage src={gift.proposer.image ?? undefined} />
                     <AvatarFallback>
-                      {gift.createdBy ? getInitials(gift.createdBy) : '?'}
+                      {getInitials(gift.proposer)}
                     </AvatarFallback>
                   </Avatar>
                   <p className="text-sm text-muted-foreground">
-                    {gift.createdBy?.id === currentUserId
+                    {gift.proposer.id === currentUserId
                       ? 'You'
-                      : gift.createdBy?.name || gift.createdBy?.email}{' '}
+                      : gift.proposer.name || gift.proposer.email}{' '}
                     (
                     {formatDistanceToNow(new Date(gift.createdAt), {
                       addSuffix: true,

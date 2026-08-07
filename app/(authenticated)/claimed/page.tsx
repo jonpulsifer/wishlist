@@ -10,12 +10,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import { getClaimedGiftsForMe } from '@/lib/db/queries-cached';
+import { getClaimedWishesForMe } from '@/lib/db/queries-cached';
 import GiftList from './gift-list';
 
 export default async function ClaimedPage() {
   const viewer = await requireViewerOrRedirect();
-  const claimedGifts = await getClaimedGiftsForMe(viewer.id);
+  const claimedGifts = await getClaimedWishesForMe(viewer.id);
 
   return (
     <SidebarInset>
