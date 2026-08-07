@@ -21,7 +21,10 @@ interface AppHeaderProps {
 export function AppHeader({ children }: AppHeaderProps) {
   const isMobile = useIsMobile();
   return (
-    <header className="flex h-16 shrink-0 items-center p-2 gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+    <header
+      data-app-header
+      className="flex h-16 shrink-0 items-center p-2 gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+    >
       <SidebarTrigger />
       <Separator
         orientation="vertical"
