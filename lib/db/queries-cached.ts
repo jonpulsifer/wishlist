@@ -86,6 +86,26 @@ const getVisibleProfile = unstable_cache(
   { tags: ['users', 'wishlists'] },
 );
 
+/**
+ * The people the viewer has excluded from being matched with them.
+ *
+ * Deliberately not part of `profileSelect`: that select is also how someone
+ * else's profile is read, and an exclusion is visible to the two people in it
+ * and to nobody else — not to the Organiser, who runs a Draw shaped by
+ * constraints they cannot inspect.
+ */
+const getOwnExclusions = unstable_cache(
+  async (viewerId: string): Promise<PersonRef[]> => {
+    const person = await prisma.user.findUnique({
+      where: { id: viewerId },
+      select: { excludes: { select: personRefSelect } },
+    });
+    return person?.excludes ?? [];
+  },
+  ['ownExclusions'],
+  { tags: ['secretSanta', 'users'] },
+);
+
 /** The viewer's own profile, for the edit form. */
 const getOwnProfile = unstable_cache(
   async (viewerId: string): Promise<Profile | null> =>
@@ -291,6 +311,7 @@ export {
   getFamiliesWithMembers,
   getFullUserForRecommendations,
   getLatestVisibleWishesForUserById,
+  getOwnExclusions,
   getOwnProfile,
   getPeopleForNewWishModal,
   getSortedVisibleWishesForUser,

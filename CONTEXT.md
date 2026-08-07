@@ -560,11 +560,10 @@ they should never be matched with the other; it binds both ways, and it is visib
 those two and to no one else — not to the [Organiser](#organiser), who therefore runs a
 Draw shaped by constraints they cannot inspect or override.
 
-- **Grounded**: the container, its explicit participants and its undrawn state all
-  exist. So do exclusions, already global and already symmetric — creating one connects
-  both directions.
-- **Anticipated**: the name, the [Occasion](#occasion) row a year would become, and the
-  Family bound and exclusion ownership
+- **Grounded**: the container, its Family bound, its explicit participants and its
+  undrawn state all exist. So do exclusions, global, symmetric, and owned by the two
+  people in them.
+- **Anticipated**: the [Occasion](#occasion) row a year would become
   ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
 - **Rejected**: bounding participants by what the Organiser can see and teaching the Draw
   to avoid unseeable pairs — it turns an impossible state into a runtime failure, and can
@@ -580,9 +579,9 @@ Draw shaped by constraints they cannot inspect or override.
   Christmas just gone. The Family bound was backfilled by rule — the one Family every
   participant of an Exchange belongs to — and every production Exchange had one, so no
   santa was left unable to see their recipient. Exclusions are the `excludes` self-relation
-  on `User`, created and deleted only behind `manage:secret-santa`, so today they are an
-  administrator's setting rather than the subject's — and `/admin/secret-santa` is the
-  only place in the app one can be made.
+  on `User`, made and unmade by either of the two people in them, on their own profile.
+  The viewer is one end of every one by construction, so no capability gates them and the
+  Organiser has no way to read them.
 
 ## Organiser
 

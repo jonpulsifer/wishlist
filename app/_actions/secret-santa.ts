@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
 import { organiserOfWhere } from '@/lib/db/authority';
 import db from '@/lib/db/client';
-import { visibleFamiliesWhere } from '@/lib/db/visibility';
+import { visibleFamiliesWhere, visibleProfileWhere } from '@/lib/db/visibility';
 import { currentSeason, withinDrawHistory } from '@/lib/season';
 import {
   drawAssignments,
@@ -13,7 +13,7 @@ import {
 } from '@/lib/secret-santa/draw';
 import {
   exchangeIdSchema,
-  exclusionPairSchema,
+  exclusionSchema,
   openExchangeSchema,
 } from '@/lib/secret-santa/schema';
 
@@ -136,54 +136,64 @@ export const drawExchange = defineAction(
   },
 );
 
-export const createSecretSantaExclusion = defineAction(
-  {
-    capability: 'manage:secret-santa',
-    input: exclusionPairSchema,
-    invalidates: ['secretSanta'],
-  },
-  async ({ input: { user1Id, user2Id } }) => {
-    const existing = await db.user.findFirst({
-      where: { id: user1Id, excludes: { some: { id: user2Id } } },
-      select: { id: true },
-    });
-    if (existing) throw new ActionError('This exclusion already exists');
+/**
+ * Never match me with this person.
+ *
+ * An exclusion belongs to the two people in it, not to whoever runs the Draw
+ * (ADR-0002). The viewer is one end of it by construction — taken from the
+ * session, never from the form — so there is no authority question left to ask
+ * beyond whether they may see the person they are naming.
+ *
+ * It binds both ways and it is written both ways, because the Draw reads it
+ * from whichever side it reaches first.
+ */
+export const excludePerson = defineAction(
+  { input: exclusionSchema, invalidates: ['secretSanta'] },
+  async ({ viewer, input: otherId }) => {
+    if (otherId === viewer.id) {
+      throw new ActionError('You cannot exclude yourself');
+    }
 
-    // Both directions, so the draw sees the pair whichever side it reads.
+    const other = await db.user.findFirst({
+      where: visibleProfileWhere(viewer.id, otherId),
+      select: { id: true, name: true, email: true },
+    });
+    if (!other) throw new ActionError('Person not found');
+
+    // `connect` on an existing edge is a no-op, so naming the same person twice
+    // is not an error worth telling apart from success.
     await db.$transaction([
       db.user.update({
-        where: { id: user1Id },
-        data: { excludes: { connect: { id: user2Id } } },
+        where: { id: viewer.id },
+        data: { excludes: { connect: { id: other.id } } },
       }),
       db.user.update({
-        where: { id: user2Id },
-        data: { excludes: { connect: { id: user1Id } } },
+        where: { id: other.id },
+        data: { excludes: { connect: { id: viewer.id } } },
       }),
     ]);
 
-    return { message: 'Exclusion created successfully' };
+    return {
+      message: `You will not be matched with ${other.name || other.email}`,
+    };
   },
 );
 
-export const deleteSecretSantaExclusion = defineAction(
-  {
-    capability: 'manage:secret-santa',
-    input: exclusionPairSchema,
-    invalidates: ['secretSanta'],
-  },
-  async ({ input: { user1Id, user2Id } }) => {
+export const unexcludePerson = defineAction(
+  { input: exclusionSchema, invalidates: ['secretSanta'] },
+  async ({ viewer, input: otherId }) => {
     await db.$transaction([
       db.user.update({
-        where: { id: user1Id },
-        data: { excludes: { disconnect: { id: user2Id } } },
+        where: { id: viewer.id },
+        data: { excludes: { disconnect: { id: otherId } } },
       }),
       db.user.update({
-        where: { id: user2Id },
-        data: { excludes: { disconnect: { id: user1Id } } },
+        where: { id: otherId },
+        data: { excludes: { disconnect: { id: viewer.id } } },
       }),
     ]);
 
-    return { message: 'Exclusion removed successfully' };
+    return { message: 'Exclusion removed' };
   },
 );
 
