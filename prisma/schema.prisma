@@ -101,7 +101,6 @@ model Gift {
   ownerId     String     @db.Uuid
   createdBy   User?      @relation("CreatedByUser", fields: [createdById], references: [id])
   createdById String?    @db.Uuid
-  wishlists   Wishlist[]
   claimers    Claimer[]
 
   @@index([createdAt])
@@ -132,7 +131,6 @@ model Wishlist {
   name      String   @unique
   password  String
   members   User[]
-  gifts     Gift[]
   invites   WishlistInvite[]
 
   @@index([createdAt])

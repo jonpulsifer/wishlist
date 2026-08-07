@@ -77,7 +77,7 @@ export async function getAllWishlists(viewer: Viewer) {
     select: {
       id: true,
       name: true,
-      _count: { select: { members: true, gifts: true } },
+      _count: { select: { members: true } },
     },
     orderBy: { name: 'asc' },
   });

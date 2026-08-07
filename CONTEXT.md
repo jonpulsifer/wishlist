@@ -54,11 +54,9 @@ Nothing is pinned or filed — a Wish is visible wherever its subject is.
   `Want` — no natural collection noun. `Item` — carries no meaning.
 - **Schema today**: `model Gift`; the subject is `ownerId` and the proposer is
   `createdById`, which is **nullable**, so "is this a Suggestion?" has three states rather
-  than two. There is a dead `image` column and a dead `published` one: nothing in the repo
-  reads or writes either. Visibility is **not** derived — `Gift.wishlists` pins each row
-  to the Families its subject belonged to at the moment it was added, so it is a snapshot
-  rather than a rule. It goes stale in both directions: a Family joined later never sees
-  the Wish, and a Family the subject has **left** sees it forever.
+  than two. Visibility **is** derived: a viewer sees a Wish when they share a Family with
+  the person it is for, answered at read time rather than snapshotted when the Wish was
+  added.
 
 ## Claim
 
