@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAction } from '@/hooks/use-action';
-import type { GiftRecommendation } from '@/lib/ai';
+import type { WishRecommendation } from '@/lib/ai';
 import { getInitials } from '@/lib/utils';
 import type { User } from '@/prisma/generated/client';
 
@@ -32,7 +32,7 @@ type Props = {
   people: Pick<User, 'id' | 'name' | 'email'>[];
 };
 
-type Recommendation = GiftRecommendation & {
+type Recommendation = WishRecommendation & {
   isAdding?: boolean;
 };
 

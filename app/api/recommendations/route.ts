@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { recommendGiftsAsList } from '@/lib/ai';
+import { recommendWishesAsList } from '@/lib/ai';
 import { currentViewer } from '@/lib/auth/viewer';
 
 export async function POST() {
@@ -8,7 +8,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const recommendations = await recommendGiftsAsList({
+  const recommendations = await recommendWishesAsList({
     personId: viewer.id,
     viewerId: viewer.id,
   });

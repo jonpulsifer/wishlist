@@ -1,5 +1,5 @@
 /**
- * Gift recommendations.
+ * Wish recommendations.
  *
  * One module, two output shapes. There used to be two exported functions that
  * repeated the same load → preferences → first name → prompt sequence and
@@ -13,7 +13,7 @@
 import type OpenAI from 'openai';
 import { getFullUserForRecommendations } from './db/queries-cached';
 
-export type GiftRecommendation = {
+export type WishRecommendation = {
   name: string;
   description: string;
   estimatedPrice?: string;
@@ -86,7 +86,7 @@ const RECOMMENDATION_TOOL: OpenAI.Chat.ChatCompletionTool = {
  * Load the recipient, scoped to the viewer.
  *
  * `null` means the viewer shares no Wishlist with this person and has no
- * business asking. Archived gifts are deliberately included: they say as much
+ * business asking. Archived Wishes are deliberately included: they say as much
  * about someone's interests as the current list does.
  */
 async function loadRecipient(
@@ -113,7 +113,7 @@ export type RecommendOptions = {
  * `null` — rather than an empty string — means the viewer may not see this
  * person, which the route handler turns into a 404.
  */
-export async function recommendGiftsAsProse({
+export async function recommendWishesAsProse({
   personId,
   viewerId,
   client,
@@ -140,14 +140,14 @@ export async function recommendGiftsAsProse({
 /**
  * Recommendations as a list.
  *
- * Empty when the viewer may not see this person, when they have no gifts to
+ * Empty when the viewer may not see this person, when they have no Wishes to
  * reason from, or when the model declines the tool call.
  */
-export async function recommendGiftsAsList({
+export async function recommendWishesAsList({
   personId,
   viewerId,
   client,
-}: RecommendOptions): Promise<GiftRecommendation[]> {
+}: RecommendOptions): Promise<WishRecommendation[]> {
   const recipient = await loadRecipient(personId, viewerId);
   if (!recipient?.preferences) return [];
 
@@ -175,7 +175,7 @@ export async function recommendGiftsAsList({
 /** Pull the tool call out of a completion, or give up quietly. */
 export function parseRecommendations(
   completion: OpenAI.Chat.ChatCompletion,
-): GiftRecommendation[] {
+): WishRecommendation[] {
   const call = completion.choices[0]?.message?.tool_calls?.[0];
   if (
     call?.type !== 'function' ||
