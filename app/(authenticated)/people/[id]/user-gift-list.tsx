@@ -70,7 +70,7 @@ export function UserGiftList({
   });
 
   const handleClaimToggle = (gift: WishCard) =>
-    !gift.yours && gift.claimedByViewer
+    !gift.yours && gift.viewerClaim > 0
       ? unclaim.run(gift.id)
       : claim.run({ id: gift.id });
 
@@ -140,13 +140,13 @@ export function UserGiftList({
             </>
           ) : (
             <Button
-              variant={gift.claimedByViewer ? 'outline' : 'default'}
+              variant={gift.viewerClaim > 0 ? 'outline' : 'default'}
               onClick={() => handleClaimToggle(gift)}
               size="sm"
               className="w-20 md:w-24"
-              disabled={gift.claimed && !gift.claimedByViewer}
+              disabled={gift.claimed && gift.viewerClaim === 0}
             >
-              {gift.claimedByViewer
+              {gift.viewerClaim > 0
                 ? 'Unclaim'
                 : gift.claimed
                   ? 'Claimed'

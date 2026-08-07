@@ -99,7 +99,7 @@ export function PeopleList({
                     {gift.name}
                   </Link>
                   {!gift.yours &&
-                    (gift.claimedByViewer ? (
+                    (gift.viewerClaim > 0 ? (
                       <Button
                         variant="outline"
                         size="sm"

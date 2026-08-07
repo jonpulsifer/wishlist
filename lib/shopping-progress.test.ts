@@ -52,18 +52,15 @@ describe('sortedForPerson', () => {
   it('is true once the viewer has claimed any one of the Wishes', () => {
     assert.equal(
       sortedForPerson([
-        { yours: false, claimedByViewer: false },
-        { yours: false, claimedByViewer: true },
+        { yours: false, viewerClaim: 0 },
+        { yours: false, viewerClaim: 1 },
       ]),
       true,
     );
   });
 
   it('ignores Wishes claimed by somebody else', () => {
-    assert.equal(
-      sortedForPerson([{ yours: false, claimedByViewer: false }]),
-      false,
-    );
+    assert.equal(sortedForPerson([{ yours: false, viewerClaim: 0 }]), false);
   });
 
   it("never counts the viewer's own Wishes, which carry no claim state", () => {

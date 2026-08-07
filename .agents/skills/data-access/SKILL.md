@@ -25,9 +25,15 @@ Six hand-written copies had drifted into three real disclosure defects. The
 module exists so that cannot happen again. If a new screen needs a scope none of
 the builders express, add a builder there — do not inline one at the call site.
 
-**Never `findUnique` a person by id alone.** The id is a uuid, but uuids leak;
-treating one as an authorization token exposes the profile to anyone holding it.
-Scope the lookup with `visibleProfileWhere`.
+**Never `findUnique` a row by id alone** — a person or a Wish, in a query or in
+an action. The id is a uuid, but uuids leak; treating one as an authorization
+token hands the row to anyone holding it. Scope the lookup with
+`visibleProfileWhere` or `visibleWishesWhere`.
+
+This binds mutations as well as pages. An action is a POST endpoint, and a
+`SELECT ... FOR UPDATE` matched on an id is still a lookup by id alone: claiming
+reached every Wish in the install until it composed its `where` like everything
+else.
 
 The year window comes from `lib/season.ts`, not from date maths written here or
 anywhere else. `currentSeason(now?)` returns `year`, `giftWindow`, `eventWindow`
@@ -98,10 +104,10 @@ is a bug even when nothing renders the sensitive fields.
 clause to a `where` — a subject sees their own list, so filtering a claimed Wish
 out of it makes the row *vanish*, and absence is a louder signal than a badge.
 `WishCard` is a union on `yours`: the person a Wish is *for* gets a payload with
-no `claimed` and no `claimedByViewer` at all — absent, not `false` — so no
+no `claimed` and no `viewerClaim` at all — absent, not `false` — so no
 component can read it, and `tsc` is the proof rather than a code review.
-Everyone else's payload says whether it is claimed, because a claimed Wish has
-to stay visible-as-claimed or nobody can find the claim to join it.
+Everyone else's payload says how much of it is spoken for, because a claimed Wish
+has to stay visible-as-claimed or nobody can find the claim to join it.
 
 ## Caching
 

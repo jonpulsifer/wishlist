@@ -98,8 +98,13 @@ export type WishCard = WishCardBase &
         claimed: boolean;
         /** How many of the `quantity` are spoken for. */
         spokenFor: number;
-        /** True only when the viewer is a claimer. Others' claims read as a count. */
-        claimedByViewer: boolean;
+        /**
+         * How many of them the viewer speaks for, `0` if none — the one part of
+         * `spokenFor` they are allowed to know the breakdown of. A boolean here
+         * threw the number away, and the optimistic unclaim below could only
+         * guess at it.
+         */
+        viewerClaim: number;
         /**
          * The other claimers, oldest first — empty unless the viewer is one of
          * them. Never includes the viewer.
@@ -118,15 +123,16 @@ export function toWishCard(row: WishRow, viewerId: string): WishCard {
   if (row.subjectId === viewerId) return { ...base, yours: true };
 
   const spokenFor = claimers.reduce((total, c) => total + c.quantity, 0);
-  const claimedByViewer = claimers.some((c) => c.userId === viewerId);
+  const viewerClaim =
+    claimers.find((c) => c.userId === viewerId)?.quantity ?? 0;
 
   return {
     ...base,
     yours: false,
     claimed: spokenFor >= row.quantity,
     spokenFor,
-    claimedByViewer,
-    joinedBy: claimedByViewer
+    viewerClaim,
+    joinedBy: viewerClaim
       ? claimers.filter((c) => c.userId !== viewerId).map((c) => c.user)
       : [],
   };
@@ -139,16 +145,20 @@ export function toWishCard(row: WishRow, viewerId: string): WishCard {
  * Four screens run this optimism and each had its own copy of it. With a
  * quantity the derivation is no longer a flipped boolean — `claimed` follows
  * from the sum — so it lives here beside the rule it has to agree with.
+ *
+ * `amount` is what a claim adds; what an unclaim takes back is `viewerClaim`,
+ * because someone who spoke for three of them is releasing three.
  */
 export function toggleViewerClaim(card: WishCard, amount = 1): WishCard {
   if (card.yours) return card;
 
-  const claiming = !card.claimedByViewer;
-  const spokenFor = Math.max(0, card.spokenFor + (claiming ? amount : -amount));
+  const claiming = card.viewerClaim === 0;
+  const delta = claiming ? amount : -card.viewerClaim;
+  const spokenFor = Math.max(0, card.spokenFor + delta);
 
   return {
     ...card,
-    claimedByViewer: claiming,
+    viewerClaim: claiming ? amount : 0,
     spokenFor,
     claimed: spokenFor >= card.quantity,
   };

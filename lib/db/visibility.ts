@@ -15,8 +15,8 @@
  *      the subject, not a snapshot taken when the Wish was added.
  *   2. Archived Wishes are hidden, except on your own profile.
  *   3. Only Wishes from the current Season's gift window are in scope.
- *   4. Your own profile shows only the Wishes you are the proposer of, so
- *      Suggestions other people made for you stay a surprise.
+ *   4. A Suggestion someone made for you is not yours to see, wherever it is
+ *      reached from — your own profile, a search result, or a Wish's own URL.
  *
  * Claim secrecy is deliberately not here. A subject sees their own list, so
  * filtering a claimed Wish out of it makes the row *vanish*, and absence is a
@@ -73,11 +73,25 @@ export type WishScope = {
 };
 
 /**
+ * Wishes about the viewer that somebody else proposed — the Suggestions rule 4
+ * keeps from them.
+ *
+ * Excluded from every scope rather than only from their own profile. A viewer
+ * shares a Family with themselves, so the unscoped clause matches their own
+ * Wishes, and the feeds only missed this because they pass `excludeOwn`. Search
+ * and a Wish's own URL do not, and both handed the subject their surprises.
+ */
+function notASurpriseForTheViewer(viewerId: string): Prisma.WishWhereInput {
+  return { NOT: { subjectId: viewerId, proposerId: { not: viewerId } } };
+}
+
+/**
  * The `where` clause for "Wishes this viewer may see".
  *
  * Viewing your own profile (`subjectId === viewerId`) takes the surprise-
  * preserving branch: archived Wishes become visible, but only the ones you
- * proposed yourself are returned. Everything else takes the full rule set.
+ * proposed yourself are returned. Everything else takes the full rule set,
+ * which withholds the same Suggestions by a different route.
  */
 export function visibleWishesWhere(
   viewerId: string,
@@ -100,6 +114,7 @@ export function visibleWishesWhere(
     ...(subjectId ? { subjectId } : {}),
     ...(excludeOwn ? { subjectId: { not: viewerId } } : {}),
     ...subjectSharesAFamilyWithViewer(viewerId),
+    ...notASurpriseForTheViewer(viewerId),
   };
 }
 

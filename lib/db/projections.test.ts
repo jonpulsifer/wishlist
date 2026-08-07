@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { toWishCard, type WishCard } from './projections.ts';
+import { toggleViewerClaim, toWishCard, type WishCard } from './projections.ts';
 
 const VIEWER = 'viewer-1';
 const SUBJECT = 'subject-1';
@@ -64,19 +64,19 @@ describe('claim secrecy', () => {
     const card = toWishCard(wishRow(claimedBy(STRANGER)), VIEWER);
     assert.equal(card.yours, false);
     assert.equal(card.yours === false && card.claimed, true);
-    assert.equal(card.yours === false && card.claimedByViewer, false);
+    assert.equal(card.yours === false && card.viewerClaim, 0);
     // Nothing anywhere in the payload names the claimer.
     assert.equal(JSON.stringify(card).includes(STRANGER), false);
   });
 
   it('tells the viewer about their own claim', () => {
     const card = toWishCard(wishRow(claimedBy(VIEWER)), VIEWER);
-    assert.equal(card.yours === false && card.claimedByViewer, true);
+    assert.equal(card.yours === false && card.viewerClaim, 1);
   });
 
   it('reads an unclaimed gift as unclaimed by the viewer', () => {
     const card = toWishCard(wishRow(), VIEWER);
-    assert.equal(card.yours === false && card.claimedByViewer, false);
+    assert.equal(card.yours === false && card.viewerClaim, 0);
   });
 
   // The whole point of the step: the person a gift is *for* receives a payload
@@ -86,7 +86,7 @@ describe('claim secrecy', () => {
     const card = toWishCard(wishRow(claimedBy(STRANGER)), SUBJECT);
     assert.equal(card.yours, true);
     assert.equal('claimed' in card, false);
-    assert.equal('claimedByViewer' in card, false);
+    assert.equal('viewerClaim' in card, false);
     assert.equal(JSON.stringify(card).includes(STRANGER), false);
   });
 
@@ -152,6 +152,42 @@ describe('quantity and splitting', () => {
   });
 });
 
+describe('toggleViewerClaim', () => {
+  const spokenFor = (card: WishCard) =>
+    card.yours === false ? card.spokenFor : -1;
+
+  it('adds what the viewer speaks for', () => {
+    const card = toWishCard(
+      wishRow({ quantity: 5, claimers: [claimer(STRANGER, 1)] }),
+      VIEWER,
+    );
+    assert.equal(spokenFor(toggleViewerClaim(card, 3)), 4);
+  });
+
+  it('releases everything the viewer spoke for, not one of it', () => {
+    // The card used to carry a boolean, so an unclaim could only subtract one:
+    // someone letting go of three of five watched the row drop to four.
+    const card = toWishCard(
+      wishRow({
+        quantity: 5,
+        claimers: [claimer(STRANGER, 1), claimer(VIEWER, 3)],
+      }),
+      VIEWER,
+    );
+    assert.equal(spokenFor(card), 4);
+
+    const released = toggleViewerClaim(card);
+    assert.equal(spokenFor(released), 1);
+    assert.equal(released.yours === false && released.viewerClaim, 0);
+    assert.equal(released.yours === false && released.claimed, false);
+  });
+
+  it('leaves the subject’s claim-free card untouched', () => {
+    const card = toWishCard(wishRow(), SUBJECT);
+    assert.equal(toggleViewerClaim(card), card);
+  });
+});
+
 describe('who the claimers may see', () => {
   it('names the others to someone already among them', () => {
     const card = toWishCard(
@@ -213,7 +249,7 @@ describe('the card the view receives', () => {
       'yours',
       'claimed',
       'spokenFor',
-      'claimedByViewer',
+      'viewerClaim',
       'joinedBy',
       'quantity',
       'subjectId',

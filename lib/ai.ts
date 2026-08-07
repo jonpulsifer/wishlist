@@ -86,8 +86,9 @@ const RECOMMENDATION_TOOL: OpenAI.Chat.ChatCompletionTool = {
  * Load the recipient, scoped to the viewer.
  *
  * `null` means the viewer shares no Wishlist with this person and has no
- * business asking. Archived Wishes are deliberately included: they say as much
- * about someone's interests as the current list does.
+ * business asking. The Wishes it reasons from are the ones the viewer could
+ * read on the person's profile and no others — a prompt is an outbound payload,
+ * and a model reading a Suggestion is a reader reading a Suggestion.
  */
 async function loadRecipient(
   personId: string,

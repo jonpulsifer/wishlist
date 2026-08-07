@@ -114,7 +114,14 @@ const getOwnProfile = unstable_cache(
   { tags: ['users'] },
 );
 
-/** A person plus everything the AI recommender reads. Viewer-scoped. */
+/**
+ * A person plus everything the AI recommender reads.
+ *
+ * Both halves are scoped, not just the person. The Wishes went in unfiltered,
+ * so the prompt for your own recommendations was built from the Suggestions
+ * other people made for you, and the prompt for someone else's was built partly
+ * from their archived ones. A model is a reader like any other.
+ */
 const getFullUserForRecommendations = unstable_cache(
   async (profileId: string, viewerId: string) =>
     prisma.user.findFirst({
@@ -122,6 +129,7 @@ const getFullUserForRecommendations = unstable_cache(
       select: {
         ...profileSelect,
         wishes: {
+          where: visibleWishesWhere(viewerId, { subjectId: profileId }),
           select: { id: true, name: true, description: true, url: true },
         },
       },

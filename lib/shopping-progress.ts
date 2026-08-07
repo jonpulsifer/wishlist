@@ -13,13 +13,11 @@ type Person = { id: string; wishCount: number };
 type ClaimedWish = { subject: { id: string } };
 
 /** A Wish as far as this module cares: does it carry a claim by the viewer. */
-type MaybeClaimed =
-  | { yours: true }
-  | { yours: false; claimedByViewer: boolean };
+type MaybeClaimed = { yours: true } | { yours: false; viewerClaim: number };
 
 /** The same rule as `shoppingProgress`, asked of one person's Wishes. */
 export function sortedForPerson(wishes: MaybeClaimed[]): boolean {
-  return wishes.some((wish) => !wish.yours && wish.claimedByViewer);
+  return wishes.some((wish) => !wish.yours && wish.viewerClaim > 0);
 }
 
 export type ShoppingProgress<P, G> = {
