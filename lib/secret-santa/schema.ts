@@ -1,5 +1,5 @@
 /**
- * The shape of a Secret Santa Event at intake.
+ * The shape of an Exchange at intake.
  *
  * Imported by both the create form and the action behind it, so the rules are
  * stated once. Previously the 2-character minimum existed only in the browser
@@ -13,14 +13,16 @@
 import { z } from 'zod';
 import { MINIMUM_PARTICIPANTS } from './draw';
 
-export const eventNameSchema = z
+export const exchangeNameSchema = z
   .string()
   .trim()
   .min(2, 'Event name must be at least 2 characters')
   .max(100, 'Event name must be at most 100 characters');
 
-export const openEventSchema = z.object({
-  name: eventNameSchema,
+export const openExchangeSchema = z.object({
+  name: exchangeNameSchema,
+  /** The Family it is held for. Its members are the only eligible participants. */
+  familyId: z.string().uuid('Invalid family'),
   participantIds: z
     .array(z.string().uuid('Invalid participant'))
     .min(
@@ -33,10 +35,10 @@ export const openEventSchema = z.object({
     ),
 });
 
-export type OpenEventInput = z.infer<typeof openEventSchema>;
+export type OpenExchangeInput = z.infer<typeof openExchangeSchema>;
 
-export const eventIdSchema = z.object({
-  eventId: z.string().uuid('Invalid event'),
+export const exchangeIdSchema = z.object({
+  exchangeId: z.string().uuid('Invalid exchange'),
 });
 
 export const exclusionPairSchema = z

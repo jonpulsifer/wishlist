@@ -44,7 +44,7 @@ memory.
 
 `subjectOfWhere` (the Wish is about you, and the authority archiving takes),
 `editableWishWhere` (subject or proposer, for editing and deleting),
-`organiserOfWhere` (you opened the Event).
+`organiserOfWhere` (you opened the Exchange).
 
 **Spread it into the `where`, do not compare after the read.** A `findUnique`
 by id followed by `if (row.subjectId !== viewer.id)` confirms the row exists to

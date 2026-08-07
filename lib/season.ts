@@ -62,39 +62,11 @@ export function currentSeason(now: Date = new Date()): Season {
 }
 
 /** An Exchange, as much of one as deciding its Occasion needs. */
-export type Exchange = { year: number | null; createdAt: Date | string };
+export type Exchange = { year: number; createdAt: Date | string };
 
-/**
- * Which Occasion an Exchange is held for.
- *
- * A null `year` reads as the year it was opened in, which is the answer the
- * backfill would have written and the only one the row carries.
- */
-export function occasionYearOf(exchange: Exchange): number {
-  return exchange.year ?? new Date(exchange.createdAt).getFullYear();
-}
-
-/**
- * Exchanges held for the Occasion in play, as a Prisma `where`.
- *
- * The `createdAt` arm is `occasionYearOf`'s fallback expressed in SQL: rows
- * carrying a `year` are matched on it, and only rows without one are judged by
- * when they were opened.
- */
+/** Exchanges held for the Occasion in play, as a Prisma `where`. */
 export function heldForCurrentOccasion(now: Date = new Date()) {
-  const { occasionYear } = currentSeason(now);
-  return {
-    OR: [
-      { year: occasionYear },
-      {
-        year: null,
-        createdAt: {
-          gte: januaryFirst(occasionYear),
-          lt: januaryFirst(occasionYear + 1),
-        },
-      },
-    ],
-  };
+  return { year: currentSeason(now).occasionYear };
 }
 
 /**
@@ -102,13 +74,7 @@ export function heldForCurrentOccasion(now: Date = new Date()) {
  * Occasion in play and the one before it.
  */
 export function withinDrawHistory(now: Date = new Date()) {
-  const { occasionYear } = currentSeason(now);
-  return {
-    OR: [
-      { year: { gte: occasionYear - 1 } },
-      { year: null, createdAt: { gte: januaryFirst(occasionYear - 1) } },
-    ],
-  };
+  return { year: { gte: currentSeason(now).occasionYear - 1 } };
 }
 
 /**
@@ -129,8 +95,8 @@ export function partitionBySeason<T extends Exchange>(
   // older than it, so the two halves always account for every item.
   return {
     year: occasionYear,
-    current: sorted.filter((item) => occasionYearOf(item) === occasionYear),
-    past: sorted.filter((item) => occasionYearOf(item) !== occasionYear),
+    current: sorted.filter((item) => item.year === occasionYear),
+    past: sorted.filter((item) => item.year !== occasionYear),
   };
 }
 

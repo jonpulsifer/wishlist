@@ -10,8 +10,8 @@ import {
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
+  getAllExchanges,
   getAllPeople,
-  getAllSecretSantaEvents,
   getSecretSantaExclusions,
 } from '@/lib/db/queries-admin';
 import { SecretSantaEventList } from './event-list';
@@ -24,7 +24,7 @@ export default async function AdminSecretSantaPage() {
   const viewer = await requireViewerOrRedirect('manage:secret-santa');
 
   const [events, exclusions, people] = await Promise.all([
-    getAllSecretSantaEvents(viewer),
+    getAllExchanges(viewer),
     getSecretSantaExclusions(viewer),
     getAllPeople(viewer, 'manage:secret-santa'),
   ]);

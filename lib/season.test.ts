@@ -6,7 +6,6 @@ import {
   daysUntilChristmas,
   heldForCurrentOccasion,
   nextChristmas,
-  occasionYearOf,
   partitionBySeason,
   withinDrawHistory,
 } from './season.ts';
@@ -72,51 +71,18 @@ describe('occasionYear', () => {
   });
 });
 
-describe('occasionYearOf', () => {
-  it('reads the column when the row carries one', () => {
-    // Opened in January, held for the Christmas before it.
-    const exchange = {
-      year: 2026,
-      createdAt: new Date('2027-01-02T00:00:00Z'),
-    };
-    assert.equal(occasionYearOf(exchange), 2026);
-  });
-
-  it('falls a null year back to when the row was opened', () => {
-    assert.equal(
-      occasionYearOf({ year: null, createdAt: new Date('2025-06-01') }),
-      2025,
-    );
-    assert.equal(
-      occasionYearOf({ year: null, createdAt: '2023-01-09T10:00:00Z' }),
-      2023,
-    );
-  });
-});
-
 describe('heldForCurrentOccasion', () => {
-  it('matches the year column outright', () => {
-    const [byYear] = heldForCurrentOccasion(EARLY_JANUARY).OR;
-    assert.deepEqual(byYear, { year: 2026 });
-  });
-
-  it('judges only null-year rows by when they were opened', () => {
-    const [, byCreatedAt] = heldForCurrentOccasion(EARLY_JANUARY).OR;
-    assert.equal(byCreatedAt.year, null);
-    assert.deepEqual(byCreatedAt.createdAt, {
-      gte: new Date('2026-01-01'),
-      lt: new Date('2027-01-01'),
-    });
+  it('is the Occasion in play, which in January is the year before', () => {
+    assert.deepEqual(heldForCurrentOccasion(EARLY_JANUARY), { year: 2026 });
   });
 });
 
 describe('withinDrawHistory', () => {
   it('reaches back one Occasion, not one calendar year', () => {
-    const [byYear, byCreatedAt] = withinDrawHistory(EARLY_JANUARY).OR;
     // In January 2027 the Occasion in play is 2026, so history starts at 2025.
-    assert.deepEqual(byYear, { year: { gte: 2025 } });
-    assert.equal(byCreatedAt.year, null);
-    assert.deepEqual(byCreatedAt.createdAt, { gte: new Date('2025-01-01') });
+    assert.deepEqual(withinDrawHistory(EARLY_JANUARY), {
+      year: { gte: 2025 },
+    });
   });
 });
 
@@ -164,7 +130,7 @@ describe('partitionBySeason', () => {
 
   it('accepts serialised dates, as a client component receives them', () => {
     const { current } = partitionBySeason(
-      [{ id: 'x', year: null, createdAt: '2026-03-01T00:00:00Z' }],
+      [{ id: 'x', year: 2026, createdAt: '2026-03-01T00:00:00Z' }],
       MID_SEASON,
     );
     assert.equal(current.length, 1);

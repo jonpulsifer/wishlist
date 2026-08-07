@@ -212,8 +212,8 @@ describe('toExclusionMap', () => {
     // The schema writes both sides, but only one is ever read back; a
     // half-written pair must not let the draw match the excluded couple.
     const map = toExclusionMap([
-      { id: 'a', secretSantaDoNotMatchWith: [{ id: 'b' }] },
-      { id: 'b', secretSantaDoNotMatchWith: [] },
+      { id: 'a', excludes: [{ id: 'b' }] },
+      { id: 'b', excludes: [] },
     ]);
 
     assert.ok(map.get('a')?.has('b'));
@@ -225,10 +225,10 @@ describe('toExclusionMap', () => {
     // a and b would need c and no derangement exists.
     const ids = ['a', 'b', 'c', 'd'];
     const exclusions = toExclusionMap([
-      { id: 'a', secretSantaDoNotMatchWith: [{ id: 'b' }] },
-      { id: 'b', secretSantaDoNotMatchWith: [] },
-      { id: 'c', secretSantaDoNotMatchWith: [] },
-      { id: 'd', secretSantaDoNotMatchWith: [] },
+      { id: 'a', excludes: [{ id: 'b' }] },
+      { id: 'b', excludes: [] },
+      { id: 'c', excludes: [] },
+      { id: 'd', excludes: [] },
     ]);
 
     for (let seed = 1; seed <= 100; seed++) {
