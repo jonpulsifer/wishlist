@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { PeekingSanta } from '@/components/peeking-santa';
 import { SnowfallBackground } from '@/components/snowfall-background';
 import { Loading } from '@/components/ui/loading';
+import { INVITE_COOKIE_NAME } from '@/lib/invites';
 import { daysUntilChristmas } from '@/lib/season';
-import { WISHLIST_INVITE_COOKIE_NAME } from '@/lib/wishlist-invites';
 
 import santa from '@/public/santaicon.png';
 
@@ -22,9 +22,7 @@ function getCookieValue(name: string) {
 
 function LoginPage() {
   const [showLoading, setShowLoading] = useState(false);
-  const [inviteToken] = useState(() =>
-    getCookieValue(WISHLIST_INVITE_COOKIE_NAME),
-  );
+  const [inviteToken] = useState(() => getCookieValue(INVITE_COOKIE_NAME));
   // After mount, not during render: the server counts in UTC and the browser
   // in local time, which is a hydration mismatch waiting to happen.
   const [sleeps, setSleeps] = useState<number | null>(null);

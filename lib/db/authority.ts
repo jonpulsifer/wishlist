@@ -33,6 +33,11 @@ export function editableWishWhere(viewerId: string): Prisma.WishWhereInput {
   return { OR: [subjectOfWhere(viewerId), { proposerId: viewerId }] };
 }
 
+/** You are in this Family. Membership is the whole of the check. */
+export function memberOfWhere(viewerId: string): Prisma.FamilyWhereInput {
+  return { memberships: { some: { userId: viewerId } } };
+}
+
 /** The Exchange is yours: you opened it. */
 export function organiserOfWhere(viewerId: string): Prisma.ExchangeWhereInput {
   return { organiserId: viewerId };

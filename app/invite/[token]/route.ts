@@ -3,9 +3,9 @@ import { revalidateGiftRelatedCaches } from '@/app/_actions/gifts';
 import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
-  WISHLIST_INVITE_COOKIE_MAX_AGE_SECONDS,
-  WISHLIST_INVITE_COOKIE_NAME,
-} from '@/lib/wishlist-invites';
+  INVITE_COOKIE_MAX_AGE_SECONDS,
+  INVITE_COOKIE_NAME,
+} from '@/lib/invites';
 
 export async function GET(
   request: NextRequest,
@@ -18,10 +18,10 @@ export async function GET(
   if (!viewer) {
     const response = NextResponse.redirect(new URL('/login', request.url));
     response.cookies.set({
-      name: WISHLIST_INVITE_COOKIE_NAME,
+      name: INVITE_COOKIE_NAME,
       value: token,
       path: '/',
-      maxAge: WISHLIST_INVITE_COOKIE_MAX_AGE_SECONDS,
+      maxAge: INVITE_COOKIE_MAX_AGE_SECONDS,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       httpOnly: false,
@@ -31,19 +31,22 @@ export async function GET(
 
   const response = NextResponse.redirect(new URL('/wishlists', request.url));
 
-  // Signed in: validate the token and join. This is the only door in.
-  const invite = await db.wishlistInvite.findFirst({
+  // Signed in: validate the token and join. This is the only door in, and the
+  // only irreversible act in the model — so a token that is spent, revoked or
+  // out of date opens nothing, and a forwarded link does nothing at all.
+  const invite = await db.invite.findFirst({
     where: {
       token,
       revokedAt: null,
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      redeemedAt: null,
+      expiresAt: { gt: new Date() },
     },
-    select: { wishlistId: true },
+    select: { id: true, familyId: true },
   });
 
   if (!invite) {
     response.cookies.set({
-      name: WISHLIST_INVITE_COOKIE_NAME,
+      name: INVITE_COOKIE_NAME,
       value: '',
       path: '/',
       maxAge: 0,
@@ -51,17 +54,27 @@ export async function GET(
     return response;
   }
 
-  // The pair is the primary key, so following the same link twice is a no-op
-  // rather than a duplicate — no read-then-write, and no race between the two.
-  const { count } = await db.membership.createMany({
-    data: { familyId: invite.wishlistId, userId: viewer.id },
-    skipDuplicates: true,
+  // Redemption is claimed with the same statement that reads it: two people
+  // following one link race here, and `updateMany` on the unredeemed row means
+  // exactly one of them wins. The membership only follows if it did.
+  const { count: claimed } = await db.invite.updateMany({
+    where: { id: invite.id, redeemedAt: null },
+    data: { redeemedAt: new Date(), redeemedById: viewer.id },
   });
 
-  if (count > 0) revalidateGiftRelatedCaches();
+  if (claimed > 0) {
+    // The pair is the primary key, so someone already in the Family simply
+    // stays in it — spending their own link on nothing, which is the correct
+    // cost of following one twice.
+    await db.membership.createMany({
+      data: { familyId: invite.familyId, userId: viewer.id },
+      skipDuplicates: true,
+    });
+    revalidateGiftRelatedCaches();
+  }
 
   response.cookies.set({
-    name: WISHLIST_INVITE_COOKIE_NAME,
+    name: INVITE_COOKIE_NAME,
     value: '',
     path: '/',
     maxAge: 0,

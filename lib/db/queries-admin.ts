@@ -2,7 +2,7 @@
  * The reads behind the admin screens.
  *
  * These used to be built with `defineAction`, which made each of them a
- * POST-able RPC endpoint returning every role, wishlist or user in the install,
+ * POST-able RPC endpoint returning every role, Family or user in the install,
  * and forced the pages that called them to narrow on `result.success` and
  * hand-render a second copy of the page chrome for the failure branch.
  *
@@ -66,18 +66,6 @@ export async function getAllUsersForRoles(viewer: Viewer) {
       roles: {
         select: { id: true, role: { select: { id: true, name: true } } },
       },
-    },
-    orderBy: { name: 'asc' },
-  });
-}
-
-export async function getAllFamilies(viewer: Viewer) {
-  assert(viewer, 'manage:wishlists');
-  return db.family.findMany({
-    select: {
-      id: true,
-      name: true,
-      _count: { select: { memberships: true } },
     },
     orderBy: { name: 'asc' },
   });
