@@ -59,12 +59,14 @@ model User {
   memberships               Membership[]
   accounts                  Account[]
   sessions                  Session[]
-  createdEvents             SecretSantaEvent[]       @relation("CreatedEvents")
-  secretSantaParticipations SecretSantaParticipant[]
-  secretSantaAssignedTo     SecretSantaParticipant[] @relation("AssignedTo")
-  secretSantaAssignedBy     SecretSantaParticipant[] @relation("AssignedBy")
-  secretSantaDoNotMatchWith User[]                   @relation("SecretSantaExclusions")
-  secretSantaExcludedBy     User[]                   @relation("SecretSantaExclusions")
+  organisedExchanges        Exchange[]               @relation("Organiser")
+  participations            Participant[]
+  assignedTo                Participant[]            @relation("AssignedTo")
+  assignedBy                Participant[]            @relation("AssignedBy")
+  /// Symmetric by construction: creating one connects both directions, so the
+  /// Draw sees the pair whichever side it reads.
+  excludes                  User[]                   @relation("Exclusions")
+  excludedBy                User[]                   @relation("Exclusions")
   roles                     UserRole[]               @relation("UserRoles")
   createdWishlistInvites    WishlistInvite[]         @relation("WishlistInvitesCreatedBy")
 }
@@ -139,6 +141,7 @@ model Family {
   updatedAt   DateTime         @updatedAt
   name        String
   memberships Membership[]
+  exchanges   Exchange[]
   invites     WishlistInvite[]
 
   @@index([createdAt])
@@ -179,33 +182,40 @@ model WishlistInvite {
   @@index([token])
 }
 
-model SecretSantaEvent {
+/// A round of giving one Family holds for one Occasion.
+///
+/// The Family bound is not bookkeeping: a Family is the only visibility edge
+/// there is, so participants drawn from two of them could be paired into an
+/// obligation the visibility rules make impossible to fulfil (ADR-0001). An
+/// Exchange grants no visibility of its own; being bound to a Family is what
+/// keeps a santa able to see their recipient's Wishes.
+model Exchange {
   id   String @id @default(uuid()) @db.Uuid
   name String
-  /// The Occasion year this exchange is held for, which is not always the year
+  /// The Occasion year this Exchange is held for, which is not always the year
   /// it was opened in — one drawn on January 2nd is still for the Christmas
-  /// just gone. Nullable because there are no migrations to backfill with:
-  /// `occasionYearOf` reads a null as the `createdAt` year, which is what the
-  /// backfill would have written.
-  year Int?
+  /// just gone.
+  year Int
 
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-  createdBy    User                     @relation("CreatedEvents", fields: [createdById], references: [id])
-  createdById  String                   @db.Uuid
-  participants SecretSantaParticipant[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  organiser    User          @relation("Organiser", fields: [organiserId], references: [id])
+  organiserId  String        @db.Uuid
+  family       Family        @relation(fields: [familyId], references: [id])
+  familyId     String        @db.Uuid
+  participants Participant[]
 }
 
-model SecretSantaParticipant {
-  id           String           @id @default(uuid()) @db.Uuid
-  event        SecretSantaEvent @relation(fields: [eventId], references: [id])
-  eventId      String           @db.Uuid
-  user         User             @relation(fields: [userId], references: [id])
-  userId       String           @db.Uuid
-  assignedTo   User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
-  assignedToId String?          @db.Uuid
-  assignedBy   User?            @relation("AssignedBy", fields: [assignedById], references: [id])
-  assignedById String?          @db.Uuid
+model Participant {
+  id           String   @id @default(uuid()) @db.Uuid
+  exchange     Exchange @relation(fields: [exchangeId], references: [id])
+  exchangeId   String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @db.Uuid
+  assignedTo   User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?  @db.Uuid
+  assignedBy   User?    @relation("AssignedBy", fields: [assignedById], references: [id])
+  assignedById String?  @db.Uuid
 
-  @@unique([eventId, userId])
+  @@unique([exchangeId, userId])
 }

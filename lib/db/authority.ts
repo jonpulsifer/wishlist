@@ -33,9 +33,7 @@ export function editableWishWhere(viewerId: string): Prisma.WishWhereInput {
   return { OR: [subjectOfWhere(viewerId), { proposerId: viewerId }] };
 }
 
-/** The Secret Santa Event is yours: you opened it. */
-export function organiserOfWhere(
-  viewerId: string,
-): Prisma.SecretSantaEventWhereInput {
-  return { createdById: viewerId };
+/** The Exchange is yours: you opened it. */
+export function organiserOfWhere(viewerId: string): Prisma.ExchangeWhereInput {
+  return { organiserId: viewerId };
 }

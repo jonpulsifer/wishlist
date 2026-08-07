@@ -18,15 +18,15 @@ import {
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
-import { getSecretSantaEvents } from '@/lib/db/queries-cached';
-import { occasionYearOf, partitionBySeason } from '@/lib/season';
+import { getExchanges } from '@/lib/db/queries-cached';
+import { partitionBySeason } from '@/lib/season';
 
 export default async function SecretSantaPage() {
   const viewer = await requireViewerOrRedirect();
 
   // Get all assignments for the viewer and events
   const [assignments, events] = await Promise.all([
-    db.secretSantaParticipant.findMany({
+    db.participant.findMany({
       where: {
         userId: viewer.id,
       },
@@ -41,14 +41,14 @@ export default async function SecretSantaPage() {
             shoe_size: true,
           },
         },
-        event: true,
+        exchange: true,
       },
     }),
-    getSecretSantaEvents(viewer.id),
+    getExchanges(viewer.id),
   ]);
 
   // Create a map of assignments by eventId for easy lookup
-  const assignmentsByEvent = new Map(assignments.map((a) => [a.eventId, a]));
+  const assignmentsByEvent = new Map(assignments.map((a) => [a.exchangeId, a]));
 
   const {
     current: currentEvents,
@@ -233,7 +233,7 @@ export default async function SecretSantaPage() {
                 <div className="grid gap-4 opacity-60">
                   {pastEvents.map((event) => {
                     const assignment = assignmentsByEvent.get(event.id);
-                    const eventYear = occasionYearOf(event);
+                    const eventYear = event.year;
 
                     return (
                       <Card key={event.id} className="bg-muted/30">

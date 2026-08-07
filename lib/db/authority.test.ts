@@ -34,7 +34,7 @@ describe('editableWishWhere', () => {
 });
 
 describe('organiserOfWhere', () => {
-  it('is the person who opened the event', () => {
-    assert.deepEqual(organiserOfWhere(VIEWER), { createdById: VIEWER });
+  it('is the person who opened the Exchange', () => {
+    assert.deepEqual(organiserOfWhere(VIEWER), { organiserId: VIEWER });
   });
 });

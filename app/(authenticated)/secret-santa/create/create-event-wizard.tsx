@@ -6,10 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import {
-  assignSecretSantaParticipants,
-  openSecretSantaEvent,
-} from '@/app/_actions/secret-santa';
+import { drawExchange, openExchange } from '@/app/_actions/secret-santa';
 import { AppHeader } from '@/components/app-header';
 import {
   Breadcrumb,
@@ -47,26 +44,42 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { useAction } from '@/hooks/use-action';
-import type { PersonRef } from '@/lib/db/projections';
 import {
-  eventNameSchema,
+  exchangeNameSchema,
   MINIMUM_PARTICIPANTS,
 } from '@/lib/secret-santa/schema';
 
 // The same schema the action validates against, rather than a second copy that
 // only ever ran in the browser.
-const formSchema = z.object({ name: eventNameSchema });
+const formSchema = z.object({ name: exchangeNameSchema });
 
-export function CreateEventWizard({ people }: { people: PersonRef[] }) {
+/** A Family the viewer belongs to, and the people in it. */
+export type FamilyOption = {
+  id: string;
+  name: string;
+  members: Array<{ id: string; name: string | null; email: string }>;
+};
+
+export function CreateEventWizard({ families }: { families: FamilyOption[] }) {
   const [step, setStep] = useState(1);
+  const [familyId, setFamilyId] = useState(families[0]?.id ?? '');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const router = useRouter();
 
-  const users = people;
+  // An Exchange is held by one Family, and only its members can be drawn — a
+  // santa has to be able to see their recipient's Wishes.
+  const users = families.find((f) => f.id === familyId)?.members ?? [];
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,8 +89,8 @@ export function CreateEventWizard({ people }: { people: PersonRef[] }) {
   });
 
   // The event is announced by the draw that follows it, not on its own.
-  const open = useAction(openSecretSantaEvent, { success: false });
-  const assign = useAction(assignSecretSantaParticipants, {
+  const open = useAction(openExchange, { success: false });
+  const assign = useAction(drawExchange, {
     // The event exists either way; only the draw failed, and the list is where
     // that is visible.
     onError: () => router.push('/secret-santa'),
@@ -109,11 +122,12 @@ export function CreateEventWizard({ people }: { people: PersonRef[] }) {
     try {
       const created = await open.run({
         name: form.getValues('name'),
+        familyId,
         participantIds: selectedUsers,
       });
       if (!created) return;
 
-      await assign.run({ eventId: created.id });
+      await assign.run({ exchangeId: created.id });
     } finally {
       setConfirmDialogOpen(false);
     }
@@ -219,7 +233,34 @@ export function CreateEventWizard({ people }: { people: PersonRef[] }) {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit">Continue to Participants</Button>
+                  <div className="space-y-2">
+                    <FormLabel htmlFor="familyId">Family</FormLabel>
+                    <Select
+                      value={familyId}
+                      onValueChange={(id) => {
+                        setFamilyId(id);
+                        setSelectedUsers([]);
+                      }}
+                    >
+                      <SelectTrigger id="familyId">
+                        <SelectValue placeholder="Pick a family" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {families.map((family) => (
+                          <SelectItem key={family.id} value={family.id}>
+                            {family.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Everyone drawn comes from this family, so each santa can
+                      see what their person asked for.
+                    </FormDescription>
+                  </div>
+                  <Button type="submit" disabled={!familyId}>
+                    Continue to Participants
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -239,9 +280,7 @@ export function CreateEventWizard({ people }: { people: PersonRef[] }) {
               <div className="space-y-4">
                 <div className="border rounded-md">
                   <div className="p-4 flex justify-between items-center border-b">
-                    <span className="font-medium">
-                      People in your Wishlists
-                    </span>
+                    <span className="font-medium">People in this family</span>
                     <span className="text-sm text-muted-foreground">
                       {selectedUsers.length} selected
                     </span>
@@ -249,7 +288,7 @@ export function CreateEventWizard({ people }: { people: PersonRef[] }) {
                   <div className="p-2 max-h-96 overflow-y-auto">
                     {users.length === 0 ? (
                       <div className="text-center p-4 text-muted-foreground">
-                        No people found in your wishlists
+                        Nobody else is in this family yet
                       </div>
                     ) : (
                       <div className="grid gap-2">

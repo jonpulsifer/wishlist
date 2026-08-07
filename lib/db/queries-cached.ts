@@ -208,21 +208,26 @@ const getLatestVisibleWishesForUserById = unstable_cache(
 );
 
 /**
- * Secret Santa events.
+ * Exchanges the viewer's Families hold.
+ *
+ * Scoped by the Family the Exchange is bound to: before that column existed
+ * this listed every Exchange in the install, with its participants' names, to
+ * anyone signed in.
  *
  * Selects only what the page renders. The previous version pulled every
- * participant's `assignedTo` as a full `User` row for every event, so the whole
- * assignment graph reached the caller.
+ * participant's `assignedTo` as a full `User` row for every Exchange, so the
+ * whole assignment graph reached the caller.
  */
-const getSecretSantaEvents = unstable_cache(
+const getExchanges = unstable_cache(
   async (viewerId: string) => {
-    const events = await prisma.secretSantaEvent.findMany({
+    const exchanges = await prisma.exchange.findMany({
+      where: { family: visibleFamiliesWhere(viewerId) },
       select: {
         id: true,
         name: true,
         year: true,
         createdAt: true,
-        createdById: true,
+        organiserId: true,
         participants: {
           select: {
             userId: true,
@@ -234,21 +239,21 @@ const getSecretSantaEvents = unstable_cache(
       orderBy: { createdAt: 'desc' },
     });
 
-    return events.map(({ participants, ...event }) => {
+    return exchanges.map(({ participants, ...exchange }) => {
       const isParticipating = participants.some((p) => p.userId === viewerId);
       const hasAssignments = participants.some((p) => p.assignedToId !== null);
       return {
-        ...event,
+        ...exchange,
         participants: participants.map(({ user }) => user),
         participantCount: participants.length,
         isParticipating,
         hasAssignments,
         canJoin: !isParticipating && !hasAssignments,
-        isOwner: event.createdById === viewerId,
+        isOrganiser: exchange.organiserId === viewerId,
       };
     });
   },
-  ['secretSantaEvents'],
+  ['exchanges'],
   { tags: ['secretSanta', 'users'] },
 );
 
@@ -282,12 +287,12 @@ const getWishWithAccessCheck = unstable_cache(
 
 export {
   getClaimedWishesForMe,
+  getExchanges,
   getFamiliesWithMembers,
   getFullUserForRecommendations,
   getLatestVisibleWishesForUserById,
   getOwnProfile,
   getPeopleForNewWishModal,
-  getSecretSantaEvents,
   getSortedVisibleWishesForUser,
   getUsersForPeoplePage,
   getVisiblePeopleRefs,

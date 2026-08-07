@@ -2,7 +2,7 @@
 
 import { CalendarIcon, Trash2, Users } from 'lucide-react';
 import { startTransition, useOptimistic } from 'react';
-import { deleteSecretSantaEvent } from '@/app/_actions/secret-santa';
+import { deleteExchange } from '@/app/_actions/secret-santa';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,9 +28,9 @@ import { partitionBySeason } from '@/lib/season';
 type SecretSantaEvent = {
   id: string;
   name: string;
-  year: number | null;
+  year: number;
   createdAt: Date;
-  createdBy: {
+  organiser: {
     id: string;
     name: string | null;
     email: string;
@@ -57,7 +57,7 @@ type EventListProps = {
 export function SecretSantaEventList({ events }: EventListProps) {
   const [optimisticEvents, setOptimisticEvents] = useOptimistic(events);
 
-  const { run: handleDelete } = useAction(deleteSecretSantaEvent, {
+  const { run: handleDelete } = useAction(deleteExchange, {
     optimistic: (eventId) => {
       const before = optimisticEvents;
       startTransition(() =>
@@ -149,7 +149,7 @@ function EventCard({
                   {event.participants.length} participants
                 </span>
                 <span>
-                  Created by: {event.createdBy.name || event.createdBy.email}
+                  Organiser: {event.organiser.name || event.organiser.email}
                 </span>
               </div>
               <div className="text-xs">

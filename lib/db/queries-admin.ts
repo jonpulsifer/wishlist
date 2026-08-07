@@ -83,15 +83,15 @@ export async function getAllFamilies(viewer: Viewer) {
   });
 }
 
-export async function getAllSecretSantaEvents(viewer: Viewer) {
+export async function getAllExchanges(viewer: Viewer) {
   assert(viewer, 'manage:secret-santa');
-  return db.secretSantaEvent.findMany({
+  return db.exchange.findMany({
     select: {
       id: true,
       name: true,
       year: true,
       createdAt: true,
-      createdBy: { select: adminPersonSelect },
+      organiser: { select: adminPersonSelect },
       participants: {
         select: {
           id: true,
@@ -133,11 +133,8 @@ export async function getSecretSantaExclusions(
   assert(viewer, 'manage:secret-santa');
 
   const people = await db.user.findMany({
-    where: { secretSantaDoNotMatchWith: { some: {} } },
-    select: {
-      ...adminPersonSelect,
-      secretSantaDoNotMatchWith: { select: adminPersonSelect },
-    },
+    where: { excludes: { some: {} } },
+    select: { ...adminPersonSelect, excludes: { select: adminPersonSelect } },
     orderBy: { name: 'asc' },
   });
 
@@ -145,7 +142,7 @@ export async function getSecretSantaExclusions(
   const pairs: ExclusionPairRow[] = [];
 
   for (const person of people) {
-    for (const other of person.secretSantaDoNotMatchWith) {
+    for (const other of person.excludes) {
       const key = [person.id, other.id].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);

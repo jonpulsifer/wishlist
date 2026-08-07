@@ -179,7 +179,7 @@ export function drawAssignments(
 export function toExclusionMap(
   rows: Array<{
     id: ParticipantId;
-    secretSantaDoNotMatchWith: Array<{ id: ParticipantId }>;
+    excludes: Array<{ id: ParticipantId }>;
   }>,
 ): Map<ParticipantId, Set<ParticipantId>> {
   const map = new Map<ParticipantId, Set<ParticipantId>>();
@@ -190,7 +190,7 @@ export function toExclusionMap(
   };
 
   for (const row of rows) {
-    for (const excluded of row.secretSantaDoNotMatchWith) {
+    for (const excluded of row.excludes) {
       add(row.id, excluded.id);
       add(excluded.id, row.id);
     }

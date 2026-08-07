@@ -58,13 +58,13 @@ export default async function HomePage() {
     getSortedVisibleWishesForUser({ userId: viewer.id }),
     getVisibleWishesForUserById(viewer.id, viewer.id),
     getLatestVisibleWishesForUserById(viewer.id),
-    db.secretSantaParticipant.findMany({
-      where: { userId: viewer.id, event: heldForCurrentOccasion() },
+    db.participant.findMany({
+      where: { userId: viewer.id, exchange: heldForCurrentOccasion() },
       include: {
-        event: { select: { id: true, name: true } },
+        exchange: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true, email: true } },
       },
-      orderBy: { event: { createdAt: 'desc' } },
+      orderBy: { exchange: { createdAt: 'desc' } },
     }),
   ]);
 
@@ -168,7 +168,7 @@ export default async function HomePage() {
             <CardContent className="px-2">
               <ul>
                 {secretSantaParticipations.map((p) => (
-                  <li key={p.event.id}>
+                  <li key={p.exchange.id}>
                     <Link
                       href={
                         p.assignedTo
@@ -179,7 +179,7 @@ export default async function HomePage() {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
-                          {p.event.name || 'Event'}
+                          {p.exchange.name || 'Event'}
                         </p>
                         <p className="truncate text-sm font-medium">
                           {p.assignedTo

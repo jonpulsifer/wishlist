@@ -522,7 +522,7 @@ year.
   nothing specific. Birthdays as Occasions — one receiver, and modelling them here
   would put a nullable "whose is it" discriminator on every reader.
 - **Schema today**: no table. An [Exchange](#exchange) names the Occasion it is held for
-  by year alone, in `SecretSantaEvent.year`.
+  by year alone, in `Exchange.year`, which is required.
 
 ## Season
 
@@ -574,19 +574,15 @@ Draw shaped by constraints they cannot inspect or override.
   exclusions, and exclusions the Organiser sets — the first contradicts
   [#152](https://github.com/jonpulsifer/wishlist/issues/152)'s finding that they are
   permanent, and the second puts the shape of a draw in the hands of someone in it.
-- **Schema today**: `model SecretSantaEvent`, carrying the `year` it is held for and no
-  Family at all. `lib/season.ts` owns the reading of the year: `occasionYearOf` falls a
-  null back to `createdAt`, and the Occasion in play turns over on April 1st rather than
-  New Year, so an Exchange opened on January 2nd is for the Christmas just gone. That
-  fallback exists only because `year` is nullable, and `year` is nullable only because
-  there were no migrations to backfill it with — so both retire together
-  ([#161](https://github.com/jonpulsifer/wishlist/issues/161)). Because no Exchange
-  records a Family, whether every past Exchange's participants still share one is
-  **unknown**; where they do not, a santa cannot see the Wishes of the person they were
-  assigned, and the backfill is what would reveal it. Exclusions are the
-  `secretSantaDoNotMatchWith` self-relation on `User`, created and deleted only behind
-  `manage:secret-santa`, so today they are an administrator's setting rather than the
-  subject's — and `/admin/secret-santa` is the only place in the app one can be made.
+- **Schema today**: `model Exchange`, with a required `year` and a required `familyId`.
+  `lib/season.ts` owns the reading of the year: the Occasion in play turns over on
+  April 1st rather than New Year, so an Exchange opened on January 2nd is for the
+  Christmas just gone. The Family bound was backfilled by rule — the one Family every
+  participant of an Exchange belongs to — and every production Exchange had one, so no
+  santa was left unable to see their recipient. Exclusions are the `excludes` self-relation
+  on `User`, created and deleted only behind `manage:secret-santa`, so today they are an
+  administrator's setting rather than the subject's — and `/admin/secret-santa` is the
+  only place in the app one can be made.
 
 ## Organiser
 
@@ -613,21 +609,19 @@ should be editing, and an undrawn one is a stale row the next Occasion's Exchang
 replaces. Someone who wants to help runs their own Exchange; that is the whole answer to
 co-organising, and it is why nobody needed a per-Family role to get it.
 
-- **Grounded**: half of it, unnamed. `app/_actions/secret-santa.ts:68` already restricts
-  the Draw to `event.createdById` — per-object ownership, hand-written against one action
-  and known to no shared module.
-- **Anticipated**: the word, and the other acts gathering under it
-  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+- **Grounded**: the word and the column. `organiserOfWhere` in `lib/db/authority.ts` is
+  the shared module the rule lives in, and the Draw composes its `where` from it.
+- **Anticipated**: the remaining acts gathering under it — deleting an Exchange is still
+  `manage:secret-santa`'s ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
 - **Rejected**: co-organisers and transfer — they buy succession for an object that
   outlives nothing. Authority following participation, so that any participant may run the
   Exchange — the Draw is irreversible once assignments are written, and any of thirty
   people could fire it early. An instance administrator keeping the destructive acts as a
   backstop for an abandoned Exchange, which was the last job anything global had.
-- **Schema today**: `SecretSantaEvent.createdById`. The acts are split against it rather
-  than gathered: the creator may run the Draw but not delete the Exchange, while
-  `manage:secret-santa` may delete one it has nothing to do with. Opening an Exchange is
-  gated by nothing at all, and its participant list is never checked against what the
-  viewer may see ([#185](https://github.com/jonpulsifer/wishlist/issues/185)).
+- **Schema today**: `Exchange.organiserId`. The acts are still split against it: the
+  Organiser runs the Draw but cannot delete the Exchange, which `manage:secret-santa` may
+  do to one it has nothing to do with. Opening one is gated by membership of the Family
+  it is held for, and its participants must be members of that Family.
 
 ## Draw
 
@@ -643,10 +637,10 @@ constraint shaping it.
 
 - **Grounded**: entirely, including who fires it — `drawAssignments`, `DrawInput`,
   `DrawResult` and the tests already use this word for exactly this meaning, and
-  `assignSecretSantaParticipants` already refuses anyone but the creator and refuses a
+  `drawExchange` already refuses anyone but the Organiser and refuses a
   second run.
-- **Schema today**: the `assignedToId` and `assignedById` columns on
-  `SecretSantaParticipant`. The act has no row of its own.
+- **Schema today**: the `assignedToId` and `assignedById` columns on `Participant`. The
+  act has no row of its own.
 
 ---
 
