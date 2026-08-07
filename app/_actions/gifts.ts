@@ -5,7 +5,11 @@ import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
 import { editableWishWhere, subjectOfWhere } from '@/lib/db/authority';
 import db from '@/lib/db/client';
-import { visibleProfileWhere } from '@/lib/db/visibility';
+import {
+  claimedByViewerWhere,
+  visibleProfileWhere,
+  visibleWishesWhere,
+} from '@/lib/db/visibility';
 import type { Prisma } from '@/prisma/generated/client';
 
 // Reached from the invite route handler as well as from actions, so this stays
@@ -41,7 +45,7 @@ const GiftSchema = z.object({
 
 export type GiftFormData = z.infer<typeof GiftSchema>;
 
-const giftIdSchema = z.object({ id: z.string().min(1, 'Gift ID is required') });
+const giftIdSchema = z.object({ id: z.uuid('Gift ID is required') });
 
 /**
  * Load a Wish the viewer holds the given authority over, or throw.
@@ -91,7 +95,7 @@ export const addGift = defineAction(
 );
 
 export const deleteGift = defineAction(
-  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  { input: z.uuid('Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
     // Deleting is how a proposer withdraws a Suggestion, so it stays open to
     // both people.
@@ -102,7 +106,7 @@ export const deleteGift = defineAction(
 );
 
 export const archiveGift = defineAction(
-  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  { input: z.uuid('Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
     // Only the subject archives. A proposer archiving their own Suggestion
     // would strand the row where nobody — themselves included — can reach it.
@@ -115,7 +119,7 @@ export const archiveGift = defineAction(
 );
 
 export const unarchiveGift = defineAction(
-  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  { input: z.uuid('Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
     const wish = await loadWish(id, subjectOfWhere(viewer.id));
     if (!wish.archived) throw new ActionError('Gift is not archived');
@@ -169,23 +173,30 @@ export const updateGift = defineAction(
  * each of them a snapshot taken before the other wrote. A guard written as one
  * `INSERT ... WHERE (SELECT SUM(...))` reads exactly the same way and is no
  * safer; only the lock serialises them.
+ *
+ * The lock is a lock and nothing more: which Wishes this viewer may reach is
+ * `visibleWishesWhere`, the same clause the pages read through, because an
+ * action is a POST endpoint and the raw `SELECT ... FOR UPDATE` matched on a
+ * uuid alone. Anyone signed in could lock a stranger's gift out of their own
+ * Family's reach, and read its name back in the confirmation.
  */
 export const claimGift = defineAction(
   {
     input: z.object({
-      id: z.string().min(1, 'Gift ID is required'),
+      id: z.uuid('Gift ID is required'),
       quantity: quantitySchema.optional(),
     }),
     invalidates: GIFT_CACHES,
   },
   async ({ viewer, input: { id, quantity = 1 } }) => {
     return db.$transaction(async (tx) => {
-      // `FOR UPDATE` on the Wish makes every claimer of it queue here. Returns
-      // no rows for an id that does not exist, which is the same answer as a
-      // Wish the viewer may not reach.
-      const [wish] = await tx.$queryRaw<
-        Array<{ name: string; quantity: number; subjectId: string }>
-      >`SELECT "name", "quantity", "subjectId" FROM "Wish" WHERE "id" = ${id}::uuid FOR UPDATE`;
+      // `FOR UPDATE` on the Wish makes every claimer of it queue here.
+      await tx.$queryRaw`SELECT 1 FROM "Wish" WHERE "id" = ${id}::uuid FOR UPDATE`;
+
+      const wish = await tx.wish.findFirst({
+        where: { id, ...visibleWishesWhere(viewer.id) },
+        select: { name: true, quantity: true, subjectId: true },
+      });
 
       if (!wish) throw new ActionError('Gift not found');
       if (wish.subjectId === viewer.id)
@@ -217,21 +228,23 @@ export const claimGift = defineAction(
   },
 );
 
+/**
+ * Let go of a Wish you spoke for.
+ *
+ * "A Wish you have claimed" is already a `where` — the one the Claimed page
+ * reads through — so it is the whole of the lookup. A bare `findUnique` here
+ * told anyone holding a uuid whether the Wish existed and what it was called
+ * before deciding they had no claim on it.
+ */
 export const unclaimGift = defineAction(
-  { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
+  { input: z.uuid('Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const wish = await db.wish.findUnique({
-      where: { id },
-      select: {
-        name: true,
-        claimers: { where: { userId: viewer.id }, select: { userId: true } },
-      },
+    const wish = await db.wish.findFirst({
+      where: { id, ...claimedByViewerWhere(viewer.id) },
+      select: { name: true },
     });
 
-    if (!wish) throw new ActionError('Gift not found');
-    if (wish.claimers.length === 0) {
-      throw new ActionError('You have not claimed this gift');
-    }
+    if (!wish) throw new ActionError('You have not claimed this gift');
 
     await db.claimer.delete({
       where: { wishId_userId: { wishId: id, userId: viewer.id } },
