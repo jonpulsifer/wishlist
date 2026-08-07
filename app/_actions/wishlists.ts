@@ -14,10 +14,9 @@ const familyIdSchema = z.string().uuid('Invalid family');
 /**
  * Open a Family, with yourself in it.
  *
- * No capability: there is nothing to grant. A Family you are the only member of
- * discloses nothing to anyone, and an Invite is the only way that changes
- * (ADR-0005) — so the act that used to need `manage:wishlists` needs a session
- * and nothing else.
+ * Open to anyone signed in, because there is nothing here to grant: a Family
+ * you are the only member of discloses nothing to anyone, and an Invite is the
+ * only way that changes (ADR-0005).
  */
 export const createFamily = defineAction(
   {

@@ -20,6 +20,7 @@ import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import { getExchanges } from '@/lib/db/queries-cached';
 import { partitionBySeason } from '@/lib/season';
+import { DeleteExchangeButton } from './organiser-actions';
 
 export default async function SecretSantaPage() {
   const viewer = await requireViewerOrRedirect();
@@ -126,6 +127,12 @@ export default async function SecretSantaPage() {
                               </CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
+                              {event.isOrganiser && (
+                                <DeleteExchangeButton
+                                  exchangeId={event.id}
+                                  name={event.name}
+                                />
+                              )}
                               {hasAssignments ? (
                                 <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full">
                                   Active

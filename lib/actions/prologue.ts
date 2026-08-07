@@ -13,7 +13,6 @@
  */
 
 import { z } from 'zod';
-import { type Capability, UnauthorizedError } from '@/lib/auth/capabilities';
 import type { Viewer } from '@/lib/auth/viewer';
 
 /**
@@ -80,8 +79,6 @@ export function isNextControlFlow(error: unknown): boolean {
 }
 
 export type ActionConfig<Schema extends z.ZodType | undefined> = {
-  /** Required capability. Omit for "any signed-in viewer". */
-  capability?: Capability;
   /** Validates the action's single argument. */
   input?: Schema;
   /** Tags revalidated after the handler succeeds. */
@@ -105,8 +102,12 @@ type HandlerArgs<Schema> = {
 
 /** What the prologue needs from the world. */
 export type Prologue = {
-  /** Resolve the viewer, or throw. Throwing `UnauthorizedError` becomes a result. */
-  resolveViewer: (capability?: Capability) => Promise<Viewer>;
+  /**
+   * Resolve the viewer, or throw. It takes no argument: every action is open to
+   * any signed-in person, and what they may act on is decided by the `where`
+   * their handler composes from `lib/db/authority.ts` (ADR-0002).
+   */
+  resolveViewer: () => Promise<Viewer>;
   /** Mark a cache tag stale. Called once per tag, only after the handler wins. */
   invalidate: (tag: CacheTag) => void;
 };
@@ -132,7 +133,7 @@ export function createDefineAction(prologue: Prologue): DefineAction {
   ) => {
     const run = async (rawInput?: unknown): Promise<ActionResult<Payload>> => {
       try {
-        const viewer = await prologue.resolveViewer(config.capability);
+        const viewer = await prologue.resolveViewer();
 
         let input = rawInput;
         if (config.input) {
@@ -162,7 +163,6 @@ export function createDefineAction(prologue: Prologue): DefineAction {
       } catch (error) {
         if (isNextControlFlow(error)) throw error;
         if (error instanceof ActionError) return failure(error.message);
-        if (error instanceof UnauthorizedError) return failure(error.message);
         if (error instanceof Error) return failure(error.message);
         return failure(config.onError ?? 'Something went wrong');
       }

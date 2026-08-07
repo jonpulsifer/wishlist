@@ -67,29 +67,8 @@ model User {
   /// Draw sees the pair whichever side it reads.
   excludes                  User[]                   @relation("Exclusions")
   excludedBy                User[]                   @relation("Exclusions")
-  roles                     UserRole[]               @relation("UserRoles")
   createdInvites            Invite[]                 @relation("InvitesCreatedBy")
   redeemedInvites           Invite[]                 @relation("InvitesRedeemedBy")
-}
-
-model Role {
-  id        String     @id @default(uuid()) @db.Uuid
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  name      String     @unique
-  users     UserRole[] @relation("UserRoles")
-}
-
-model UserRole {
-  id        String   @id @default(uuid()) @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String   @db.Uuid
-  roleId    String   @db.Uuid
-  user      User     @relation("UserRoles", fields: [userId], references: [id])
-  role      Role     @relation("UserRoles", fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
 }
 
 /// A thing one person would like to receive from another. Its **subject** is

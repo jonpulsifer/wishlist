@@ -12,7 +12,6 @@ import {
   Monitor,
   Moon,
   Settings,
-  Shield,
   Sun,
   User,
   Users,
@@ -46,9 +45,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { christmasProgress, daysUntilChristmas } from '@/lib/season';
 import { getInitials } from '@/lib/utils';
@@ -255,11 +251,6 @@ function ChristmasPanel({ sorted, total }: SidebarProgress) {
 }
 
 export function AppSidebar({ progress }: { progress: SidebarProgress }) {
-  const { data: session } = useSession();
-  // The session carries capabilities, not roles — resolved server-side against
-  // the same table the pages gate on, so the link and the page agree.
-  const showAdminButton = session?.user?.capabilities?.includes('view:admin');
-
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -309,41 +300,6 @@ export function AppSidebar({ progress }: { progress: SidebarProgress }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {showAdminButton && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Settings</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <a href="/admin">
-                      <Shield />
-                      <span>Admin</span>
-                    </a>
-                  </SidebarMenuButton>
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton asChild>
-                        <a href="/admin/secret-santa">
-                          <CandyCane />
-                          <span>Secret Santa</span>
-                        </a>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton asChild>
-                        <a href="/admin/roles">
-                          <Users />
-                          <span>Roles</span>
-                        </a>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         <ChristmasPanel {...progress} />
       </SidebarContent>
       <SidebarFooter>

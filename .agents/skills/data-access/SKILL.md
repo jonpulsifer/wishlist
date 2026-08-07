@@ -1,10 +1,10 @@
 ---
 name: data-access
 description: >-
-  The rules for reading user data and deciding who may see it — visibility where
-  clauses, capabilities instead of role names, and what may cross to the
-  browser. Use when writing any Prisma query, adding a page that shows people or
-  gifts, or gating a screen or action.
+  The rules for reading user data and deciding who may see it — visibility and
+  authority where clauses, and what may cross to the browser. Use when writing
+  any Prisma query, adding a page that shows people or gifts, or gating a screen
+  or action.
 ---
 
 # Data access
@@ -51,22 +51,23 @@ by id followed by `if (row.subjectId !== viewer.id)` confirms the row exists to
 anyone holding a uuid, and it is one `select` away from returning fields that
 check never covered.
 
-## Capabilities: `lib/auth/capabilities.ts`
+## Authority is the row, not the person
 
-**Never ask about a role name.** Ask the viewer what they can do:
+**There is nobody to ask about.** No roles, no admins, no capabilities — a
+`Viewer` is an identity and carries nothing to check (ADR-0002). Authority is a
+property of the row: compose the `where` from `lib/db/authority.ts` and let the
+query answer.
 
 ```ts
-if (!viewer.can('manage:secret-santa')) { … }
+const wish = await db.wish.findFirst({
+  where: { id, ...subjectOfWhere(viewer.id) },
+});
+if (!wish) throw new ActionError('Gift not found');
 ```
 
-The capabilities are `manage:roles`, `manage:wishlists`, `manage:secret-santa`
-and `view:admin`. `ROLE_CAPABILITIES` maps role names onto them and is the only
-place a role name appears; `godmode` grants everything. The table is pure and
-covered by `capabilities.test.ts` — extend the test when you extend the table.
-
-Server actions do not check capabilities by hand either; they declare
-`capability:` in `defineAction` and the combinator calls `requireViewer`. See
-the `server-actions` skill.
+Everyone is one of exactly three things — the **subject** of a Wish, a
+**member** of a Family, or the **Organiser** of the one Exchange they opened.
+If an act does not fit one of those, the act is wrong, not the module.
 
 **Viewer resolution is `lib/auth/viewer.ts`, and nothing else.** Three adapters,
 one per caller shape — the only thing that varies is what "no" looks like:
@@ -74,20 +75,13 @@ one per caller shape — the only thing that varies is what "no" looks like:
 | Adapter | Says no by | Used by |
 | --- | --- | --- |
 | `currentViewer()` | returning `null` | route handlers, which reply 401 |
-| `requireViewer(cap?)` | throwing `UnauthorizedError` | `defineAction` |
-| `requireViewerOrRedirect(cap?)` | redirecting | pages |
+| `requireViewer()` | throwing | `defineAction` |
+| `requireViewerOrRedirect()` | redirecting | pages |
 
 `auth()` from `app/auth.ts` is NextAuth's own handle. Only the authenticated
 layout (for `SessionProvider`) and the catch-all route handler may touch it —
-never to work out who is asking. The session carries `capabilities`, never role
-names, so a client component cannot gate on a role even if it wants to.
-
-## Admin reads: `lib/db/queries-admin.ts`
-
-Reads that need a capability are queries, not actions. Each takes the `Viewer`
-the page already resolved and asserts what it needs, so the gate travels with the
-query and a page with no `Viewer` cannot call one. Pages gate with
-`requireViewerOrRedirect(capability)` and pass the result straight in.
+never to work out who is asking. The session carries an identity and nothing
+more, so there is nothing on it for a client component to gate on.
 
 ## Projections: `lib/db/projections.ts`
 

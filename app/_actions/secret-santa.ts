@@ -197,13 +197,26 @@ export const unexcludePerson = defineAction(
   },
 );
 
+/**
+ * Delete an Exchange you opened.
+ *
+ * The Organiser's, and nobody else's: organising one Exchange confers nothing
+ * over another, so there is no rank here to hold — only the row (ADR-0002).
+ * Loaded through `organiserOfWhere`, so one the viewer did not open is never
+ * found.
+ */
 export const deleteExchange = defineAction(
   {
-    capability: 'manage:secret-santa',
     input: z.string().uuid('Invalid exchange'),
     invalidates: ['secretSanta'],
   },
-  async ({ input: exchangeId }) => {
+  async ({ viewer, input: exchangeId }) => {
+    const exchange = await db.exchange.findFirst({
+      where: { id: exchangeId, ...organiserOfWhere(viewer.id) },
+      select: { id: true },
+    });
+    if (!exchange) throw new ActionError('Secret Santa event not found');
+
     await db.$transaction([
       db.participant.deleteMany({ where: { exchangeId } }),
       db.exchange.delete({ where: { id: exchangeId } }),
