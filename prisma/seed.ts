@@ -3,25 +3,25 @@ import type { User } from '@/prisma/generated/client';
 
 import prisma from '../lib/db/client';
 
-const createRandomGift = async (user: User, recipient?: User) => {
-  console.log('creating gift for', user);
-  const sender = recipient ? recipient : user;
-  return prisma.gift.upsert({
+const createRandomWish = async (user: User, proposer?: User) => {
+  console.log('creating wish for', user);
+  const proposedBy = proposer ? proposer : user;
+  return prisma.wish.upsert({
     where: { id: faker.string.uuid() },
     update: {},
     create: {
       name: faker.commerce.productName(),
       description: `${faker.commerce.productName()} - ${faker.commerce.productDescription()}`,
       url: faker.internet.url(),
-      owner: { connect: user },
-      createdBy: { connect: sender },
+      subject: { connect: user },
+      proposer: { connect: proposedBy },
     },
   });
 };
 
 async function drop() {
   return Promise.all([
-    prisma.gift.deleteMany(),
+    prisma.wish.deleteMany(),
     prisma.user.deleteMany(),
     prisma.wishlist.deleteMany(),
   ]);
@@ -110,36 +110,36 @@ async function main() {
   });
 
   await Promise.all([
-    createRandomGift(alice),
-    createRandomGift(alice),
-    createRandomGift(alice),
-    createRandomGift(alice),
-    createRandomGift(alice),
+    createRandomWish(alice),
+    createRandomWish(alice),
+    createRandomWish(alice),
+    createRandomWish(alice),
+    createRandomWish(alice),
     // bob
-    createRandomGift(bob),
-    createRandomGift(bob),
-    createRandomGift(bob),
-    createRandomGift(bob),
+    createRandomWish(bob),
+    createRandomWish(bob),
+    createRandomWish(bob),
+    createRandomWish(bob),
     // carol
-    createRandomGift(carol),
-    createRandomGift(carol),
-    createRandomGift(carol),
-    createRandomGift(carol),
+    createRandomWish(carol),
+    createRandomWish(carol),
+    createRandomWish(carol),
+    createRandomWish(carol),
     // dave
-    createRandomGift(dave),
-    createRandomGift(dave),
+    createRandomWish(dave),
+    createRandomWish(dave),
     // emily
-    createRandomGift(emily),
-    createRandomGift(emily),
-    createRandomGift(emily),
+    createRandomWish(emily),
+    createRandomWish(emily),
+    createRandomWish(emily),
     // jonathan
-    createRandomGift(jonathan),
-    createRandomGift(jonathan),
-    createRandomGift(jonathan),
-    createRandomGift(jonathan),
-    createRandomGift(alice, jonathan),
-    createRandomGift(alice, jonathan),
-    createRandomGift(bob, jonathan),
+    createRandomWish(jonathan),
+    createRandomWish(jonathan),
+    createRandomWish(jonathan),
+    createRandomWish(jonathan),
+    createRandomWish(alice, jonathan),
+    createRandomWish(alice, jonathan),
+    createRandomWish(bob, jonathan),
   ]);
   console.log({ alice, bob, carol, dave, emily, jonathan });
 }

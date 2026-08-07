@@ -17,11 +17,11 @@ import {
 } from '@/components/ui/select';
 import { useAction } from '@/hooks/use-action';
 import { useDebounce } from '@/hooks/use-debounce';
-import type { GiftCard } from '@/lib/db/projections';
+import type { WishCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
 interface GiftListProps {
-  initialGifts: GiftCard[];
+  initialGifts: WishCard[];
   search: string;
   sort: string;
   direction: string;
@@ -67,7 +67,7 @@ export function GiftList({
       .filter(
         (gift) =>
           gift.name.toLowerCase().includes(search.toLowerCase()) ||
-          gift.owner.name?.toLowerCase().includes(search.toLowerCase()) ||
+          gift.subject.name?.toLowerCase().includes(search.toLowerCase()) ||
           gift.url?.toLowerCase().includes(search.toLowerCase()) ||
           gift.description?.toLowerCase().includes(search.toLowerCase()) ||
           false,
@@ -77,7 +77,7 @@ export function GiftList({
           case 'name':
             return a.name.localeCompare(b.name);
           case 'owner':
-            return (a.owner.name ?? '').localeCompare(b.owner.name ?? '');
+            return (a.subject.name ?? '').localeCompare(b.subject.name ?? '');
           default:
             return (
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -90,7 +90,7 @@ export function GiftList({
   // applying it twice is its own undo. Your own Gifts carry no claim state to
   // flip.
   const toggleClaim = (giftId: string) => {
-    const flip = (g: GiftCard): GiftCard =>
+    const flip = (g: WishCard): WishCard =>
       g.id === giftId && !g.yours
         ? { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer }
         : g;
@@ -114,7 +114,7 @@ export function GiftList({
     },
   });
 
-  const handleClaimToggle = (gift: GiftCard) =>
+  const handleClaimToggle = (gift: WishCard) =>
     !gift.yours && gift.claimedByViewer
       ? unclaim.run(gift.id)
       : claim.run(gift.id);
@@ -174,22 +174,22 @@ export function GiftList({
                 className="space-y-1 hover:opacity-80"
               >
                 <div className="font-medium">{gift.name}</div>
-                {gift.createdBy?.id !== gift.owner.id && (
+                {gift.proposer.id !== gift.subject.id && (
                   <div className="text-sm text-muted-foreground">
                     Added by{' '}
-                    {gift.createdBy?.id === currentUserId
+                    {gift.proposer.id === currentUserId
                       ? 'you'
-                      : gift.createdBy?.name ||
-                        gift.createdBy?.email ||
+                      : gift.proposer.name ||
+                        gift.proposer.email ||
                         'someone else'}
                   </div>
                 )}
                 <div className="md:hidden text-sm text-muted-foreground flex items-center gap-2">
                   <Avatar className="h-5 w-5">
-                    <AvatarImage src={gift.owner?.image || undefined} />
-                    <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
+                    <AvatarImage src={gift.subject.image || undefined} />
+                    <AvatarFallback>{getInitials(gift.subject)}</AvatarFallback>
                   </Avatar>
-                  <span>{gift.owner?.name}</span>•{' '}
+                  <span>{gift.subject.name}</span>•{' '}
                   {formatDistanceToNow(new Date(gift.createdAt), {
                     addSuffix: true,
                   })}
@@ -197,16 +197,18 @@ export function GiftList({
               </Link>
 
               <Link
-                href={`/people/${gift.owner.id}`}
+                href={`/people/${gift.subject.id}`}
                 className="hidden md:flex items-center gap-2 hover:opacity-80"
               >
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={gift.owner.image ?? undefined} />
-                  <AvatarFallback>{getInitials(gift.owner)}</AvatarFallback>
+                  <AvatarImage src={gift.subject.image ?? undefined} />
+                  <AvatarFallback>{getInitials(gift.subject)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
                   <span>
-                    {gift.owner.id === currentUserId ? 'you' : gift.owner.name}
+                    {gift.subject.id === currentUserId
+                      ? 'you'
+                      : gift.subject.name}
                   </span>
                   <span className="text-muted-foreground text-xxs">
                     {formatDistanceToNow(new Date(gift.createdAt), {
@@ -217,7 +219,7 @@ export function GiftList({
               </Link>
 
               <div className="text-right">
-                {gift.createdBy?.id === currentUserId ? (
+                {gift.proposer.id === currentUserId ? (
                   <Button
                     variant="destructive"
                     onClick={() => handleDelete(gift.id)}

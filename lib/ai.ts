@@ -97,7 +97,7 @@ async function loadRecipient(
   if (!person) return null;
   return {
     firstName: person.name?.split(' ')[0] || 'someone mysterious',
-    preferences: person.gifts.map((gift) => gift.name).join(', '),
+    preferences: person.wishes.map((wish) => wish.name).join(', '),
   };
 }
 

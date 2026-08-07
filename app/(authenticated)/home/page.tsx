@@ -22,11 +22,11 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
-  getLatestVisibleGiftsForUserById,
-  getPeopleForNewGiftModal,
-  getSortedVisibleGiftsForUser,
+  getLatestVisibleWishesForUserById,
+  getPeopleForNewWishModal,
+  getSortedVisibleWishesForUser,
   getUsersForPeoplePage,
-  getVisibleGiftsForUserById,
+  getVisibleWishesForUserById,
 } from '@/lib/db/queries-cached';
 import {
   christmasProgress,
@@ -53,11 +53,11 @@ export default async function HomePage() {
     latestGifts,
     secretSantaParticipations,
   ] = await Promise.all([
-    getPeopleForNewGiftModal(viewer.id),
+    getPeopleForNewWishModal(viewer.id),
     getUsersForPeoplePage(viewer.id),
-    getSortedVisibleGiftsForUser({ userId: viewer.id }),
-    getVisibleGiftsForUserById(viewer.id, viewer.id),
-    getLatestVisibleGiftsForUserById(viewer.id),
+    getSortedVisibleWishesForUser({ userId: viewer.id }),
+    getVisibleWishesForUserById(viewer.id, viewer.id),
+    getLatestVisibleWishesForUserById(viewer.id),
     db.secretSantaParticipant.findMany({
       where: { userId: viewer.id, event: heldForCurrentOccasion() },
       include: {
@@ -68,9 +68,9 @@ export default async function HomePage() {
     }),
   ]);
 
-  const ordered = [...people].sort((a, b) => b.giftCount - a.giftCount);
+  const ordered = [...people].sort((a, b) => b.wishCount - a.wishCount);
   const sortedCount = people.filter((p) =>
-    sortedForPerson(visibleGifts.filter((g) => g.ownerId === p.id)),
+    sortedForPerson(visibleGifts.filter((g) => g.subjectId === p.id)),
   ).length;
   const sleeps = daysUntilChristmas();
 
@@ -211,15 +211,15 @@ export default async function HomePage() {
                       className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent"
                     >
                       <Avatar className="h-7 w-7 shrink-0">
-                        <AvatarImage src={gift.owner.image ?? undefined} />
+                        <AvatarImage src={gift.subject.image ?? undefined} />
                         <AvatarFallback className="text-xs">
-                          {getInitials(gift.owner)}
+                          {getInitials(gift.subject)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{gift.name}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {gift.owner.name || gift.owner.email}
+                          {gift.subject.name || gift.subject.email}
                         </p>
                       </div>
                     </Link>

@@ -10,26 +10,26 @@
 import { unstable_cache } from 'next/cache';
 import prisma from './client';
 import {
-  type GiftCard,
-  giftRowSelect,
   type PersonCard,
   type PersonRef,
   type Profile,
   personRefSelect,
   profileSelect,
-  toGiftCard,
+  toWishCard,
+  type WishCard,
+  wishRowSelect,
 } from './projections';
 import {
   claimedByViewerWhere,
-  visibleGiftCountWhere,
-  visibleGiftsWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
+  visibleWishCountWhere,
+  visibleWishesWhere,
   visibleWishlistsWhere,
 } from './visibility';
 
-/** People the viewer may add a Gift for. */
-const getPeopleForNewGiftModal = unstable_cache(
+/** People the viewer may add a Wish for. */
+const getPeopleForNewWishModal = unstable_cache(
   async (viewerId: string) =>
     prisma.user.findMany({
       select: { id: true, name: true, email: true },
@@ -100,7 +100,7 @@ const getFullUserForRecommendations = unstable_cache(
       select: {
         ...profileSelect,
         wishlists: { select: { id: true, name: true } },
-        gifts: {
+        wishes: {
           select: { id: true, name: true, description: true, url: true },
         },
       },
@@ -109,15 +109,15 @@ const getFullUserForRecommendations = unstable_cache(
   { tags: ['users', 'gifts', 'wishlists'] },
 );
 
-/** Gifts on one person's profile. */
-const getVisibleGiftsForUserById = unstable_cache(
-  async (profileId: string, viewerId: string): Promise<GiftCard[]> => {
-    const rows = await prisma.gift.findMany({
-      where: visibleGiftsWhere(viewerId, { ownerId: profileId }),
-      select: giftRowSelect,
+/** Wishes on one person's profile. */
+const getVisibleWishesForUserById = unstable_cache(
+  async (profileId: string, viewerId: string): Promise<WishCard[]> => {
+    const rows = await prisma.wish.findMany({
+      where: visibleWishesWhere(viewerId, { subjectId: profileId }),
+      select: wishRowSelect,
       orderBy: { name: 'asc' },
     });
-    return rows.map((row) => toGiftCard(row, viewerId));
+    return rows.map((row) => toWishCard(row, viewerId));
   },
   ['visibleGiftsForUserById'],
   { tags: ['gifts', 'users', 'wishlists'] },
@@ -130,7 +130,7 @@ const getUsersForPeoplePage = unstable_cache(
       select: {
         ...personRefSelect,
         _count: {
-          select: { gifts: { where: visibleGiftCountWhere() } },
+          select: { wishes: { where: visibleWishCountWhere() } },
         },
       },
       where: visiblePeopleWhere(viewerId, { excludeSelf: true }),
@@ -138,29 +138,29 @@ const getUsersForPeoplePage = unstable_cache(
     });
     return rows.map(({ _count, ...person }) => ({
       ...person,
-      giftCount: _count.gifts,
+      wishCount: _count.wishes,
     }));
   },
   ['people'],
   { tags: ['users', 'gifts', 'wishlists'] },
 );
 
-/** Gifts the viewer has claimed. */
-const getClaimedGiftsForMe = unstable_cache(
-  async (viewerId: string): Promise<GiftCard[]> => {
-    const rows = await prisma.gift.findMany({
+/** Wishes the viewer has claimed. */
+const getClaimedWishesForMe = unstable_cache(
+  async (viewerId: string): Promise<WishCard[]> => {
+    const rows = await prisma.wish.findMany({
       where: claimedByViewerWhere(viewerId),
-      select: giftRowSelect,
+      select: wishRowSelect,
       orderBy: { name: 'asc' },
     });
-    return rows.map((row) => toGiftCard(row, viewerId));
+    return rows.map((row) => toWishCard(row, viewerId));
   },
   ['claimedGiftsForMe'],
   { tags: ['gifts', 'users', 'wishlists'] },
 );
 
 /** The browse list. */
-const getSortedVisibleGiftsForUser = unstable_cache(
+const getSortedVisibleWishesForUser = unstable_cache(
   async ({
     column = 'name',
     direction = 'asc',
@@ -169,15 +169,18 @@ const getSortedVisibleGiftsForUser = unstable_cache(
     direction?: 'asc' | 'desc';
     column?: 'name' | 'owner';
     userId: string;
-  }): Promise<GiftCard[]> => {
+  }): Promise<WishCard[]> => {
+    // `owner` is the sort value in the URL, which is copy and stays put.
     const orderBy =
-      column === 'owner' ? { owner: { name: direction } } : { name: direction };
-    const rows = await prisma.gift.findMany({
-      where: visibleGiftsWhere(userId, { excludeOwn: true }),
-      select: giftRowSelect,
+      column === 'owner'
+        ? { subject: { name: direction } }
+        : { name: direction };
+    const rows = await prisma.wish.findMany({
+      where: visibleWishesWhere(userId, { excludeOwn: true }),
+      select: wishRowSelect,
       orderBy: [orderBy],
     });
-    return rows.map((row) => toGiftCard(row, userId));
+    return rows.map((row) => toWishCard(row, userId));
   },
   ['sortedVisibleGifts'],
   { tags: ['gifts', 'users', 'wishlists'] },
@@ -186,18 +189,18 @@ const getSortedVisibleGiftsForUser = unstable_cache(
 /**
  * The home feed.
  *
- * Shares `visibleGiftsWhere` with the browse list, so the `createdById` arm is
+ * Shares `visibleWishesWhere` with the browse list, so the `proposerId` arm is
  * present — this query used to omit it, which hid the viewer's own additions.
  */
-const getLatestVisibleGiftsForUserById = unstable_cache(
-  async (viewerId: string): Promise<GiftCard[]> => {
-    const rows = await prisma.gift.findMany({
-      where: visibleGiftsWhere(viewerId, { excludeOwn: true }),
-      select: giftRowSelect,
+const getLatestVisibleWishesForUserById = unstable_cache(
+  async (viewerId: string): Promise<WishCard[]> => {
+    const rows = await prisma.wish.findMany({
+      where: visibleWishesWhere(viewerId, { excludeOwn: true }),
+      select: wishRowSelect,
       orderBy: { createdAt: 'desc' },
       take: 10,
     });
-    return rows.map((row) => toGiftCard(row, viewerId));
+    return rows.map((row) => toWishCard(row, viewerId));
   },
   ['latestVisibleGiftsForUserById'],
   { tags: ['gifts', 'users', 'wishlists'] },
@@ -248,46 +251,46 @@ const getSecretSantaEvents = unstable_cache(
   { tags: ['secretSanta', 'users'] },
 );
 
-/** One Gift, or `null` if the viewer may not see it. */
-const getGiftWithAccessCheck = unstable_cache(
-  async (giftId: string, viewerId: string): Promise<GiftCard | null> => {
-    const gift = await prisma.gift.findFirst({
+/** One Wish, or `null` if the viewer may not see it. */
+const getWishWithAccessCheck = unstable_cache(
+  async (wishId: string, viewerId: string): Promise<WishCard | null> => {
+    const wish = await prisma.wish.findFirst({
       where: {
         AND: [
-          { id: giftId },
-          // Own-profile Gifts are reachable by their owner even when archived;
-          // everything else goes through the full rule set.
+          { id: wishId },
+          // A Wish on your own list is reachable by its subject even when
+          // archived; everything else goes through the full rule set.
           {
             OR: [
-              { id: giftId, ownerId: viewerId, createdById: viewerId },
-              visibleGiftsWhere(viewerId),
+              { id: wishId, subjectId: viewerId, proposerId: viewerId },
+              visibleWishesWhere(viewerId),
             ],
           },
         ],
       },
-      select: giftRowSelect,
+      select: wishRowSelect,
     });
 
-    if (!gift) return null;
+    if (!wish) return null;
 
-    return toGiftCard(gift, viewerId);
+    return toWishCard(wish, viewerId);
   },
   ['giftWithAccess'],
   { tags: ['gifts', 'users', 'wishlists'] },
 );
 
 export {
-  getClaimedGiftsForMe,
+  getClaimedWishesForMe,
   getFullUserForRecommendations,
-  getGiftWithAccessCheck,
-  getLatestVisibleGiftsForUserById,
+  getLatestVisibleWishesForUserById,
   getOwnProfile,
-  getPeopleForNewGiftModal,
+  getPeopleForNewWishModal,
   getSecretSantaEvents,
-  getSortedVisibleGiftsForUser,
+  getSortedVisibleWishesForUser,
   getUsersForPeoplePage,
-  getVisibleGiftsForUserById,
   getVisiblePeopleRefs,
   getVisibleProfile,
+  getVisibleWishesForUserById,
   getWishlistsWithMembers,
+  getWishWithAccessCheck,
 };

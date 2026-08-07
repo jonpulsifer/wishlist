@@ -53,9 +53,9 @@ model User {
   shirt_size                String?
   shoe_size                 String?
   hasCompletedOnboarding    Boolean                  @default(false)
-  gifts                     Gift[]
+  wishes                    Wish[]                   @relation("WishSubject")
   claimers                  Claimer[]
-  createdGifts              Gift[]                   @relation("CreatedByUser")
+  proposedWishes            Wish[]                   @relation("WishProposer")
   wishlists                 Wishlist[]
   accounts                  Account[]
   sessions                  Session[]
@@ -89,23 +89,29 @@ model UserRole {
   @@unique([userId, roleId])
 }
 
-model Gift {
-  id          String     @id @default(uuid()) @db.Uuid
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  name        String     @db.VarChar(255)
+/// A thing one person would like to receive from another. Its **subject** is
+/// who would receive it; its **proposer** is who added it. They are usually the
+/// same person; when they differ the Wish is a Suggestion, which is what makes
+/// surprises possible. `proposerId` is required, so that state is exactly
+/// `proposerId != subjectId` with no third case for a reader to forget — a Wish
+/// nobody else proposed names its own subject rather than naming nobody.
+model Wish {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  name        String    @db.VarChar(255)
   url         String?
   description String?
-  archived    Boolean    @default(false)
-  owner       User       @relation(fields: [ownerId], references: [id])
-  ownerId     String     @db.Uuid
-  createdBy   User?      @relation("CreatedByUser", fields: [createdById], references: [id])
-  createdById String?    @db.Uuid
+  archived    Boolean   @default(false)
+  subject     User      @relation("WishSubject", fields: [subjectId], references: [id])
+  subjectId   String    @db.Uuid
+  proposer    User      @relation("WishProposer", fields: [proposerId], references: [id])
+  proposerId  String    @db.Uuid
   claimers    Claimer[]
 
   @@index([createdAt])
-  @@index([ownerId, createdAt])
-  @@index([createdById, createdAt])
+  @@index([subjectId, createdAt])
+  @@index([proposerId, createdAt])
   @@index([archived])
 }
 
@@ -117,7 +123,7 @@ model Claimer {
   wishId    String   @db.Uuid
   userId    String   @db.Uuid
   createdAt DateTime @default(now())
-  wish      Gift     @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  wish      Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([wishId, userId])

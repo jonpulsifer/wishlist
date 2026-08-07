@@ -15,8 +15,8 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
-  getPeopleForNewGiftModal,
-  getSortedVisibleGiftsForUser,
+  getPeopleForNewWishModal,
+  getSortedVisibleWishesForUser,
 } from '@/lib/db/queries-cached';
 import { GiftList } from './gift-list';
 
@@ -29,13 +29,13 @@ export default async function GiftsPage({ searchParams }: PageProps) {
   const { q, sort, direction } = await searchParams;
   const viewer = await requireViewerOrRedirect();
 
-  const gifts = await getSortedVisibleGiftsForUser({
+  const gifts = await getSortedVisibleWishesForUser({
     userId: viewer.id,
     direction: direction as 'asc' | 'desc',
     column: sort as 'name' | 'owner',
   });
 
-  const users = await getPeopleForNewGiftModal(viewer.id);
+  const users = await getPeopleForNewWishModal(viewer.id);
 
   return (
     <SidebarInset>

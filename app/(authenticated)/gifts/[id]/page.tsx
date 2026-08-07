@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import { getGiftWithAccessCheck } from '@/lib/db/queries-cached';
+import { getWishWithAccessCheck } from '@/lib/db/queries-cached';
 import { GiftDetail } from './gift-detail';
 
 type Props = {
@@ -24,7 +24,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const viewer = await requireViewerOrRedirect();
   const { id } = await params;
-  const gift = await getGiftWithAccessCheck(id, viewer.id);
+  const gift = await getWishWithAccessCheck(id, viewer.id);
 
   if (!gift) {
     return {
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GiftPage({ params }: Props) {
   const viewer = await requireViewerOrRedirect();
   const { id } = await params;
-  const gift = await getGiftWithAccessCheck(id, viewer.id);
+  const gift = await getWishWithAccessCheck(id, viewer.id);
 
   if (!gift) {
     notFound();

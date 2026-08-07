@@ -12,7 +12,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useAction } from '@/hooks/use-action';
-import type { GiftCard, PersonCard } from '@/lib/db/projections';
+import type { PersonCard, WishCard } from '@/lib/db/projections';
 import { sortedForPerson } from '@/lib/shopping-progress';
 import { getInitials } from '@/lib/utils';
 
@@ -25,7 +25,7 @@ export function PeopleList({
   gifts: initialGifts,
 }: {
   people: PersonCard[];
-  gifts: GiftCard[];
+  gifts: WishCard[];
 }) {
   const [gifts, setGifts] = useOptimistic(initialGifts);
 
@@ -34,7 +34,7 @@ export function PeopleList({
     startTransition(() =>
       setGifts((prev) =>
         prev.map(
-          (g): GiftCard =>
+          (g): WishCard =>
             g.id === giftId && !g.yours
               ? {
                   ...g,
@@ -51,12 +51,12 @@ export function PeopleList({
   const claim = useAction(claimGift, { optimistic: flipClaim });
   const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
 
-  const byOwner = new Map<string, GiftCard[]>();
+  const byOwner = new Map<string, WishCard[]>();
   for (const gift of gifts) {
     if (gift.archived) continue;
-    const owned = byOwner.get(gift.ownerId) ?? [];
+    const owned = byOwner.get(gift.subjectId) ?? [];
     owned.push(gift);
-    byOwner.set(gift.ownerId, owned);
+    byOwner.set(gift.subjectId, owned);
   }
 
   const rows = people.map((person) => {

@@ -3,9 +3,10 @@
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { ActionError, defineAction } from '@/lib/actions/define';
-import { editableGiftWhere } from '@/lib/db/authority';
+import { editableWishWhere, subjectOfWhere } from '@/lib/db/authority';
 import db from '@/lib/db/client';
 import { visibleProfileWhere } from '@/lib/db/visibility';
+import type { Prisma } from '@/prisma/generated/client';
 
 // Reached from the invite route handler as well as from actions, so this stays
 // on `revalidateTag` — `updateTag` is only legal inside a Server Action.
@@ -22,6 +23,12 @@ const GiftSchema = z.object({
   name: z.string().min(1, 'Gift name is required'),
   url: z.url().optional().or(z.literal('')),
   description: z.string().optional(),
+  /**
+   * Typing someone's list in *for* them rather than suggesting *to* them: the
+   * proposer recorded is the subject, so the Wish lands on their own list where
+   * they can see it. Suggesting is the default, and it stays a surprise.
+   */
+  asSubject: z.boolean().optional(),
 });
 
 export type GiftFormData = z.infer<typeof GiftSchema>;
@@ -29,28 +36,21 @@ export type GiftFormData = z.infer<typeof GiftSchema>;
 const giftIdSchema = z.object({ id: z.string().min(1, 'Gift ID is required') });
 
 /**
- * Load a Gift the viewer is allowed to change, or throw.
+ * Load a Wish the viewer holds the given authority over, or throw.
  *
- * Owner-or-creator was written out four times across this file, each with its
- * own copy of the same message. The rule itself now lives in
- * `lib/db/authority.ts`, so a Gift the viewer may not touch is never loaded —
- * and "not yours" and "not there" are one answer, which is the one that does
- * not confirm a uuid exists.
+ * The authority comes in as a `where` rather than being judged after the row is
+ * loaded, so a Wish the viewer may not touch is never loaded — and "not yours"
+ * and "not there" are one answer, which is the one that does not confirm a uuid
+ * exists.
  */
-async function loadEditableGift(giftId: string, viewerId: string) {
-  const gift = await db.gift.findFirst({
-    where: { id: giftId, ...editableGiftWhere(viewerId) },
-    select: {
-      id: true,
-      name: true,
-      archived: true,
-      ownerId: true,
-      createdById: true,
-    },
+async function loadWish(id: string, authority: Prisma.WishWhereInput) {
+  const wish = await db.wish.findFirst({
+    where: { id, ...authority },
+    select: { id: true, name: true, archived: true },
   });
 
-  if (!gift) throw new ActionError('Gift not found');
-  return gift;
+  if (!wish) throw new ActionError('Gift not found');
+  return wish;
 }
 
 export const addGift = defineAction(
@@ -65,13 +65,15 @@ export const addGift = defineAction(
     });
     if (!recipient) throw new ActionError('Recipient not found');
 
-    await db.gift.create({
+    await db.wish.create({
       data: {
         name: input.name,
         url: input.url,
         description: input.description,
-        owner: { connect: { id: input.recipientId } },
-        createdBy: { connect: { id: viewer.id } },
+        subject: { connect: { id: recipient.id } },
+        proposer: {
+          connect: { id: input.asSubject ? recipient.id : viewer.id },
+        },
       },
     });
 
@@ -82,36 +84,40 @@ export const addGift = defineAction(
 export const deleteGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const gift = await loadEditableGift(id, viewer.id);
-    await db.gift.delete({ where: { id } });
-    return { message: `${gift.name} has been deleted` };
+    // Deleting is how a proposer withdraws a Suggestion, so it stays open to
+    // both people.
+    const wish = await loadWish(id, editableWishWhere(viewer.id));
+    await db.wish.delete({ where: { id } });
+    return { message: `${wish.name} has been deleted` };
   },
 );
 
 export const archiveGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const gift = await loadEditableGift(id, viewer.id);
-    if (gift.archived) throw new ActionError('Gift is already archived');
+    // Only the subject archives. A proposer archiving their own Suggestion
+    // would strand the row where nobody — themselves included — can reach it.
+    const wish = await loadWish(id, subjectOfWhere(viewer.id));
+    if (wish.archived) throw new ActionError('Gift is already archived');
 
-    await db.gift.update({ where: { id }, data: { archived: true } });
-    return { message: `${gift.name} has been archived` };
+    await db.wish.update({ where: { id }, data: { archived: true } });
+    return { message: `${wish.name} has been archived` };
   },
 );
 
 export const unarchiveGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const gift = await loadEditableGift(id, viewer.id);
-    if (!gift.archived) throw new ActionError('Gift is not archived');
+    const wish = await loadWish(id, subjectOfWhere(viewer.id));
+    if (!wish.archived) throw new ActionError('Gift is not archived');
 
     // Unarchiving also releases any claim: the gift is going back on the list
     // as available.
     await db.$transaction([
       db.claimer.deleteMany({ where: { wishId: id } }),
-      db.gift.update({ where: { id }, data: { archived: false } }),
+      db.wish.update({ where: { id }, data: { archived: false } }),
     ]);
-    return { message: `${gift.name} has been unarchived` };
+    return { message: `${wish.name} has been unarchived` };
   },
 );
 
@@ -125,8 +131,8 @@ export const updateGift = defineAction(
     invalidates: GIFT_CACHES,
   },
   async ({ viewer, input }) => {
-    await loadEditableGift(input.id, viewer.id);
-    await db.gift.update({
+    await loadWish(input.id, editableWishWhere(viewer.id));
+    await db.wish.update({
       where: { id: input.id },
       data: {
         name: input.name,
@@ -141,30 +147,30 @@ export const updateGift = defineAction(
 export const claimGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const gift = await db.gift.findUnique({
+    const wish = await db.wish.findUnique({
       where: { id },
       select: {
         name: true,
-        ownerId: true,
+        subjectId: true,
         claimers: { select: { userId: true } },
       },
     });
 
-    if (!gift) throw new ActionError('Gift not found');
-    if (gift.claimers.length > 0)
+    if (!wish) throw new ActionError('Gift not found');
+    if (wish.claimers.length > 0)
       throw new ActionError('This gift has already been claimed');
-    if (gift.ownerId === viewer.id)
+    if (wish.subjectId === viewer.id)
       throw new ActionError('You cannot claim your own gift');
 
     await db.claimer.create({ data: { wishId: id, userId: viewer.id } });
-    return { message: `You claimed ${gift.name}` };
+    return { message: `You claimed ${wish.name}` };
   },
 );
 
 export const unclaimGift = defineAction(
   { input: z.string().min(1, 'Gift ID is required'), invalidates: GIFT_CACHES },
   async ({ viewer, input: id }) => {
-    const gift = await db.gift.findUnique({
+    const wish = await db.wish.findUnique({
       where: { id },
       select: {
         name: true,
@@ -172,14 +178,14 @@ export const unclaimGift = defineAction(
       },
     });
 
-    if (!gift) throw new ActionError('Gift not found');
-    if (gift.claimers.length === 0) {
+    if (!wish) throw new ActionError('Gift not found');
+    if (wish.claimers.length === 0) {
       throw new ActionError('You have not claimed this gift');
     }
 
     await db.claimer.delete({
       where: { wishId_userId: { wishId: id, userId: viewer.id } },
     });
-    return { message: `You unclaimed ${gift.name}` };
+    return { message: `You unclaimed ${wish.name}` };
   },
 );

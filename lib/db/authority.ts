@@ -15,21 +15,22 @@
 
 import type { Prisma } from '@/prisma/generated/client';
 
-/** The Gift is about you. */
-export function subjectOfWhere(viewerId: string): Prisma.GiftWhereInput {
-  return { ownerId: viewerId };
+/** The Wish is about you. Archiving is this and nothing wider. */
+export function subjectOfWhere(viewerId: string): Prisma.WishWhereInput {
+  return { subjectId: viewerId };
 }
 
 /**
- * Gifts the viewer may edit, archive or delete.
+ * Wishes the viewer may edit or delete.
  *
- * Wider than `subjectOfWhere` on purpose: today a Gift someone else added for
- * you is still theirs to correct. Step 12 narrows this to the subject alone,
- * when `subjectId` arrives and a Suggestion stops being editable by the person
- * who made it.
+ * Wider than `subjectOfWhere` on purpose: a Suggestion someone made for you is
+ * still theirs to correct, and deleting is how they withdraw it. Archiving is
+ * *not* here — a proposer archiving their own Suggestion strands the row past
+ * every reader, because the subject cannot see Suggestions and every other
+ * query filters `archived: false`.
  */
-export function editableGiftWhere(viewerId: string): Prisma.GiftWhereInput {
-  return { OR: [subjectOfWhere(viewerId), { createdById: viewerId }] };
+export function editableWishWhere(viewerId: string): Prisma.WishWhereInput {
+  return { OR: [subjectOfWhere(viewerId), { proposerId: viewerId }] };
 }
 
 /** The Secret Santa Event is yours: you opened it. */

@@ -2,8 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
-  visibleGiftsWhere,
   visiblePeopleWhere,
+  visibleWishesWhere,
   visibleWishlistsWhere,
 } from '@/lib/db/visibility';
 
@@ -45,22 +45,22 @@ export async function GET(req: NextRequest) {
       orderBy: [{ name: 'asc' }],
       take: 12,
     }),
-    db.gift.findMany({
+    db.wish.findMany({
       select: {
         id: true,
         name: true,
         claimers: { where: { userId }, select: { userId: true } },
-        owner: { select: { id: true, name: true, email: true } },
+        subject: { select: { id: true, name: true, email: true } },
       },
       where: {
         AND: [
-          visibleGiftsWhere(userId),
+          visibleWishesWhere(userId),
           {
             OR: [
               { name: contains },
               { description: contains },
               { url: contains },
-              { owner: { OR: [{ name: contains }, { email: contains }] } },
+              { subject: { OR: [{ name: contains }, { email: contains }] } },
             ],
           },
         ],
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     title: g.name,
     // Only the viewer's own claim is selected, so this cannot surface someone
     // else's — including to the person the gift is for.
-    subtitle: `For ${g.owner.name || g.owner.email}${
+    subtitle: `For ${g.subject.name || g.subject.email}${
       g.claimers.length > 0 ? ' • claimed by you' : ''
     }`,
     href: `/gifts/${g.id}`,

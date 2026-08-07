@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { shoppingProgress, sortedForPerson } from './shopping-progress';
 
-const person = (id: string, giftCount = 0) => ({ id, giftCount });
-const claim = (ownerId: string) => ({ owner: { id: ownerId } });
+const person = (id: string, wishCount = 0) => ({ id, wishCount });
+const claim = (subjectId: string) => ({ subject: { id: subjectId } });
 
 describe('shoppingProgress', () => {
   it('moves a person out of the shopping list once claimed for', () => {
@@ -33,7 +33,7 @@ describe('shoppingProgress', () => {
     );
   });
 
-  it('counts a person once however many gifts are claimed for them', () => {
+  it('counts a person once however many Wishes are claimed for them', () => {
     const { sortedPeople, claimedFor, percent } = shoppingProgress(
       [person('a')],
       [claim('a'), claim('a')],
@@ -49,7 +49,7 @@ describe('shoppingProgress', () => {
 });
 
 describe('sortedForPerson', () => {
-  it('is true once the viewer has claimed any one of the Gifts', () => {
+  it('is true once the viewer has claimed any one of the Wishes', () => {
     assert.equal(
       sortedForPerson([
         { yours: false, claimedByViewer: false },
@@ -59,14 +59,14 @@ describe('sortedForPerson', () => {
     );
   });
 
-  it('ignores Gifts claimed by somebody else', () => {
+  it('ignores Wishes claimed by somebody else', () => {
     assert.equal(
       sortedForPerson([{ yours: false, claimedByViewer: false }]),
       false,
     );
   });
 
-  it("never counts the viewer's own Gifts, which carry no claim state", () => {
+  it("never counts the viewer's own Wishes, which carry no claim state", () => {
     assert.equal(sortedForPerson([{ yours: true }, { yours: true }]), false);
   });
 

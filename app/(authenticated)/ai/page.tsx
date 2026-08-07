@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import { getPeopleForNewGiftModal } from '@/lib/db/queries-cached';
+import { getPeopleForNewWishModal } from '@/lib/db/queries-cached';
 import { AIRecommendations } from './ai-recommendations';
 
 export default async function AIPage() {
   const viewer = await requireViewerOrRedirect();
 
-  const people = await getPeopleForNewGiftModal(viewer.id);
+  const people = await getPeopleForNewWishModal(viewer.id);
 
   return (
     <SidebarInset>
