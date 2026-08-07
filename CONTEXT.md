@@ -157,13 +157,13 @@ A Wishlist is what its owner **asked for**, which is precisely why a
   showing different things to different people is joining a different Family rather than
   keeping a second list. Decided in
   [#156](https://github.com/jonpulsifer/wishlist/issues/156).
-- **Rejected**: `Wishlist` as the name of the **[Family](#family)** — that is the
-  meaning the schema carries today, and it retires in
+- **Rejected**: `Wishlist` as the name of the **[Family](#family)** — the meaning the
+  schema used to carry, retired in
   [#150](https://github.com/jonpulsifer/wishlist/issues/150). Naming a person's
   collection anything else, when wishin.app is named for this word and every user
   already uses it this way.
-- **Schema today**: `model Wishlist` is the [Family](#family), not this. A person's
-  collection has no representation beyond `Wish.subjectId`.
+- **Schema today**: no model. A person's collection is `Wish.subjectId`, queried —
+  `model Family` is the group, and holds nothing of this.
 
 ## Suggestion
 
@@ -358,16 +358,12 @@ people still in it.
   see into without being seen. It is the second axis on `lib/db/visibility.ts` that
   per-Family roles were rejected for, wearing a different hat
   ([#158](https://github.com/jonpulsifer/wishlist/issues/158)).
-- **Schema today**: `model Wishlist`. Its `name` is globally `@unique`, its `password`
-  is a plaintext pin, and it has no owner column — which
-  [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate.
-  `deleteWishlistAdmin` hard-deletes one behind `manage:wishlists`, and after
-  [#156](https://github.com/jonpulsifer/wishlist/issues/156) that destroys no
-  [Wish](#wish) — a Family owns nothing but its membership edges and its Invites. There
-  *is* a directory:
-  `getWishlistsWithMembers` takes no viewer and lists every Family by name to every
-  signed-in user, on `/wishlists` and in global search. Both the pin and the directory go
-  ([#153](https://github.com/jonpulsifer/wishlist/issues/153)).
+- **Schema today**: `model Family`, and `model Membership` — one row per person per
+  Family, keyed by the pair. The name is a label with no unique index, because an Invite
+  is the only way in and nothing looks a Family up by name. There is no owner column,
+  which [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate,
+  and `deleteWishlistAdmin` hard-deletes one behind `manage:wishlists` — which destroys
+  no [Wish](#wish), since a Family owns nothing but its membership edges and its Invites.
 
 ## User
 
@@ -501,7 +497,6 @@ serialised, so it is declared as a shape and not assembled as a template.
   `app/invite/[token]/route.ts` records nothing about redemption, so one link admits
   everyone who follows it, and only one is active per Family because creating one revokes
   the previous. `expiresAt` exists and nothing ever writes it, so invites do not expire.
-  The pin path (`joinWishlist`) is unthrottled and compares in plaintext.
 
 ## Occasion
 
@@ -669,10 +664,10 @@ constraint shaping it.
   [Family](#family). "Person" survives in prose where it reads naturally, but no model
   or type is named for it.
 - **Pin** / **password** — retired by
-  [#153](https://github.com/jonpulsifer/wishlist/issues/153). `Wishlist.password` is a
-  join secret, not a credential — nobody authenticates with it, since signing in is
-  Google's job. As a way into a [Family](#family) it is a weaker
-  [Invite](#invite), so it goes rather than being hashed or lengthened.
+  [#153](https://github.com/jonpulsifer/wishlist/issues/153). It was a join secret,
+  not a credential — nobody authenticated with it, since signing in is Google's job. As
+  a way into a [Family](#family) it was a weaker [Invite](#invite), so it went rather
+  than being hashed or lengthened.
 - **Published** — never a concept. It was a column nothing outside the generated client
   ever read or wrote, and every live row was `false`;
   [#152](https://github.com/jonpulsifer/wishlist/issues/152) dropped it.

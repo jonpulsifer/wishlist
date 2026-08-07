@@ -20,9 +20,7 @@ export const createWishlistAdmin = defineAction(
     invalidates: WISHLIST_CACHES,
   },
   async ({ input }) => {
-    // `password` is a vestigial NOT NULL column with no default; step 13 drops
-    // it. Nothing reads it, and no code path chooses its value any more.
-    await db.wishlist.create({ data: { name: input.name, password: '' } });
+    await db.family.create({ data: { name: input.name } });
     return { message: 'Wishlist created' };
   },
 );
@@ -34,7 +32,7 @@ export const deleteWishlistAdmin = defineAction(
     invalidates: WISHLIST_CACHES,
   },
   async ({ input }) => {
-    await db.wishlist.delete({ where: { id: input.wishlistId } });
+    await db.family.delete({ where: { id: input.wishlistId } });
     return { message: 'Wishlist deleted' };
   },
 );
@@ -55,7 +53,7 @@ export const createWishlistInviteAdmin = defineAction(
     invalidates: WISHLIST_CACHES,
   },
   async ({ viewer, input }) => {
-    const wishlist = await db.wishlist.findUnique({
+    const wishlist = await db.family.findUnique({
       where: { id: input.wishlistId },
       select: { id: true },
     });

@@ -21,11 +21,11 @@ import {
 } from './projections';
 import {
   claimedByViewerWhere,
+  visibleFamiliesWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
   visibleWishCountWhere,
   visibleWishesWhere,
-  visibleWishlistsWhere,
 } from './visibility';
 
 /** People the viewer may add a Wish for. */
@@ -52,15 +52,17 @@ const getVisiblePeopleRefs = unstable_cache(
   { tags: ['users', 'wishlists'] },
 );
 
-/** The viewer's own Wishlists, with members. */
-const getWishlistsWithMembers = unstable_cache(
+/** The Families the viewer belongs to, with their members. */
+const getFamiliesWithMembers = unstable_cache(
   async (viewerId: string) =>
-    prisma.wishlist.findMany({
-      where: visibleWishlistsWhere(viewerId),
+    prisma.family.findMany({
+      where: visibleFamiliesWhere(viewerId),
       select: {
         id: true,
         name: true,
-        members: { select: { id: true, name: true, email: true } },
+        memberships: {
+          select: { user: { select: { id: true, name: true, email: true } } },
+        },
       },
     }),
   ['wishlistsWithMembers'],
@@ -70,7 +72,7 @@ const getWishlistsWithMembers = unstable_cache(
 /**
  * A person's profile, scoped to the viewer.
  *
- * Returns `null` for someone the viewer shares no Wishlist with. This used to be
+ * Returns `null` for someone the viewer shares no Family with. This used to be
  * a bare `findUnique`, so any signed-in viewer with a uuid could read a
  * stranger's shipping address and sizes.
  */
@@ -99,7 +101,6 @@ const getFullUserForRecommendations = unstable_cache(
       where: visibleProfileWhere(viewerId, profileId),
       select: {
         ...profileSelect,
-        wishlists: { select: { id: true, name: true } },
         wishes: {
           select: { id: true, name: true, description: true, url: true },
         },
@@ -281,6 +282,7 @@ const getWishWithAccessCheck = unstable_cache(
 
 export {
   getClaimedWishesForMe,
+  getFamiliesWithMembers,
   getFullUserForRecommendations,
   getLatestVisibleWishesForUserById,
   getOwnProfile,
@@ -291,6 +293,5 @@ export {
   getVisiblePeopleRefs,
   getVisibleProfile,
   getVisibleWishesForUserById,
-  getWishlistsWithMembers,
   getWishWithAccessCheck,
 };
