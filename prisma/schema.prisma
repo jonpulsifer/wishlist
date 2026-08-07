@@ -56,7 +56,7 @@ model User {
   wishes                    Wish[]                   @relation("WishSubject")
   claimers                  Claimer[]
   proposedWishes            Wish[]                   @relation("WishProposer")
-  wishlists                 Wishlist[]
+  memberships               Membership[]
   accounts                  Account[]
   sessions                  Session[]
   createdEvents             SecretSantaEvent[]       @relation("CreatedEvents")
@@ -130,25 +130,46 @@ model Claimer {
   @@index([userId])
 }
 
-model Wishlist {
-  id        String   @id @default(uuid()) @db.Uuid
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  name      String   @unique
-  password  String
-  members   User[]
-  invites   WishlistInvite[]
+/// The group people share, and the only visibility boundary there is
+/// (ADR-0001). `name` is a label: nothing looks a Family up by it, because an
+/// Invite is the only way in, so two families may share a name.
+model Family {
+  id          String           @id @default(uuid()) @db.Uuid
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  name        String
+  memberships Membership[]
+  invites     WishlistInvite[]
 
   @@index([createdAt])
 }
 
+/// Membership is the app's only visibility edge, and it is explicit rather than
+/// an implicit many-to-many so that the columns have names — a join table whose
+/// columns are `A` and `B` inverts silently if a migration reads them the wrong
+/// way round. `joinedAt` is unread; it is here because an edge this load-bearing
+/// is worth knowing the date of.
+model Membership {
+  familyId String   @db.Uuid
+  userId   String   @db.Uuid
+  joinedAt DateTime @default(now())
+  family   Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([familyId, userId])
+  @@index([userId])
+}
+
+/// The model and the `wishlistId` column keep the old word for one more step:
+/// Step 16 renames this to `Invite` and reshapes it at the same time, and doing
+/// half of that here would mean renaming the column twice.
 model WishlistInvite {
   id          String    @id @default(uuid()) @db.Uuid
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   token       String    @unique
   wishlistId  String    @db.Uuid
-  wishlist    Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  wishlist    Family    @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
   createdById String?   @db.Uuid
   createdBy   User?     @relation("WishlistInvitesCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   expiresAt   DateTime?

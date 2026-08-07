@@ -23,28 +23,20 @@ async function drop() {
   return Promise.all([
     prisma.wish.deleteMany(),
     prisma.user.deleteMany(),
-    prisma.wishlist.deleteMany(),
+    prisma.family.deleteMany(),
   ]);
 }
 
 async function main() {
   await drop();
-  const christmasWishlist = await prisma.wishlist.upsert({
-    where: { name: 'Christmas Wishlist' },
-    update: {},
-    create: {
-      name: 'Christmas Wishlist',
-      password: '1234',
-    },
+  // Created rather than upserted: `drop()` has just emptied the table, and a
+  // Family's name is a label with no unique index to look one up by.
+  const christmasWishlist = await prisma.family.create({
+    data: { name: 'Christmas Wishlist' },
   });
 
-  const birthdayWishlist = await prisma.wishlist.upsert({
-    where: { name: 'Birthday Wishlist' },
-    update: {},
-    create: {
-      name: 'Birthday Wishlist',
-      password: '1234',
-    },
+  const birthdayWishlist = await prisma.family.create({
+    data: { name: 'Birthday Wishlist' },
   });
 
   const alice = await prisma.user.upsert({
@@ -53,9 +45,7 @@ async function main() {
     create: {
       email: 'alice@example.com',
       name: `Alice ${faker.person.fullName()}`,
-      wishlists: {
-        connect: christmasWishlist,
-      },
+      memberships: { create: { familyId: christmasWishlist.id } },
     },
   });
 
@@ -65,9 +55,7 @@ async function main() {
     create: {
       email: 'bob@example.com',
       name: `Bob ${faker.person.fullName()}`,
-      wishlists: {
-        connect: christmasWishlist,
-      },
+      memberships: { create: { familyId: christmasWishlist.id } },
     },
   });
 
@@ -85,7 +73,7 @@ async function main() {
     update: {},
     create: {
       email: 'dave@example.com',
-      wishlists: { connect: christmasWishlist },
+      memberships: { create: { familyId: christmasWishlist.id } },
     },
   });
 
@@ -95,7 +83,12 @@ async function main() {
     create: {
       email: 'emily@example.com',
       name: `Emily ${faker.person.fullName()}`,
-      wishlists: { connect: [christmasWishlist, birthdayWishlist] },
+      memberships: {
+        create: [
+          { familyId: christmasWishlist.id },
+          { familyId: birthdayWishlist.id },
+        ],
+      },
     },
   });
 
@@ -105,7 +98,7 @@ async function main() {
     create: {
       email: 'jonathan@pulsifer.ca',
       name: 'Jonathan Seedifer',
-      wishlists: { connect: [christmasWishlist] },
+      memberships: { create: { familyId: christmasWishlist.id } },
     },
   });
 

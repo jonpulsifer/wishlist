@@ -71,13 +71,13 @@ export async function getAllUsersForRoles(viewer: Viewer) {
   });
 }
 
-export async function getAllWishlists(viewer: Viewer) {
+export async function getAllFamilies(viewer: Viewer) {
   assert(viewer, 'manage:wishlists');
-  return db.wishlist.findMany({
+  return db.family.findMany({
     select: {
       id: true,
       name: true,
-      _count: { select: { members: true } },
+      _count: { select: { memberships: true } },
     },
     orderBy: { name: 'asc' },
   });

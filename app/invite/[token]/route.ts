@@ -51,25 +51,14 @@ export async function GET(
     return response;
   }
 
-  const alreadyMember = await db.wishlist.findFirst({
-    where: {
-      id: invite.wishlistId,
-      members: { some: { id: viewer.id } },
-    },
-    select: { id: true },
+  // The pair is the primary key, so following the same link twice is a no-op
+  // rather than a duplicate — no read-then-write, and no race between the two.
+  const { count } = await db.membership.createMany({
+    data: { familyId: invite.wishlistId, userId: viewer.id },
+    skipDuplicates: true,
   });
 
-  if (!alreadyMember) {
-    await db.wishlist.update({
-      where: { id: invite.wishlistId },
-      data: {
-        members: {
-          connect: { id: viewer.id },
-        },
-      },
-    });
-    revalidateGiftRelatedCaches();
-  }
+  if (count > 0) revalidateGiftRelatedCaches();
 
   response.cookies.set({
     name: WISHLIST_INVITE_COOKIE_NAME,

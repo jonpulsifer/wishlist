@@ -15,15 +15,19 @@ import { useAction } from '@/hooks/use-action';
 import type { Prisma } from '@/prisma/generated/client';
 
 interface WishlistCardProps {
-  wishlist: Prisma.WishlistGetPayload<{
+  wishlist: Prisma.FamilyGetPayload<{
     select: {
       id: true;
       name: true;
-      members: {
+      memberships: {
         select: {
-          id: true;
-          name: true;
-          email: true;
+          user: {
+            select: {
+              id: true;
+              name: true;
+              email: true;
+            };
+          };
         };
       };
     };
@@ -50,6 +54,7 @@ function SubmitButton() {
 
 export function WishlistCard({ wishlist }: WishlistCardProps) {
   const leave = useAction(leaveWishlist);
+  const members = wishlist.memberships.map((m) => m.user);
 
   return (
     <Card id={`wishlist-${wishlist.id}`}>
@@ -58,7 +63,7 @@ export function WishlistCard({ wishlist }: WishlistCardProps) {
           <CardTitle>{wishlist.name}</CardTitle>
           <CardDescription className="flex items-center gap-1">
             <UsersIcon className="h-3 w-3" />
-            {wishlist.members.length} members
+            {members.length} members
           </CardDescription>
         </div>
       </CardHeader>
@@ -67,7 +72,7 @@ export function WishlistCard({ wishlist }: WishlistCardProps) {
           <div>
             <h4 className="text-sm font-medium mb-2">Members</h4>
             <ul className="text-sm text-muted-foreground">
-              {wishlist.members
+              {members
                 .sort((a, b) => {
                   const nameA = a.name || a.email;
                   const nameB = b.name || b.email;

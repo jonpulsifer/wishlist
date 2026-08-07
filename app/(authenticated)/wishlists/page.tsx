@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import { getWishlistsWithMembers } from '@/lib/db/queries-cached';
+import { getFamiliesWithMembers } from '@/lib/db/queries-cached';
 import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {
@@ -59,7 +59,7 @@ function WishlistsLoading() {
 }
 
 async function WishlistsContent({ userId }: { userId: string }) {
-  const wishlists = await getWishlistsWithMembers(userId);
+  const wishlists = await getFamiliesWithMembers(userId);
 
   if (wishlists.length === 0) {
     return (

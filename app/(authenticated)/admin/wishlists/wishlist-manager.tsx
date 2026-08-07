@@ -46,7 +46,7 @@ type WishlistRow = {
   id: string;
   name: string;
   _count: {
-    members: number;
+    memberships: number;
   };
 };
 
@@ -150,7 +150,7 @@ export function WishlistManager({ wishlists }: { wishlists: WishlistRow[] }) {
             {wishlists.map((w) => (
               <TableRow key={w.id}>
                 <TableCell className="font-medium">{w.name}</TableCell>
-                <TableCell>{w._count.members}</TableCell>
+                <TableCell>{w._count.memberships}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Button

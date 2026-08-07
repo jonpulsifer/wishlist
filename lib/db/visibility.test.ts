@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   claimedByViewerWhere,
+  visibleFamiliesWhere,
   visiblePeopleWhere,
   visibleProfileWhere,
   visibleWishCountWhere,
   visibleWishesWhere,
-  visibleWishlistsWhere,
 } from './visibility.ts';
 
 const VIEWER = 'viewer-1';
@@ -14,7 +14,9 @@ const OTHER = 'other-1';
 
 /** The membership clause every scoped People query must carry. */
 const MEMBERSHIP = {
-  wishlists: { some: { members: { some: { id: VIEWER } } } },
+  memberships: {
+    some: { family: { memberships: { some: { userId: VIEWER } } } },
+  },
 };
 
 /**
@@ -26,11 +28,11 @@ const WISH_MEMBERSHIP = { subject: MEMBERSHIP };
 describe('visibleWishesWhere', () => {
   const now = new Date('2026-08-01T00:00:00Z');
 
-  it('scopes the browse feed by the subject’s wishlist membership', () => {
+  it('scopes the browse feed by the subject’s family membership', () => {
     const where = visibleWishesWhere(VIEWER, { excludeOwn: true, now });
     assert.deepEqual(where.subject, WISH_MEMBERSHIP.subject);
-    // That the pin is not consulted is no longer assertable — `wishlists` is
-    // not a field of `WishWhereInput` any more, so the compiler is the proof.
+    // That the pin is not consulted is no longer assertable — there is no such
+    // field on `WishWhereInput` any more, so the compiler is the proof.
   });
 
   it('hides archived wishes from everyone but their subject', () => {
@@ -115,11 +117,21 @@ describe('claimedByViewerWhere', () => {
 });
 
 describe('visiblePeopleWhere', () => {
-  it('requires a shared wishlist', () => {
+  it('requires a shared family', () => {
     assert.deepEqual(
-      visiblePeopleWhere(VIEWER).wishlists,
-      MEMBERSHIP.wishlists,
+      visiblePeopleWhere(VIEWER).memberships,
+      MEMBERSHIP.memberships,
     );
+  });
+
+  it('keys the inner clause on the viewer, not on a family', () => {
+    // The join table's columns used to be `A` and `B`; reading them the wrong
+    // way round inverts every membership in the app and raises no error.
+    // Explicit columns are what make that assertable at all.
+    const inner = visiblePeopleWhere(VIEWER).memberships?.some;
+    assert.deepEqual(inner, {
+      family: { memberships: { some: { userId: VIEWER } } },
+    });
   });
 
   it('can drop the viewer from the list', () => {
@@ -135,17 +147,17 @@ describe('visibleProfileWhere', () => {
     assert.deepEqual(visibleProfileWhere(VIEWER, VIEWER), { id: VIEWER });
   });
 
-  it('requires a shared wishlist for anyone else', () => {
+  it('requires a shared family for anyone else', () => {
     const where = visibleProfileWhere(VIEWER, OTHER);
     assert.equal(where.id, OTHER);
-    assert.deepEqual(where.wishlists, MEMBERSHIP.wishlists);
+    assert.deepEqual(where.memberships, MEMBERSHIP.memberships);
   });
 });
 
-describe('visibleWishlistsWhere', () => {
+describe('visibleFamiliesWhere', () => {
   it('is the membership clause, so /wishlists is your Families and not a directory', () => {
-    assert.deepEqual(visibleWishlistsWhere(VIEWER), {
-      members: { some: { id: VIEWER } },
+    assert.deepEqual(visibleFamiliesWhere(VIEWER), {
+      memberships: { some: { userId: VIEWER } },
     });
   });
 });

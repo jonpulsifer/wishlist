@@ -18,7 +18,7 @@ writing a query.
 
 **Never hand-write a `where` clause that decides what a viewer can see.**
 Compose from the builders: `visibleWishesWhere`, `visiblePeopleWhere`,
-`visibleProfileWhere`, `visibleWishlistsWhere`, `visibleWishCountWhere`,
+`visibleProfileWhere`, `visibleFamiliesWhere`, `visibleWishCountWhere`,
 `claimedByViewerWhere`.
 
 Six hand-written copies had drifted into three real disclosure defects. The

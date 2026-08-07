@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { currentViewer } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
+  visibleFamiliesWhere,
   visiblePeopleWhere,
   visibleWishesWhere,
-  visibleWishlistsWhere,
 } from '@/lib/db/visibility';
 
 export const dynamic = 'force-dynamic';
@@ -68,9 +68,13 @@ export async function GET(req: NextRequest) {
       orderBy: [{ updatedAt: 'desc' }],
       take: 12,
     }),
-    db.wishlist.findMany({
-      select: { id: true, name: true, _count: { select: { members: true } } },
-      where: { AND: [visibleWishlistsWhere(userId), { name: contains }] },
+    db.family.findMany({
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { memberships: true } },
+      },
+      where: { AND: [visibleFamiliesWhere(userId), { name: contains }] },
       orderBy: [{ name: 'asc' }],
       take: 10,
     }),
@@ -105,7 +109,7 @@ export async function GET(req: NextRequest) {
     id: w.id,
     type: 'wishlist',
     title: w.name,
-    subtitle: `${w._count.members} member${w._count.members === 1 ? '' : 's'}`,
+    subtitle: `${w._count.memberships} member${w._count.memberships === 1 ? '' : 's'}`,
     href: `/wishlists#wishlist-${w.id}`,
   }));
 

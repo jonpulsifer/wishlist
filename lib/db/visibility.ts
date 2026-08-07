@@ -10,9 +10,9 @@
  * directly in tests.
  *
  * The rules:
- *   1. Wishlist membership — you only see People you share a Wishlist with,
- *      and only Wishes whose subject you share a Wishlist with. Visibility
- *      follows the subject, not a snapshot taken when the Wish was added.
+ *   1. Family membership — you only see People you share a Family with, and
+ *      only Wishes whose subject you share a Family with. Visibility follows
+ *      the subject, not a snapshot taken when the Wish was added.
  *   2. Archived Wishes are hidden, except on your own profile.
  *   3. Only Wishes from the current Season's gift window are in scope.
  *   4. Your own profile shows only the Wishes you are the proposer of, so
@@ -36,18 +36,31 @@ function giftWindow(now?: Date): Prisma.DateTimeFilter {
 }
 
 /**
- * Wishes whose subject shares at least one Wishlist with the viewer.
+ * Sharing a Family with the viewer, as a clause on a `User`.
+ *
+ * Both hops are `some`, so membership stays mutual: the person is in a Family
+ * the viewer is also in. Written once here because it is the whole disclosure
+ * boundary (ADR-0001) and the two callers below must not be able to disagree.
+ */
+function sharesAFamilyWithViewer(viewerId: string): Prisma.UserWhereInput {
+  return {
+    memberships: {
+      some: { family: { memberships: { some: { userId: viewerId } } } },
+    },
+  };
+}
+
+/**
+ * Wishes whose subject shares a Family with the viewer.
  *
  * Derived from the subject, not from a column on the Wish. Such a column pinned
- * each row to the Wishlists its subject belonged to at the moment it was added
- * — a cache of an answer that was true once, and stale in both directions.
+ * each row to the Families its subject belonged to at the moment it was added —
+ * a cache of an answer that was true once, and stale in both directions.
  */
-function subjectSharesAWishlistWithViewer(
+function subjectSharesAFamilyWithViewer(
   viewerId: string,
 ): Prisma.WishWhereInput {
-  return {
-    subject: { wishlists: { some: { members: { some: { id: viewerId } } } } },
-  };
+  return { subject: sharesAFamilyWithViewer(viewerId) };
 }
 
 export type WishScope = {
@@ -86,7 +99,7 @@ export function visibleWishesWhere(
     createdAt,
     ...(subjectId ? { subjectId } : {}),
     ...(excludeOwn ? { subjectId: { not: viewerId } } : {}),
-    ...subjectSharesAWishlistWithViewer(viewerId),
+    ...subjectSharesAFamilyWithViewer(viewerId),
   };
 }
 
@@ -99,7 +112,7 @@ export function claimedByViewerWhere(
     archived: false,
     claimers: { some: { userId: viewerId } },
     createdAt: giftWindow(now),
-    ...subjectSharesAWishlistWithViewer(viewerId),
+    ...subjectSharesAFamilyWithViewer(viewerId),
   };
 }
 
@@ -110,14 +123,14 @@ export type PeopleScope = {
 
 /**
  * The `where` clause for "People this viewer may see" — anyone sharing at least
- * one Wishlist with them.
+ * one Family with them.
  */
 export function visiblePeopleWhere(
   viewerId: string,
   scope: PeopleScope = {},
 ): Prisma.UserWhereInput {
   return {
-    wishlists: { some: { members: { some: { id: viewerId } } } },
+    ...sharesAFamilyWithViewer(viewerId),
     ...(scope.excludeSelf ? { NOT: { id: viewerId } } : {}),
   };
 }
@@ -136,11 +149,11 @@ export function visibleProfileWhere(
   return { id: profileId, ...visiblePeopleWhere(viewerId) };
 }
 
-/** The `where` clause for Wishlists the viewer may see by name. */
-export function visibleWishlistsWhere(
+/** The `where` clause for the Families the viewer belongs to. */
+export function visibleFamiliesWhere(
   viewerId: string,
-): Prisma.WishlistWhereInput {
-  return { members: { some: { id: viewerId } } };
+): Prisma.FamilyWhereInput {
+  return { memberships: { some: { userId: viewerId } } };
 }
 
 /**

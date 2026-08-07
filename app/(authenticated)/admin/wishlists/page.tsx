@@ -9,12 +9,12 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import { getAllWishlists } from '@/lib/db/queries-admin';
+import { getAllFamilies } from '@/lib/db/queries-admin';
 import { WishlistManager } from './wishlist-manager';
 
 export default async function AdminWishlistsPage() {
   const viewer = await requireViewerOrRedirect('manage:wishlists');
-  const wishlists = await getAllWishlists(viewer);
+  const wishlists = await getAllFamilies(viewer);
 
   return (
     <SidebarInset>
