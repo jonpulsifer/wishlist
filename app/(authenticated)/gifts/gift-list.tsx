@@ -116,7 +116,7 @@ export function GiftList({
   });
 
   const handleClaimToggle = (gift: WishCard) =>
-    !gift.yours && gift.claimedByViewer
+    !gift.yours && gift.viewerClaim > 0
       ? unclaim.run(gift.id)
       : claim.run({ id: gift.id });
 
@@ -231,15 +231,15 @@ export function GiftList({
                   </Button>
                 ) : gift.yours ? null : (
                   <Button
-                    variant={gift.claimedByViewer ? 'outline' : 'default'}
+                    variant={gift.viewerClaim > 0 ? 'outline' : 'default'}
                     onClick={() => handleClaimToggle(gift)}
                     size="sm"
                     className="w-20 md:w-24"
                     // Claimed by someone else: visible only because the viewer
                     // created it, and not theirs to unclaim.
-                    disabled={gift.claimed && !gift.claimedByViewer}
+                    disabled={gift.claimed && gift.viewerClaim === 0}
                   >
-                    {gift.claimedByViewer
+                    {gift.viewerClaim > 0
                       ? 'Unclaim'
                       : gift.claimed
                         ? 'Claimed'

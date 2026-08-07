@@ -66,13 +66,20 @@ export function GiftDetail({
     onSuccess: () => setIsEditing(false),
   });
 
-  const flipClaim = () => {
-    startTransition(() => setGift((g) => toggleViewerClaim(g)));
-    return flipClaim;
+  // The only screen that speaks for more than one at a time, so the only one
+  // with an amount to hand the optimism. The undo restores the card rather than
+  // flipping back: a flip is its own inverse only while the amount is one, and
+  // letting go of three of five is not undone by taking one back.
+  const flipClaim = (amount = 1) => {
+    const before = gift;
+    startTransition(() => setGift((g) => toggleViewerClaim(g, amount)));
+    return () => startTransition(() => setGift(before));
   };
 
-  const claim = useAction(claimGift, { optimistic: () => flipClaim() });
-  const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
+  const claim = useAction(claimGift, {
+    optimistic: () => flipClaim(claimAmount),
+  });
+  const unclaim = useAction(unclaimGift, { optimistic: () => flipClaim() });
 
   const destroy = useAction(deleteGift, {
     onSuccess: () => router.push('/gifts'),
@@ -94,7 +101,7 @@ export function GiftDetail({
     });
 
   const handleClaimToggle = () =>
-    !gift.yours && gift.claimedByViewer
+    !gift.yours && gift.viewerClaim > 0
       ? unclaim.run(gift.id)
       : claim.run({ id: gift.id, quantity: claimAmount });
 
@@ -303,7 +310,7 @@ export function GiftDetail({
               </div>
               {!canEdit && !gift.yours && (
                 <div className="flex items-center gap-2">
-                  {!gift.claimedByViewer && remaining > 1 && (
+                  {gift.viewerClaim === 0 && remaining > 1 && (
                     <Input
                       type="number"
                       min={1}
@@ -322,16 +329,16 @@ export function GiftDetail({
                     />
                   )}
                   <Button
-                    variant={gift.claimedByViewer ? 'outline' : 'default'}
+                    variant={gift.viewerClaim > 0 ? 'outline' : 'default'}
                     onClick={handleClaimToggle}
                     disabled={
-                      isPending || (!gift.claimedByViewer && gift.claimed)
+                      isPending || (gift.viewerClaim === 0 && gift.claimed)
                     }
                   >
                     {isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    {gift.claimedByViewer
+                    {gift.viewerClaim > 0
                       ? 'Unclaim'
                       : gift.claimed
                         ? 'Claimed'
