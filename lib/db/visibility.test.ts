@@ -108,7 +108,7 @@ describe('visibleWishesWhere', () => {
 });
 
 describe('claimedByViewerWhere', () => {
-  it('matches only the viewer’s own Claimer rows, inside their wishlists', () => {
+  it('matches only the viewer’s own Claimer rows, inside their families', () => {
     const where = claimedByViewerWhere(VIEWER);
     assert.deepEqual(where.claimers, { some: { userId: VIEWER } });
     assert.equal(where.archived, false);
@@ -155,7 +155,7 @@ describe('visibleProfileWhere', () => {
 });
 
 describe('visibleFamiliesWhere', () => {
-  it('is the membership clause, so /wishlists is your Families and not a directory', () => {
+  it('is the membership clause, so /families is yours and not a directory', () => {
     assert.deepEqual(visibleFamiliesWhere(VIEWER), {
       memberships: { some: { userId: VIEWER } },
     });

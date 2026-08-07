@@ -2,7 +2,7 @@
 
 import { Loader2, UsersIcon } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
-import { leaveWishlist } from '@/app/_actions/wishlists';
+import { leaveFamily } from '@/app/_actions/families';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,8 +15,8 @@ import { useAction } from '@/hooks/use-action';
 import type { Prisma } from '@/prisma/generated/client';
 import { InviteButton } from './family-actions';
 
-interface WishlistCardProps {
-  wishlist: Prisma.FamilyGetPayload<{
+interface FamilyCardProps {
+  family: Prisma.FamilyGetPayload<{
     select: {
       id: true;
       name: true;
@@ -47,21 +47,21 @@ function SubmitButton() {
           Leaving...
         </>
       ) : (
-        'Leave Wishlist'
+        'Leave'
       )}
     </Button>
   );
 }
 
-export function WishlistCard({ wishlist }: WishlistCardProps) {
-  const leave = useAction(leaveWishlist);
-  const members = wishlist.memberships.map((m) => m.user);
+export function FamilyCard({ family }: FamilyCardProps) {
+  const leave = useAction(leaveFamily);
+  const members = family.memberships.map((m) => m.user);
 
   return (
-    <Card id={`wishlist-${wishlist.id}`}>
+    <Card id={`family-${family.id}`}>
       <CardHeader>
         <div>
-          <CardTitle>{wishlist.name}</CardTitle>
+          <CardTitle>{family.name}</CardTitle>
           <CardDescription className="flex items-center gap-1">
             <UsersIcon className="h-3 w-3" />
             {members.length} members
@@ -85,11 +85,11 @@ export function WishlistCard({ wishlist }: WishlistCardProps) {
             </ul>
           </div>
 
-          <InviteButton familyId={wishlist.id} />
+          <InviteButton familyId={family.id} />
 
           <form
             action={async () => {
-              await leave.run(wishlist.id);
+              await leave.run(family.id);
             }}
           >
             <SubmitButton />

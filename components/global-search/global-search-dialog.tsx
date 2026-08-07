@@ -24,7 +24,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 
 type SearchItem = {
   id: string;
-  type: 'user' | 'gift' | 'wishlist' | 'nav';
+  type: 'user' | 'wish' | 'family' | 'nav';
   title: string;
   subtitle?: string | null;
   href: string;
@@ -32,17 +32,17 @@ type SearchItem = {
 
 type SearchResponse = {
   users: SearchItem[];
-  gifts: SearchItem[];
-  wishlists: SearchItem[];
+  wishes: SearchItem[];
+  families: SearchItem[];
 };
 
-const EMPTY_RESULTS: SearchResponse = { users: [], gifts: [], wishlists: [] };
+const EMPTY_RESULTS: SearchResponse = { users: [], wishes: [], families: [] };
 
 function iconForType(type: SearchItem['type']) {
   switch (type) {
-    case 'gift':
+    case 'wish':
       return <GiftIcon className="h-4 w-4" />;
-    case 'wishlist':
+    case 'family':
       return <BookUserIcon className="h-4 w-4" />;
     case 'user':
       return <UsersIcon className="h-4 w-4" />;
@@ -99,10 +99,10 @@ export function GlobalSearchDialog() {
       { id: 'nav-gifts', type: 'nav', title: 'Gifts', href: '/gifts' },
       { id: 'nav-people', type: 'nav', title: 'People', href: '/people' },
       {
-        id: 'nav-wishlists',
+        id: 'nav-families',
         type: 'nav',
-        title: 'Wishlists',
-        href: '/wishlists',
+        title: 'Families',
+        href: '/families',
       },
       { id: 'nav-me', type: 'nav', title: 'My profile', href: '/people/me' },
     ],
@@ -116,8 +116,8 @@ export function GlobalSearchDialog() {
 
   const hasAnyResults =
     results.users.length > 0 ||
-    results.gifts.length > 0 ||
-    results.wishlists.length > 0;
+    results.wishes.length > 0 ||
+    results.families.length > 0;
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -127,7 +127,7 @@ export function GlobalSearchDialog() {
           setQuery(value);
           debouncedSearch(value);
         }}
-        placeholder="Search gifts, people, wishlists…"
+        placeholder="Search gifts, people, families…"
         autoFocus
       />
       <CommandList>
@@ -142,9 +142,9 @@ export function GlobalSearchDialog() {
                 <UsersIcon className="mr-2 h-4 w-4" />
                 Browse people
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect('/wishlists')}>
+              <CommandItem onSelect={() => handleSelect('/families')}>
                 <BookUserIcon className="mr-2 h-4 w-4" />
-                Browse wishlists
+                Browse families
               </CommandItem>
             </CommandGroup>
             <CommandSeparator />
@@ -185,9 +185,9 @@ export function GlobalSearchDialog() {
               <CommandEmpty>No results.</CommandEmpty>
             )}
 
-            {results.gifts.length > 0 && (
+            {results.wishes.length > 0 && (
               <CommandGroup heading="Gifts">
-                {results.gifts.map((item) => (
+                {results.wishes.map((item) => (
                   <CommandItem
                     key={item.id}
                     value={`${item.title} ${item.subtitle ?? ''}`}
@@ -209,7 +209,7 @@ export function GlobalSearchDialog() {
 
             {results.users.length > 0 && (
               <>
-                {results.gifts.length > 0 && <CommandSeparator />}
+                {results.wishes.length > 0 && <CommandSeparator />}
                 <CommandGroup heading="People">
                   {results.users.map((item) => (
                     <CommandItem
@@ -232,13 +232,13 @@ export function GlobalSearchDialog() {
               </>
             )}
 
-            {results.wishlists.length > 0 && (
+            {results.families.length > 0 && (
               <>
-                {(results.gifts.length > 0 || results.users.length > 0) && (
+                {(results.wishes.length > 0 || results.users.length > 0) && (
                   <CommandSeparator />
                 )}
-                <CommandGroup heading="Wishlists">
-                  {results.wishlists.map((item) => (
+                <CommandGroup heading="Families">
+                  {results.families.map((item) => (
                     <CommandItem
                       key={item.id}
                       value={`${item.title} ${item.subtitle ?? ''}`}

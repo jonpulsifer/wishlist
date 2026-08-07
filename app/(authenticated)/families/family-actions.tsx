@@ -3,7 +3,7 @@
 import { Link2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createFamily, createInvite } from '@/app/_actions/wishlists';
+import { createFamily, createInvite } from '@/app/_actions/families';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -35,12 +35,12 @@ export function CreateFamilyButton() {
       <DialogTrigger asChild>
         <Button className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
-          New wishlist
+          New family
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Start a new wishlist</DialogTitle>
+          <DialogTitle>Start a new family</DialogTitle>
           <DialogDescription>
             You will be its only member until you share an invite link.
           </DialogDescription>
