@@ -103,11 +103,6 @@ export function toGiftCard(row: GiftRow, viewerId: string): GiftCard {
   };
 }
 
-/** A Gift on its detail page — the card plus the Wishlists it sits on. */
-export type GiftDetail = GiftCard & {
-  wishlists: Array<{ id: string; name: string }>;
-};
-
 /** A person as shown on the People index. */
 export type PersonCard = PersonRef & { giftCount: number };
 

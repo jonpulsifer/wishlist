@@ -65,18 +65,6 @@ export const addGift = defineAction(
     });
     if (!recipient) throw new ActionError('Recipient not found');
 
-    // Nothing reads this pin any more — visibility follows the subject. It is
-    // still written so the old rule's inputs stay intact and a revert of that
-    // step is one commit rather than a restore. It goes with the table.
-    //
-    // The recipient's Wishlists, not the adder's, which is what the old rule
-    // meant: resolving these from the viewer shared the Gift with groups the
-    // recipient may not even be in, and withheld it from the ones they are.
-    const wishlists = await db.wishlist.findMany({
-      select: { id: true },
-      where: { members: { some: { id: input.recipientId } } },
-    });
-
     await db.gift.create({
       data: {
         name: input.name,
@@ -84,7 +72,6 @@ export const addGift = defineAction(
         description: input.description,
         owner: { connect: { id: input.recipientId } },
         createdBy: { connect: { id: viewer.id } },
-        wishlists: { connect: wishlists.map(({ id }) => ({ id })) },
       },
     });
 
