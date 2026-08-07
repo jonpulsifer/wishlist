@@ -75,7 +75,7 @@ does not list contents.
 | `hooks/` | Client-side React hooks. |
 | `prisma/` | Schema and seed. The generated client lands in `prisma/generated/` and is not committed. |
 | `types/` | Ambient and shared type declarations. |
-| `docs/` | Domain docs and ADRs, plus `refactor-plan.md` — the sequenced plan that makes the schema match the glossary — `agents/`, the tracker, label and domain-doc config the agent skills read, and `research/`, findings gathered against primary sources and cited back to them. |
+| `docs/` | Domain docs and ADRs, plus `agents/`, the tracker, label and domain-doc config the agent skills read, and `research/`, findings gathered against primary sources and cited back to them. |
 | `.agents/skills/` | Repo-local agent skills. Tool-agnostic source; `.claude/skills` is a symlink to it. |
 
 ## Where depth lives
