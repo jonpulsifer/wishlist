@@ -76,6 +76,7 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
       name: formData.get('name') as string,
       url: formData.get('url') as string,
       description: formData.get('description') as string,
+      quantity: Number(formData.get('quantity')) || 1,
       asSubject: forSomeoneElse && asSubject,
     };
     run(data);
@@ -164,6 +165,29 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
             {fieldErrors.name && (
               <p className="text-sm text-red-500">{fieldErrors.name}</p>
             )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="quantity" className="font-bold">
+              How many?
+            </Label>
+            <Input
+              id="quantity"
+              name="quantity"
+              type="number"
+              min={1}
+              max={99}
+              defaultValue={1}
+              className="w-24"
+            />
+            {fieldErrors.quantity && (
+              <p className="text-sm text-red-500">{fieldErrors.quantity}</p>
+            )}
+            <Label
+              htmlFor="quantity"
+              className="text-xs text-muted-foreground font-normal"
+            >
+              Five pairs of socks is one gift wanted five times, not five gifts.
+            </Label>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="url" className="font-bold">

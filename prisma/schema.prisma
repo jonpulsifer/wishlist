@@ -85,6 +85,10 @@ model Wish {
   url         String?
   description String?
   archived    Boolean   @default(false)
+  /// How many of the thing its subject wants. Five pairs of socks is one Wish
+  /// wanted five times, not five Wishes, and it is what lets a Claim speak for
+  /// part of a Wish rather than all of it.
+  quantity    Int       @default(1)
   subject     User      @relation("WishSubject", fields: [subjectId], references: [id])
   subjectId   String    @db.Uuid
   proposer    User      @relation("WishProposer", fields: [proposerId], references: [id])
@@ -104,6 +108,11 @@ model Wish {
 model Claimer {
   wishId    String   @db.Uuid
   userId    String   @db.Uuid
+  /// How many of the Wish this person speaks for. Several people going in on
+  /// one thing is several rows; the sum against `Wish.quantity` is what "is
+  /// this taken?" means.
+  quantity  Int      @default(1)
+  /// Orders the split: who started it, and who joined.
   createdAt DateTime @default(now())
   wish      Wish     @relation(fields: [wishId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

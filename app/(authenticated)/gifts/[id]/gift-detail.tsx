@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useAction } from '@/hooks/use-action';
-import type { WishCard } from '@/lib/db/projections';
+import { toggleViewerClaim, type WishCard } from '@/lib/db/projections';
 import { getInitials } from '@/lib/utils';
 
 interface GiftDetailProps {
@@ -49,27 +49,29 @@ export function GiftDetail({
   const [name, setName] = useState(gift.name);
   const [description, setDescription] = useState(gift.description || '');
   const [url, setUrl] = useState(gift.url || '');
+  const [quantity, setQuantity] = useState(String(gift.quantity));
+
+  // How many of a several-times-wanted Wish this viewer is speaking for. One,
+  // unless they say otherwise, and never more than is left.
+  const remaining = gift.yours ? 0 : gift.quantity - gift.spokenFor;
+  const [claimAmount, setClaimAmount] = useState(1);
 
   const update = useAction(updateGift, {
-    optimistic: ({ name, description, url }) => {
-      startTransition(() => setGift({ ...gift, name, description, url }));
+    optimistic: ({ name, description, url, quantity }) => {
+      startTransition(() =>
+        setGift({ ...gift, name, description, url, quantity: quantity ?? 1 }),
+      );
       return () => startTransition(() => setGift(initialGift));
     },
     onSuccess: () => setIsEditing(false),
   });
 
   const flipClaim = () => {
-    startTransition(() =>
-      setGift((g) =>
-        g.yours
-          ? g
-          : { ...g, claimed: !g.claimed, claimedByViewer: !g.claimedByViewer },
-      ),
-    );
+    startTransition(() => setGift((g) => toggleViewerClaim(g)));
     return flipClaim;
   };
 
-  const claim = useAction(claimGift, { optimistic: flipClaim });
+  const claim = useAction(claimGift, { optimistic: () => flipClaim() });
   const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
 
   const destroy = useAction(deleteGift, {
@@ -82,12 +84,19 @@ export function GiftDetail({
     unclaim.isPending ||
     destroy.isPending;
 
-  const handleSave = () => update.run({ id: gift.id, name, description, url });
+  const handleSave = () =>
+    update.run({
+      id: gift.id,
+      name,
+      description,
+      url,
+      quantity: Number(quantity) || 1,
+    });
 
   const handleClaimToggle = () =>
     !gift.yours && gift.claimedByViewer
       ? unclaim.run(gift.id)
-      : claim.run(gift.id);
+      : claim.run({ id: gift.id, quantity: claimAmount });
 
   const handleDelete = () => destroy.run(gift.id);
 
@@ -204,6 +213,21 @@ export function GiftDetail({
                     placeholder="https://..."
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">How many?</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="w-24"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Five pairs of socks is one wish wanted five times.
+                  </p>
+                </div>
               </>
             ) : (
               <>
@@ -234,6 +258,26 @@ export function GiftDetail({
 
           <Separator />
 
+          {!gift.yours && (gift.quantity > 1 || gift.joinedBy.length > 0) && (
+            <div className="space-y-1 rounded-lg border border-primary/10 bg-primary/5 p-4">
+              {gift.quantity > 1 && (
+                <p className="text-sm font-medium">
+                  Wanted {gift.quantity} times — {gift.spokenFor} spoken for,{' '}
+                  {remaining} to go
+                </p>
+              )}
+              {gift.joinedBy.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  You and{' '}
+                  {gift.joinedBy
+                    .map((person) => person.name || person.email)
+                    .join(', ')}{' '}
+                  are in on this
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -258,20 +302,44 @@ export function GiftDetail({
                 </div>
               </div>
               {!canEdit && !gift.yours && (
-                <Button
-                  variant={gift.claimedByViewer ? 'outline' : 'default'}
-                  onClick={handleClaimToggle}
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {gift.claimedByViewer
-                    ? 'Unclaim'
-                    : gift.claimed
-                      ? 'Claimed'
-                      : 'Claim'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {!gift.claimedByViewer && remaining > 1 && (
+                    <Input
+                      type="number"
+                      min={1}
+                      max={remaining}
+                      aria-label="How many are you getting?"
+                      value={claimAmount}
+                      onChange={(e) =>
+                        setClaimAmount(
+                          Math.min(
+                            remaining,
+                            Math.max(1, Number(e.target.value) || 1),
+                          ),
+                        )
+                      }
+                      className="w-20"
+                    />
+                  )}
+                  <Button
+                    variant={gift.claimedByViewer ? 'outline' : 'default'}
+                    onClick={handleClaimToggle}
+                    disabled={
+                      isPending || (!gift.claimedByViewer && gift.claimed)
+                    }
+                  >
+                    {isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {gift.claimedByViewer
+                      ? 'Unclaim'
+                      : gift.claimed
+                        ? 'Claimed'
+                        : remaining > 1
+                          ? `Claim ${claimAmount}`
+                          : 'Claim'}
+                  </Button>
+                </div>
               )}
             </div>
           </div>

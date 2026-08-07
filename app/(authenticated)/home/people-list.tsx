@@ -12,7 +12,11 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useAction } from '@/hooks/use-action';
-import type { PersonCard, WishCard } from '@/lib/db/projections';
+import {
+  type PersonCard,
+  toggleViewerClaim,
+  type WishCard,
+} from '@/lib/db/projections';
 import { sortedForPerson } from '@/lib/shopping-progress';
 import { getInitials } from '@/lib/utils';
 
@@ -33,22 +37,13 @@ export function PeopleList({
   const flipClaim = (giftId: string) => {
     startTransition(() =>
       setGifts((prev) =>
-        prev.map(
-          (g): WishCard =>
-            g.id === giftId && !g.yours
-              ? {
-                  ...g,
-                  claimed: !g.claimed,
-                  claimedByViewer: !g.claimedByViewer,
-                }
-              : g,
-        ),
+        prev.map((g) => (g.id === giftId ? toggleViewerClaim(g) : g)),
       ),
     );
     return () => flipClaim(giftId);
   };
 
-  const claim = useAction(claimGift, { optimistic: flipClaim });
+  const claim = useAction(claimGift, { optimistic: ({ id }) => flipClaim(id) });
   const unclaim = useAction(unclaimGift, { optimistic: flipClaim });
 
   const byOwner = new Map<string, WishCard[]>();
@@ -118,9 +113,13 @@ export function PeopleList({
                         size="sm"
                         className="w-20 shrink-0"
                         disabled={gift.claimed}
-                        onClick={() => claim.run(gift.id)}
+                        onClick={() => claim.run({ id: gift.id })}
                       >
-                        {gift.claimed ? 'Claimed' : 'Claim'}
+                        {gift.claimed
+                          ? 'Claimed'
+                          : gift.quantity > 1
+                            ? `Claim (${gift.spokenFor}/${gift.quantity})`
+                            : 'Claim'}
                       </Button>
                     ))}
                 </li>
