@@ -10,9 +10,9 @@ description: >-
 # Server actions
 
 Every mutation in `app/_actions/*.ts` is built with `defineAction` from
-`lib/actions/define.ts`. That combinator owns the session, the capability gate,
-zod parsing, `NEXT_REDIRECT` passthrough, error normalisation and cache
-invalidation. **Do not re-derive any of it inside a handler.**
+`lib/actions/define.ts`. That combinator owns the session, zod parsing,
+`NEXT_REDIRECT` passthrough, error normalisation and cache invalidation. **Do
+not re-derive any of it inside a handler.**
 
 `app/_actions/` holds mutations only. A read that a server component needs is a
 query in `lib/db/` — see the `data-access` skill. The behaviour of the combinator
@@ -23,7 +23,6 @@ the wiring. Change the prologue, extend `prologue.test.ts`.
 ```ts
 export const claimGift = defineAction(
   {
-    capability: 'manage:secret-santa', // omit for "any signed-in viewer"
     input: z.string().min(1, 'Gift ID is required'),
     invalidates: ['gifts', 'users'],
   },
@@ -52,7 +51,8 @@ calls `(prevState, formData)`, does not fit.
   `error` and `message` carry the same text on the failure path deliberately —
   callers read both spellings and one being `undefined` produced empty toasts.
 - **Callers narrow on `result.success`**, never on `result.error`.
-- **Never check a capability by hand.** Declare `capability:`.
+- **Never gate on who the viewer is.** There is nothing to gate on: scope the
+  write with a `where` from `lib/db/authority.ts` so the row is never loaded.
 - **Multi-row writes go in `db.$transaction`**, not `Promise.all`.
 - **Reuse the existing queries and helpers** rather than growing a parallel set.
 

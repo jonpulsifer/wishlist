@@ -5,14 +5,14 @@
  * catch-all route handler and the `SessionProvider` in the authenticated layout.
  * Everything that wants to know *who is asking* goes through `lib/auth/viewer`.
  *
- * The session callback resolves roles into capabilities here, on the server, so
- * role names never reach the browser and no caller can gate on one.
+ * The session callback selects the few fields the browser is allowed to know
+ * about the signed-in person, and nothing else: there is no authorization
+ * question a client may ask (ADR-0002).
  */
 
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Google from 'next-auth/providers/google';
-import { type Capability, capabilitiesFor } from '@/lib/auth/capabilities';
 import prisma from '@/lib/db/client';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -52,17 +52,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: true,
           // Required by the NextAuth adapter's user shape.
           emailVerified: true,
-          roles: { select: { role: { select: { name: true } } } },
         },
       });
 
-      if (record) {
-        const { roles, ...person } = record;
-        session.user = {
-          ...person,
-          capabilities: [...capabilitiesFor(roles.map((r) => r.role.name))],
-        };
-      }
+      if (record) session.user = record;
       return session;
     },
   },
@@ -76,8 +69,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 /**
  * What the browser is allowed to know about the signed-in person.
  *
- * Capabilities, not roles: the sidebar needs to decide whether to draw the admin
- * link, and that is the only authorization question a client may ask.
+ * Identity and nothing more. What they may act on is a property of the row, not
+ * of the person, so there is nothing here for a client to gate on.
  */
 type SessionUser = {
   id: string;
@@ -85,7 +78,6 @@ type SessionUser = {
   name: string | null;
   email: string;
   emailVerified: Date | null;
-  capabilities: Capability[];
 };
 
 declare module 'next-auth' {

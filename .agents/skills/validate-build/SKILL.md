@@ -29,7 +29,7 @@ throwaway Postgres service. Matching it locally means `mise run check` plus
 bun implements — so there is no test framework dependency and none should be
 added. Test files import with an explicit `.ts` extension. There is no database
 in the test run: cover the pure modules (`lib/secret-santa/draw.ts`,
-`lib/auth/capabilities.ts`, `lib/db/visibility.ts`) and pass fixtures in.
+`lib/season.ts`, `lib/db/visibility.ts`) and pass fixtures in.
 
 `draw.ts` takes its randomness as a parameter, so assert on draws with a seeded
 generator rather than on statistical properties.

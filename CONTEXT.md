@@ -612,17 +612,17 @@ co-organising, and it is why nobody needed a per-Family role to get it.
 
 - **Grounded**: the word and the column. `organiserOfWhere` in `lib/db/authority.ts` is
   the shared module the rule lives in, and the Draw composes its `where` from it.
-- **Anticipated**: the remaining acts gathering under it — deleting an Exchange is still
-  `manage:secret-santa`'s ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
+- **Anticipated**: nothing. Every act on an Exchange is the Organiser's
+  ([#160](https://github.com/jonpulsifer/wishlist/issues/160)).
 - **Rejected**: co-organisers and transfer — they buy succession for an object that
   outlives nothing. Authority following participation, so that any participant may run the
   Exchange — the Draw is irreversible once assignments are written, and any of thirty
   people could fire it early. An instance administrator keeping the destructive acts as a
   backstop for an abandoned Exchange, which was the last job anything global had.
-- **Schema today**: `Exchange.organiserId`. The acts are still split against it: the
-  Organiser runs the Draw but cannot delete the Exchange, which `manage:secret-santa` may
-  do to one it has nothing to do with. Opening one is gated by membership of the Family
-  it is held for, and its participants must be members of that Family.
+- **Schema today**: `Exchange.organiserId`, and every act on the row composes
+  `organiserOfWhere` into its `where` — the Draw and the deletion both. Opening one is
+  gated by membership of the Family it is held for, and its participants must be members
+  of that Family.
 
 ## Draw
 
@@ -691,8 +691,10 @@ constraint shaping it.
   ([#153](https://github.com/jonpulsifer/wishlist/issues/153)), the pin and the directory
   were deleted with them, deleting a Family became a consequence of the last member
   leaving, and every Secret Santa act went to the Organiser or to the participants
-  themselves — leaving `manage:roles`, whose sole remaining power was granting
-  `manage:roles`.
+  themselves — leaving one capability whose sole remaining power was granting itself.
+  The tables are gone, and so is `/admin`: those screens read every person, every Family
+  and every Exchange in the install, through the disclosure boundary rather than within
+  it.
 
   The second argument is sharper than the tally. A Family you are not in is *invisible*,
   not merely closed, so an instance administrator could not inspect one without a bypass

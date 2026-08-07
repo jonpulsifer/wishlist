@@ -14,23 +14,21 @@
  *
  * Nothing else may derive identity from the session. `auth()` is NextAuth's own
  * handle: the authenticated layout passes it to `SessionProvider` and the route
- * handler mounts it. Read a viewer from here instead — the session carries
- * capabilities, never role names, so "never name a role" holds by construction.
+ * handler mounts it. Read a viewer from here instead.
+ *
+ * A `Viewer` is an identity and nothing more. What they may act on is not a
+ * property of the person — it is a property of the row, and it lives in
+ * `lib/db/authority.ts` (ADR-0002).
  */
 
 import { redirect } from 'next/navigation';
 import { auth } from '@/app/auth';
-import { type Capability, UnauthorizedError } from './capabilities';
 
 export type Viewer = {
   id: string;
   name: string | null;
   email: string;
   image: string | null;
-  /** Capability check. Never ask about role names outside `./capabilities`. */
-  can: (capability: Capability) => boolean;
-  /** True when the viewer holds any capability at all — gates the admin nav. */
-  isStaff: boolean;
 };
 
 /** The signed-in viewer, or `null`. Callers decide what to do about `null`. */
@@ -39,15 +37,11 @@ export async function currentViewer(): Promise<Viewer | null> {
   const user = session?.user;
   if (!user?.id) return null;
 
-  const granted = new Set(user.capabilities ?? []);
-
   return {
     id: user.id,
     name: user.name ?? null,
     email: user.email,
     image: user.image ?? null,
-    can: (capability: Capability) => granted.has(capability),
-    isStaff: granted.size > 0,
   };
 }
 
@@ -57,27 +51,15 @@ export async function currentViewer(): Promise<Viewer | null> {
  * Throws rather than redirecting so a server action can turn it into an error
  * result; `defineAction` does exactly that.
  */
-export async function requireViewer(capability?: Capability): Promise<Viewer> {
+export async function requireViewer(): Promise<Viewer> {
   const viewer = await currentViewer();
-  if (!viewer) throw new UnauthorizedError();
-  if (capability && !viewer.can(capability)) {
-    throw new UnauthorizedError(capability);
-  }
+  if (!viewer) throw new Error('Unauthorized: you must be signed in');
   return viewer;
 }
 
-/**
- * The signed-in viewer, or navigate away. The adapter pages use.
- *
- * Signed out goes to the login screen; signed in but short a capability goes
- * home, because telling someone which screens exist that they cannot open is
- * itself a disclosure.
- */
-export async function requireViewerOrRedirect(
-  capability?: Capability,
-): Promise<Viewer> {
+/** The signed-in viewer, or the login screen. The adapter pages use. */
+export async function requireViewerOrRedirect(): Promise<Viewer> {
   const viewer = await currentViewer();
   if (!viewer) redirect('/login');
-  if (capability && !viewer.can(capability)) redirect('/');
   return viewer;
 }

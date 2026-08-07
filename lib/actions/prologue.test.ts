@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { z } from 'zod';
-import type { Capability } from '@/lib/auth/capabilities';
-import { UnauthorizedError } from '@/lib/auth/capabilities';
 import type { Viewer } from '@/lib/auth/viewer';
 import {
   ActionError,
@@ -11,33 +9,28 @@ import {
   isNextControlFlow,
 } from './prologue.ts';
 
-function viewerHolding(...capabilities: Capability[]): Viewer {
-  return {
-    id: 'viewer-1',
-    name: 'Viewer',
-    email: 'viewer@example.com',
-    image: null,
-    can: (capability) => capabilities.includes(capability),
-    isStaff: capabilities.length > 0,
-  };
-}
+const SIGNED_IN: Viewer = {
+  id: 'viewer-1',
+  name: 'Viewer',
+  email: 'viewer@example.com',
+  image: null,
+};
+
+const signedOut = () => new Error('Unauthorized: you must be signed in');
 
 /** A prologue that records what it was asked to do. */
-function fakePrologue(
-  viewer: Viewer | UnauthorizedError = viewerHolding('manage:roles'),
-) {
+function fakePrologue(viewer: Viewer | Error = SIGNED_IN) {
   const invalidated: CacheTag[] = [];
-  const askedFor: (Capability | undefined)[] = [];
+  let resolved = 0;
 
   return {
     invalidated,
-    askedFor,
-    resolveViewer: async (capability?: Capability) => {
-      askedFor.push(capability);
-      if (viewer instanceof UnauthorizedError) throw viewer;
-      if (capability && !viewer.can(capability)) {
-        throw new UnauthorizedError(capability);
-      }
+    get resolved() {
+      return resolved;
+    },
+    resolveViewer: async () => {
+      resolved += 1;
+      if (viewer instanceof Error) throw viewer;
       return viewer;
     },
     invalidate: (tag: CacheTag) => {
@@ -61,7 +54,7 @@ describe('the success path', () => {
   });
 
   it('hands the handler the resolved viewer', async () => {
-    const viewer = viewerHolding();
+    const viewer = SIGNED_IN;
     let seen: Viewer | undefined;
     const action = createDefineAction(fakePrologue(viewer))(
       {},
@@ -87,21 +80,18 @@ describe('the success path', () => {
   });
 });
 
-describe('authorization', () => {
-  it('asks for the declared capability', async () => {
+describe('the session', () => {
+  it('resolves the viewer before anything else runs', async () => {
     const prologue = fakePrologue();
-    const action = createDefineAction(prologue)(
-      { capability: 'manage:roles' },
-      async () => ({}),
-    );
+    const action = createDefineAction(prologue)({}, async () => ({}));
 
     await action();
-    assert.deepEqual(prologue.askedFor, ['manage:roles']);
+    assert.equal(prologue.resolved, 1);
   });
 
-  it('turns a refusal into a failure result rather than throwing', async () => {
-    const action = createDefineAction(fakePrologue(viewerHolding()))(
-      { capability: 'manage:roles' },
+  it('turns a signed-out viewer into a failure result rather than throwing', async () => {
+    const action = createDefineAction(fakePrologue(signedOut()))(
+      {},
       async () => ({}),
     );
 
@@ -109,12 +99,12 @@ describe('authorization', () => {
 
     assert.equal(result.success, false);
     if (result.success) return;
-    assert.match(result.error, /manage:roles/);
+    assert.match(result.error, /signed in/);
   });
 
   it('does not run the handler when the viewer is refused', async () => {
     let ran = false;
-    const action = createDefineAction(fakePrologue(new UnauthorizedError()))(
+    const action = createDefineAction(fakePrologue(signedOut()))(
       {},
       async () => {
         ran = true;
@@ -127,7 +117,7 @@ describe('authorization', () => {
   });
 
   it('invalidates nothing when the viewer is refused', async () => {
-    const prologue = fakePrologue(new UnauthorizedError());
+    const prologue = fakePrologue(signedOut());
     const action = createDefineAction(prologue)(
       { invalidates: ['gifts'] },
       async () => ({}),

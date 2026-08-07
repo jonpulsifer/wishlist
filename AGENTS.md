@@ -25,10 +25,12 @@ after the fact is too late. Every one exists because the opposite shipped.
 - **Never decide who may change a row after loading it.** "Which rows may this
   viewer act on" lives in `lib/db/authority.ts`. Spread its builders into the
   `where` so the row is never loaded, rather than comparing `subjectId` in memory.
-- **Never name a role.** Ask `viewer.can('manage:secret-santa')`. The
-  role → capability table is `lib/auth/capabilities.ts`; roles are its
-  implementation detail, and the session carries capabilities so a role name
-  never reaches the browser.
+- **Never gate on who someone is.** There are no roles, no admins and no
+  capabilities: authority is a property of the row, not of the person. Everyone
+  is one of three things — the subject of a Wish, a member of a Family, or the
+  Organiser of the one Exchange they opened — and all three are `where`
+  builders in `lib/db/authority.ts`. A `Viewer` carries an identity and nothing
+  else, so there is nothing on it to check.
 - **Never resolve identity from the session.** `lib/auth/viewer.ts` is the only
   front door — `currentViewer` for route handlers, `requireViewer` for actions,
   `requireViewerOrRedirect` for pages.
@@ -83,13 +85,12 @@ rest of the codebase is not allowed to re-derive:
 
 | Module | Owns |
 | --- | --- |
-| `lib/actions/define.ts` | The server-action prologue — session, capability gate, zod parsing, error normalisation, cache invalidation. Behaviour is in `prologue.ts`, which takes its dependencies as parameters and is tested. |
+| `lib/actions/define.ts` | The server-action prologue — session, zod parsing, error normalisation, cache invalidation. Behaviour is in `prologue.ts`, which takes its dependencies as parameters and is tested. |
 | `hooks/use-action.ts` | The browser half of that seam — the unwrap, the notification, the optimistic revert. |
 | `lib/db/visibility.ts` | Who may see what, as Prisma `where` builders. |
 | `lib/db/authority.ts` | Who may change what, in the same shape. |
 | `lib/db/projections.ts` | What may cross to the browser. |
 | `lib/auth/viewer.ts` | Who is asking. One interface, three adapters. |
-| `lib/auth/capabilities.ts` | Role → capability. Pure, and covered by tests. |
 | `lib/season.ts` | Which year is in play, and every window measured against it. |
 
 Business rules that do not need a database live in plain modules with no
@@ -103,7 +104,7 @@ the same reason, and `lib/ai.ts` takes its completion client.
 | Skill | Use when |
 | --- | --- |
 | `local-dev` | Running the app, the local database, or anything Prisma on this machine. |
-| `data-access` | Reading or returning user data — the visibility, capability and projection rules. |
+| `data-access` | Reading or returning user data — the visibility, authority and projection rules. |
 | `server-actions` | Writing or changing anything in `app/_actions/`. |
 | `schema-change` | Editing `prisma/schema.prisma`. |
 | `validate-build` | Before a commit or a PR. |

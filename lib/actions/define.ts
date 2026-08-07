@@ -2,9 +2,9 @@
  * The server-action prologue, written once.
  *
  * Every action used to re-derive the same opening and closing: resolve the
- * session, check a role, parse input, do the work, revalidate, then a catch
- * block that flattened everything to `{ error: string }`. Thirty-five copies,
- * and they had drifted into seven different return shapes.
+ * session, parse input, do the work, revalidate, then a catch block that
+ * flattened everything to `{ error: string }`. Thirty-five copies, and they had
+ * drifted into seven different return shapes.
  *
  * This module is not `'use server'` — that directive forces every export to be
  * an async RPC endpoint, so the combinator lives here and is called from the
@@ -18,8 +18,10 @@
  *   )
  *
  * The handler sees a resolved `Viewer` and parsed `input`, and returns its
- * payload. Authorization, validation, error normalisation and cache invalidation
- * all sit behind this. A handler may return `{ message }` to set the success
+ * payload. Session, validation, error normalisation and cache invalidation all
+ * sit behind this. What the viewer may *act on* does not: that is a property of
+ * the row, and it is composed into the handler's `where` from
+ * `lib/db/authority.ts` (ADR-0002). A handler may return `{ message }` to set the success
  * message, and may throw `ActionError` to fail with a specific one.
  *
  * The behaviour lives in `./prologue`, which takes its two dependencies as
