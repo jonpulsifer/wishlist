@@ -23,7 +23,7 @@ the wiring. Change the prologue, extend `prologue.test.ts`.
 ```ts
 export const claimGift = defineAction(
   {
-    capability: 'manage:wishlists', // omit for "any signed-in viewer"
+    capability: 'manage:secret-santa', // omit for "any signed-in viewer"
     input: z.string().min(1, 'Gift ID is required'),
     invalidates: ['gifts', 'users'],
   },

@@ -68,7 +68,8 @@ model User {
   excludes                  User[]                   @relation("Exclusions")
   excludedBy                User[]                   @relation("Exclusions")
   roles                     UserRole[]               @relation("UserRoles")
-  createdWishlistInvites    WishlistInvite[]         @relation("WishlistInvitesCreatedBy")
+  createdInvites            Invite[]                 @relation("InvitesCreatedBy")
+  redeemedInvites           Invite[]                 @relation("InvitesRedeemedBy")
 }
 
 model Role {
@@ -142,7 +143,7 @@ model Family {
   name        String
   memberships Membership[]
   exchanges   Exchange[]
-  invites     WishlistInvite[]
+  invites     Invite[]
 
   @@index([createdAt])
 }
@@ -163,22 +164,30 @@ model Membership {
   @@index([userId])
 }
 
-/// The model and the `wishlistId` column keep the old word for one more step:
-/// Step 16 renames this to `Invite` and reshapes it at the same time, and doing
-/// half of that here would mean renaming the column twice.
-model WishlistInvite {
-  id          String    @id @default(uuid()) @db.Uuid
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  token       String    @unique
-  wishlistId  String    @db.Uuid
-  wishlist    Family    @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-  createdById String?   @db.Uuid
-  createdBy   User?     @relation("WishlistInvitesCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  expiresAt   DateTime?
-  revokedAt   DateTime?
+/// A bearer link that grants membership of one Family, and the only door into
+/// one (ADR-0005).
+///
+/// Single-use, revocable and expiring, because following one is the only
+/// irreversible act in the model: a link that never dies is a standing grant of
+/// it, and a forwarded one would cost a group chat's worth of wrong members
+/// rather than a single person. Redemption is recorded on the token itself —
+/// spent, it is dead.
+model Invite {
+  id           String    @id @default(uuid()) @db.Uuid
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  token        String    @unique
+  familyId     String    @db.Uuid
+  family       Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdById  String?   @db.Uuid
+  createdBy    User?     @relation("InvitesCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  redeemedAt   DateTime?
+  redeemedById String?   @db.Uuid
+  redeemedBy   User?     @relation("InvitesRedeemedBy", fields: [redeemedById], references: [id], onDelete: SetNull)
 
-  @@index([wishlistId])
+  @@index([familyId])
   @@index([token])
 }
 

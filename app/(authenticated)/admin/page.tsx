@@ -1,4 +1,4 @@
-import { CandyCane, ListPlus, Shield, Users } from 'lucide-react';
+import { CandyCane, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/app-header';
 import {
@@ -74,23 +74,6 @@ export default async function AdminPage() {
             <CardContent>
               <Button asChild className="w-full">
                 <Link href="/admin/roles">Manage Roles</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:bg-accent/50 transition-colors">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ListPlus className="h-5 w-5" />
-                Wishlist Management
-              </CardTitle>
-              <CardDescription>
-                Create/delete wishlists and manage their pins
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link href="/admin/wishlists">Manage Wishlists</Link>
               </Button>
             </CardContent>
           </Card>

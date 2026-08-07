@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { useAction } from '@/hooks/use-action';
 import type { Prisma } from '@/prisma/generated/client';
+import { InviteButton } from './family-actions';
 
 interface WishlistCardProps {
   wishlist: Prisma.FamilyGetPayload<{
@@ -83,6 +84,8 @@ export function WishlistCard({ wishlist }: WishlistCardProps) {
                 ))}
             </ul>
           </div>
+
+          <InviteButton familyId={wishlist.id} />
 
           <form
             action={async () => {

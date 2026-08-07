@@ -361,9 +361,10 @@ people still in it.
 - **Schema today**: `model Family`, and `model Membership` — one row per person per
   Family, keyed by the pair. The name is a label with no unique index, because an Invite
   is the only way in and nothing looks a Family up by name. There is no owner column,
-  which [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate,
-  and `deleteWishlistAdmin` hard-deletes one behind `manage:wishlists` — which destroys
-  no [Wish](#wish), since a Family owns nothing but its membership edges and its Invites.
+  which [#160](https://github.com/jonpulsifer/wishlist/issues/160) makes deliberate. Any
+  signed-in person may open one, and nobody may delete one: a Family goes when its last
+  member leaves, which destroys no [Wish](#wish), since a Family owns nothing but its
+  membership edges and its Invites.
 
 ## User
 
@@ -491,12 +492,13 @@ serialised, so it is declared as a shape and not assembled as a template.
   for one Grandma cannot recover from. Redemption behind the inviter's approval, which
   restores an undo before the irreversible step by giving up the finding that the link
   *is* the consent.
-- **Schema today**: `model WishlistInvite`, reachable only by an admin —
-  `createWishlistInviteAdmin` requires `manage:wishlists`, as does creating a Family at
-  all, so no ordinary member can invite anyone or start a family. A token is multi-use:
-  `app/invite/[token]/route.ts` records nothing about redemption, so one link admits
-  everyone who follows it, and only one is active per Family because creating one revokes
-  the previous. `expiresAt` exists and nothing ever writes it, so invites do not expire.
+- **Schema today**: `model Invite`, minted by any member of the Family it points at and
+  by nobody else. Single-use: `redeemedAt` and `redeemedById` are claimed by the same
+  statement that reads the token, so of two people following one link exactly one joins
+  and the other finds it dead. `expiresAt` is required and written — a fortnight, the
+  same span the cookie that carries a token through sign-in lasts. Only one link is live
+  per Family, because minting one revokes the last. The **push** direction does not exist
+  yet: nothing calls `user.create`, so there is no way to add someone by email.
 
 ## Occasion
 

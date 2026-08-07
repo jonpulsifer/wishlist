@@ -9,6 +9,7 @@ import {
 import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getFamiliesWithMembers } from '@/lib/db/queries-cached';
+import { CreateFamilyButton } from './family-actions';
 import { WishlistCard } from './wishlist-card';
 
 export default async function WishlistsPage() {
@@ -33,6 +34,7 @@ export default async function WishlistsPage() {
               The wishlists you belong to, and who else is in them.
             </p>
           </div>
+          <CreateFamilyButton />
         </div>
 
         <Suspense fallback={<WishlistsLoading />}>
@@ -65,7 +67,7 @@ async function WishlistsContent({ userId }: { userId: string }) {
     return (
       <div className="text-center py-12">
         <p className="text-lg text-muted-foreground">
-          You are not in any wishlists yet.
+          You are not in any wishlists yet. Start one, or follow an invite link.
         </p>
       </div>
     );
