@@ -17,13 +17,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Viewer } from '@/lib/auth/viewer';
 import { getInitials } from '@/lib/utils';
+
+/** The fields the menu shows — the viewer's id stays on the server. */
+type Account = { name: string | null; email: string; image: string | null };
 
 /** Thumb-sized rows: a menu you can hit on an iPad without aiming. */
 const itemClass = 'min-h-11 gap-3 px-3 text-base';
 
-export function UserMenu({ user }: { user: Viewer }) {
+export function UserMenu({ user }: { user: Account }) {
   const { theme, setTheme } = useTheme();
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
 
