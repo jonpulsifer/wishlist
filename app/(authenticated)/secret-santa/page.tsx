@@ -1,12 +1,8 @@
 import { Archive, CalendarIcon, Gift, PlusIcon, Users } from 'lucide-react';
 import Link from 'next/link';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageHeader } from '@/components/shell/page-header';
+import { PageTransition } from '@/components/shell/page-transition';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import { getExchanges } from '@/lib/db/queries-cached';
@@ -58,30 +53,26 @@ export default async function SecretSantaPage() {
   } = partitionBySeason(events);
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Secret Santa</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <div className="flex flex-1 flex-col gap-6 p-4 max-w-full overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Secret Santa</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              View your Secret Santa events and assignments.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/secret-santa/create">
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create New Event
-            </Link>
-          </Button>
+    <PageTransition>
+      <PageContainer>
+        <div className="flex flex-col gap-2">
+          <PageHeader
+            title="Secret Santa"
+            actions={
+              <Button asChild className="min-h-11">
+                <Link
+                  href="/secret-santa/create"
+                  transitionTypes={['drill-in']}
+                >
+                  <PlusIcon />
+                  Create New Event
+                </Link>
+              </Button>
+            }
+          />
+          <p className="text-muted-foreground text-sm sm:text-base">
+            View your Secret Santa events and assignments.
+          </p>
         </div>
 
         {events.length === 0 ? (
@@ -90,8 +81,10 @@ export default async function SecretSantaPage() {
             <p className="text-lg text-muted-foreground mb-4">
               No Secret Santa events yet.
             </p>
-            <Button asChild>
-              <Link href="/secret-santa/create">Create Your First Event</Link>
+            <Button asChild className="min-h-11">
+              <Link href="/secret-santa/create" transitionTypes={['drill-in']}>
+                Create Your First Event
+              </Link>
             </Button>
           </div>
         ) : (
@@ -111,10 +104,12 @@ export default async function SecretSantaPage() {
                     return (
                       <Card key={event.id}>
                         <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle>{event.name}</CardTitle>
-                              <CardDescription className="flex items-center gap-4 mt-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <CardTitle className="break-words">
+                                {event.name}
+                              </CardTitle>
+                              <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3.5 w-3.5" />
                                   {event.participantCount} participants
@@ -126,7 +121,7 @@ export default async function SecretSantaPage() {
                                 )}
                               </CardDescription>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex shrink-0 items-center gap-2">
                               {event.isOrganiser && (
                                 <DeleteExchangeButton
                                   exchangeId={event.id}
@@ -245,12 +240,12 @@ export default async function SecretSantaPage() {
                     return (
                       <Card key={event.id} className="bg-muted/30">
                         <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-muted-foreground">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <CardTitle className="break-words text-muted-foreground">
                                 {event.name}
                               </CardTitle>
-                              <CardDescription className="flex items-center gap-4 mt-1">
+                              <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3.5 w-3.5" />
                                   {event.participantCount} participants
@@ -287,7 +282,7 @@ export default async function SecretSantaPage() {
             )}
           </>
         )}
-      </div>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }

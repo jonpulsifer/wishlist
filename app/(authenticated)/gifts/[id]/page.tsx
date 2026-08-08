@@ -1,16 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageHeader } from '@/components/shell/page-header';
+import { PageTransition } from '@/components/shell/page-transition';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getWishWithAccessCheck } from '@/lib/db/queries-cached';
 import { GiftDetail } from './gift-detail';
@@ -47,33 +39,15 @@ export default async function GiftPage({ params }: Props) {
   }
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/gifts">Gifts</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="max-w-[150px] sm:max-w-none truncate">
-                {gift.name}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-2 max-w-full overflow-hidden">
-        <div className="container mx-auto py-6">
-          <GiftDetail
-            gift={gift}
-            currentUserId={viewer.id}
-            canEdit={gift.canEdit}
-          />
-        </div>
-      </div>
-    </SidebarInset>
+    <PageTransition>
+      <PageContainer className="overflow-hidden">
+        <PageHeader title={gift.name} backHref="/gifts" backLabel="Gifts" />
+        <GiftDetail
+          gift={gift}
+          currentUserId={viewer.id}
+          canEdit={gift.canEdit}
+        />
+      </PageContainer>
+    </PageTransition>
   );
 }

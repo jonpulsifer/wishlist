@@ -37,6 +37,7 @@ export default function GiftList({
           <div className="space-y-1">
             <Link
               href={`/gifts/${gift.id}`}
+              transitionTypes={['drill-in']}
               className="font-medium hover:text-primary transition-colors hover:underline"
             >
               {gift.name}
@@ -59,6 +60,7 @@ export default function GiftList({
           </div>
           <Link
             href={`/people/${gift.subject.id}`}
+            transitionTypes={['drill-in']}
             className="text-muted-foreground"
           >
             {gift.subject.name || 'Unknown'}

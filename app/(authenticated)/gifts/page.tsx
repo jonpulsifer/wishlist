@@ -1,23 +1,12 @@
 import { User } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { AddGiftDialog } from '@/components/add-gift-dialog';
-import { AppContent } from '@/components/app-content';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageTransition } from '@/components/shell/page-transition';
 import { Button } from '@/components/ui/button';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
-import {
-  getPeopleForNewWishModal,
-  getSortedVisibleWishesForUser,
-} from '@/lib/db/queries-cached';
+import { getSortedVisibleWishesForUser } from '@/lib/db/queries-cached';
 import { GiftList } from './gift-list';
 
 interface PageProps {
@@ -35,39 +24,27 @@ export default async function GiftsPage({ searchParams }: PageProps) {
     column: sort as 'name' | 'owner',
   });
 
-  const users = await getPeopleForNewWishModal(viewer.id);
-
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Gifts</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <AppContent>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Gifts</h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              The gifts in this list include: Claimable gifts, Gifts that you
-              have created, and Gifts that you have already claimed.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button asChild variant="outline">
-              <Link href="/people/me">
-                <User className="h-4 w-4 mr-2" />
-                View My Gifts
-              </Link>
-            </Button>
-            <AddGiftDialog users={users} currentUserId={viewer.id} />
-          </div>
+    <PageTransition>
+      <PageContainer className="overflow-hidden">
+        <div className="flex flex-col gap-3">
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">Gifts</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            The gifts in this list include: Claimable gifts, Gifts that you have
+            created, and Gifts that you have already claimed.
+          </p>
+          <Button
+            asChild
+            variant="outline"
+            className="min-h-11 w-full sm:w-fit"
+          >
+            <Link href="/people/me">
+              <User />
+              View My Gifts
+            </Link>
+          </Button>
         </div>
-        <Suspense fallback={<Skeleton className="h-full w-full" />}>
+        <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
           <GiftList
             initialGifts={gifts}
             search={q as string}
@@ -76,7 +53,7 @@ export default async function GiftsPage({ searchParams }: PageProps) {
             currentUserId={viewer.id}
           />
         </Suspense>
-      </AppContent>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }

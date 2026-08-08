@@ -1,14 +1,7 @@
 import { notFound } from 'next/navigation';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageHeader } from '@/components/shell/page-header';
+import { PageTransition } from '@/components/shell/page-transition';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import {
   getOwnExclusions,
@@ -30,35 +23,21 @@ export default async function EditUserPage() {
   }
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/people">People</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem className="hidden sm:block">
-              <BreadcrumbLink href={`/people/${user.id}`}>
-                {user.name || user.email}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden sm:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Edit Profile</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <div className="flex flex-1 flex-col p-4 sm:p-8 max-w-full overflow-hidden">
-        <div className="mx-auto w-full max-w-2xl">
+    <PageTransition>
+      <PageContainer className="max-w-2xl">
+        <PageHeader
+          backHref="/people/me"
+          backLabel="My list"
+          title="Edit profile"
+        />
+        <div>
           <UserDetailsForm user={user} />
           <ExclusionsForm
             people={people.filter((person) => person.id !== viewer.id)}
             excluded={excluded}
           />
         </div>
-      </div>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }

@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Partial prerendering: the shell prerenders, every runtime read streams in
+  // through its own Suspense boundary. `partialPrefetching` needs this on.
+  cacheComponents: true,
+  partialPrefetching: true,
   output: process.env.STANDALONE ? 'standalone' : undefined,
   logging: {
     fetches: {

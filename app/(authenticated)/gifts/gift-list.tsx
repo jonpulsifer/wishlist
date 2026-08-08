@@ -172,6 +172,7 @@ export function GiftList({
             >
               <Link
                 href={`/gifts/${gift.id}`}
+                transitionTypes={['drill-in']}
                 className="space-y-1 hover:opacity-80"
               >
                 <div className="font-medium">{gift.name}</div>
@@ -199,6 +200,7 @@ export function GiftList({
 
               <Link
                 href={`/people/${gift.subject.id}`}
+                transitionTypes={['drill-in']}
                 className="hidden md:flex items-center gap-2 hover:opacity-80"
               >
                 <Avatar className="h-6 w-6">

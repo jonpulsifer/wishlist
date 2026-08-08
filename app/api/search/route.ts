@@ -7,8 +7,6 @@ import {
   visibleWishesWhere,
 } from '@/lib/db/visibility';
 
-export const dynamic = 'force-dynamic';
-
 type SearchItem = {
   id: string;
   type: 'user' | 'wish' | 'family';

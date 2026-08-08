@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -156,14 +157,17 @@ export function UserDetailsForm({ user }: { user: Profile }) {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
+            {/* Same destination as the header's back link — two visible exits
+                that disagree would be a maze. */}
             <Button
+              asChild
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              className="min-h-11"
             >
-              Cancel
+              <Link href="/people/me">Cancel</Link>
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="min-h-11">
               {isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </CardFooter>

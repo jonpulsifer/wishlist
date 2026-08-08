@@ -1,15 +1,8 @@
 import { ChevronRightIcon, GiftIcon } from 'lucide-react';
 import Link from 'next/link';
-import { AddGiftDialog } from '@/components/add-gift-dialog';
-import { AppHeader } from '@/components/app-header';
 import { PeekingSanta } from '@/components/peeking-santa';
+import { PageTransition } from '@/components/shell/page-transition';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
 import {
   Card,
   CardContent,
@@ -18,12 +11,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import db from '@/lib/db/client';
 import {
   getLatestVisibleWishesForUserById,
-  getPeopleForNewWishModal,
   getSortedVisibleWishesForUser,
   getUsersForPeoplePage,
   getVisibleWishesForUserById,
@@ -40,20 +31,19 @@ import { PeopleList } from './people-list';
 /**
  * Home answers, in order: how long have I got, who have I not sorted yet, and
  * can anyone shop for me. Search is a way to reach a thing you can already
- * name, so it stays in the header where navigation lives.
+ * name, so it stays in the header where navigation lives; adding a wish lives
+ * on the shell's FAB, so no card duplicates it.
  */
 export default async function HomePage() {
   const viewer = await requireViewerOrRedirect();
 
   const [
-    addGiftDialogUsers,
     people,
     visibleGifts,
     myGifts,
     latestGifts,
     secretSantaParticipations,
   ] = await Promise.all([
-    getPeopleForNewWishModal(viewer.id),
     getUsersForPeoplePage(viewer.id),
     getSortedVisibleWishesForUser({ userId: viewer.id }),
     getVisibleWishesForUserById(viewer.id, viewer.id),
@@ -75,23 +65,14 @@ export default async function HomePage() {
   const sleeps = daysUntilChristmas();
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Home</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-
-      {/* p-6 is the gutter PeekingSanta's overhang is measured against. */}
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-6">
+    <PageTransition>
+      {/* p-6 is the gutter PeekingSanta's overhang is measured against; pb-28
+          is the FAB's clearance. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-6 pb-28">
         {/* The clock and the score — the two numbers that actually motivate. */}
         <section className="px-1 pt-1">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h1 className="text-2xl font-bold sm:text-3xl">
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">
               {sleeps === 0
                 ? "It's Christmas 🎄"
                 : `${sleeps} sleep${sleeps === 1 ? '' : 's'} to go`}
@@ -138,20 +119,17 @@ export default async function HomePage() {
             <CardTitle className="text-base">Your list</CardTitle>
             <CardDescription>
               {myGifts.length === 0
-                ? "It's empty — nobody can shop for you yet."
+                ? "It's empty — tap Add wish to put your first idea on it."
                 : myGifts.length < 3
                   ? `${myGifts.length} idea${myGifts.length === 1 ? '' : 's'}. A few more gives people a choice.`
                   : `${myGifts.length} ideas. Looking good.`}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2 sm:flex-row">
-            <AddGiftDialog
-              currentUserId={viewer.id}
-              users={addGiftDialogUsers}
-            />
+          <CardContent>
             <Link
               href="/people/me"
-              className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
+              transitionTypes={['section-forward']}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors hover:bg-accent"
             >
               <GiftIcon className="h-4 w-4" />
               See my list
@@ -175,7 +153,10 @@ export default async function HomePage() {
                           ? `/people/${p.assignedTo.id}`
                           : '/secret-santa'
                       }
-                      className="flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent"
+                      transitionTypes={[
+                        p.assignedTo ? 'drill-in' : 'section-forward',
+                      ]}
+                      className="flex min-h-14 items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">
@@ -208,7 +189,8 @@ export default async function HomePage() {
                   <li key={gift.id}>
                     <Link
                       href={`/gifts/${gift.id}`}
-                      className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent"
+                      transitionTypes={['drill-in']}
+                      className="flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent"
                     >
                       <Avatar className="h-7 w-7 shrink-0">
                         <AvatarImage src={gift.subject.image ?? undefined} />
@@ -230,6 +212,6 @@ export default async function HomePage() {
           </Card>
         )}
       </div>
-    </SidebarInset>
+    </PageTransition>
   );
 }

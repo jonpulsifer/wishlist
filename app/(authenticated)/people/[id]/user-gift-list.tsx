@@ -86,6 +86,7 @@ export function UserGiftList({
         <div className="space-y-1">
           <Link
             href={`/gifts/${gift.id}`}
+            transitionTypes={['drill-in']}
             className="font-medium hover:text-primary transition-colors hover:underline"
           >
             {gift.name}

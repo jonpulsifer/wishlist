@@ -1,9 +1,9 @@
 /**
  * NextAuth wiring, and nothing else.
  *
- * `auth()` is exported for the two places that genuinely need a `Session`: the
- * catch-all route handler and the `SessionProvider` in the authenticated layout.
- * Everything that wants to know *who is asking* goes through `lib/auth/viewer`.
+ * `auth()` is exported for the one place that genuinely needs a `Session`: the
+ * catch-all route handler. Everything that wants to know *who is asking* goes
+ * through `lib/auth/viewer`.
  *
  * The session callback selects the few fields the browser is allowed to know
  * about the signed-in person, and nothing else: there is no authorization
@@ -41,8 +41,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, user }) {
       // Select, don't include: the previous version assigned the whole `User`
-      // row — shipping address, sizes, onboarding flags — onto the session, and
-      // `SessionProvider` serialises that straight into the page source.
+      // row — shipping address, sizes, onboarding flags — onto the session,
+      // which is exactly what the browser may learn about the viewer.
       const record = await prisma.user.findUnique({
         where: { id: user.id },
         select: {

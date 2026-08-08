@@ -22,6 +22,9 @@ export function Toaster() {
     <Sonner
       theme={theme as 'light' | 'dark' | 'system'}
       position="bottom-right"
+      // Clear of the "Add wish" FAB, which owns the bottom-right corner.
+      offset={{ bottom: '6rem' }}
+      mobileOffset={{ bottom: '6rem' }}
       closeButton
       richColors
       toastOptions={{

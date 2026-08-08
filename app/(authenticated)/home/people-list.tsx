@@ -94,6 +94,7 @@ export function PeopleList({
                 <li key={gift.id} className="flex items-center gap-2 py-1.5">
                   <Link
                     href={`/gifts/${gift.id}`}
+                    transitionTypes={['drill-in']}
                     className="min-w-0 flex-1 truncate text-sm hover:underline"
                   >
                     {gift.name}

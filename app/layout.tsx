@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fredoka, Geist_Mono, Nunito } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -59,12 +59,17 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
 };
 
-// these are the default values
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: 1,
+  // The chrome paints edge to edge and pads itself back off the notch.
+  viewportFit: 'cover',
+  // Hex, not the oklch tokens: the meta tag is read by the OS chrome, which
+  // has no stylesheet to resolve a variable against.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fef9f1' },
+    { media: '(prefers-color-scheme: dark)', color: '#071221' },
+  ],
 };
 
 export default function RootLayout({
