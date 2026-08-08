@@ -1,12 +1,6 @@
 import { Suspense } from 'react';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageTransition } from '@/components/shell/page-transition';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getFamiliesWithMembers } from '@/lib/db/queries-cached';
 import { CreateFamilyButton } from './family-actions';
@@ -16,20 +10,13 @@ export default async function FamiliesPage() {
   const viewer = await requireViewerOrRedirect();
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>Families</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-2 max-w-full overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <PageTransition>
+      <PageContainer>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Families</h1>
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">
+              Families
+            </h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               The families you are in, and who else is in them.
             </p>
@@ -40,8 +27,8 @@ export default async function FamiliesPage() {
         <Suspense fallback={<FamiliesLoading />}>
           <FamiliesContent userId={viewer.id} />
         </Suspense>
-      </div>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }
 

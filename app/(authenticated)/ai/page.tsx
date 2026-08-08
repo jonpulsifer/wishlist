@@ -1,15 +1,6 @@
 import { Bot } from 'lucide-react';
-import { AppContent } from '@/components/app-content';
-import { AppHeader } from '@/components/app-header';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageTransition } from '@/components/shell/page-transition';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getPeopleForNewWishModal } from '@/lib/db/queries-cached';
 import { AIRecommendations } from './ai-recommendations';
@@ -20,40 +11,23 @@ export default async function AIPage() {
   const people = await getPeopleForNewWishModal(viewer.id);
 
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>AI Gift Recommendations</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <AppContent>
-        {/* Header */}
-        <div className="relative">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <Bot className="h-8 w-8 text-purple-500" />
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                AI Gift Recommendations
-              </h1>
-            </div>
-            <p className="text-muted-foreground">
-              Get personalized gift suggestions powered by AI based on someone's
-              wishlist history (including archived gifts)
-            </p>
+    <PageTransition>
+      <PageContainer>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Bot className="h-8 w-8 shrink-0 text-purple-500" />
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">
+              AI Gift Recommendations
+            </h1>
           </div>
+          <p className="text-muted-foreground">
+            Get personalized gift suggestions powered by AI based on someone's
+            wishlist history (including archived gifts)
+          </p>
         </div>
 
-        {/* AI Recommendations Component */}
         <AIRecommendations people={people} />
-      </AppContent>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }

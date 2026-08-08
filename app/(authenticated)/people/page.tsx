@@ -1,23 +1,9 @@
-import { UsersIcon } from 'lucide-react';
 import Link from 'next/link';
-import { AppHeader } from '@/components/app-header';
+import { PageContainer } from '@/components/shell/page-container';
+import { PageTransition } from '@/components/shell/page-transition';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { SidebarInset } from '@/components/ui/sidebar';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import { requireViewerOrRedirect } from '@/lib/auth/viewer';
 import { getUsersForPeoplePage } from '@/lib/db/queries-cached';
 import { getInitials } from '@/lib/utils';
@@ -26,66 +12,58 @@ export default async function PeoplePage() {
   const viewer = await requireViewerOrRedirect();
   const people = await getUsersForPeoplePage(viewer.id);
   return (
-    <SidebarInset>
-      <AppHeader>
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbPage>People</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </AppHeader>
-      <div className="flex flex-1 flex-col gap-4 p-2">
+    <PageTransition>
+      <PageContainer>
+        <header className="flex flex-col gap-1">
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">
+            People
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Everyone on your wishlists. Tap someone to see what they want.
+          </p>
+        </header>
+
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UsersIcon className="h-4 w-4" />
-              Your Wishlist Participants
-            </CardTitle>
-            <CardDescription>
-              Here is a list of people who are part of your wishlists.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableBody>
+          <CardContent className="px-2">
+            {people.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="font-medium">Nobody on your wishlists yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Join or create a wishlist to see people here.
+                </p>
+              </div>
+            ) : (
+              <ul>
                 {people.map((person) => (
-                  <TableRow
-                    key={person.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  >
-                    <TableCell colSpan={2} className="p-0">
-                      <Link
-                        href={`/people/${person.id}`}
-                        className="flex items-center justify-between p-4 w-full h-full"
+                  <li key={person.id}>
+                    <Link
+                      href={`/people/${person.id}`}
+                      transitionTypes={['drill-in']}
+                      className="flex min-h-14 items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-accent"
+                    >
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={person.image ?? undefined} />
+                        <AvatarFallback>{getInitials(person)}</AvatarFallback>
+                      </Avatar>
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {person.name ?? person.email}
+                      </span>
+                      <Badge
+                        variant={
+                          person.wishCount < 3 ? 'destructive' : 'secondary'
+                        }
                       >
-                        <div className="flex items-center gap-2">
-                          <Avatar>
-                            <AvatarImage src={person.image ?? undefined} />
-                            <AvatarFallback>
-                              {getInitials(person)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {person.name ?? person.email}
-                        </div>
-                        <Badge
-                          variant={
-                            person.wishCount < 3 ? 'destructive' : 'secondary'
-                          }
-                        >
-                          {person.wishCount} gift
-                          {person.wishCount === 1 ? '' : 's'}
-                        </Badge>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
+                        {person.wishCount} gift
+                        {person.wishCount === 1 ? '' : 's'}
+                      </Badge>
+                    </Link>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+            )}
           </CardContent>
         </Card>
-      </div>
-    </SidebarInset>
+      </PageContainer>
+    </PageTransition>
   );
 }

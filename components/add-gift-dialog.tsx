@@ -49,9 +49,11 @@ type Props = {
   users: Omit<PersonRef, 'image'>[];
   /** The id alone. A whole `Viewer` carries `can`, which cannot be serialised. */
   currentUserId: string;
+  /** A single element — `DialogTrigger` clones it. */
+  trigger?: React.ReactNode;
 };
 
-export function AddGiftDialog({ users, currentUserId }: Props) {
+export function AddGiftDialog({ users, currentUserId, trigger }: Props) {
   const [open, setOpen] = React.useState(false);
   const [recipientId, setRecipientId] = React.useState(currentUserId);
   const [asSubject, setAsSubject] = React.useState(false);
@@ -97,11 +99,13 @@ export function AddGiftDialog({ users, currentUserId }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add New Gift</span>
-          <span className="sm:hidden">Add Gift</span>
-        </Button>
+        {trigger ?? (
+          <Button className="w-full sm:w-auto">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add New Gift</span>
+            <span className="sm:hidden">Add Gift</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
         <DialogHeader>

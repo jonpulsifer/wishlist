@@ -13,8 +13,8 @@
  *   `requireViewerOrRedirect`  → redirects  (pages)
  *
  * Nothing else may derive identity from the session. `auth()` is NextAuth's own
- * handle: the authenticated layout passes it to `SessionProvider` and the route
- * handler mounts it. Read a viewer from here instead.
+ * handle: the catch-all route handler mounts it, and `currentViewer` below is
+ * the only caller that reads it. Read a viewer from here instead.
  *
  * A `Viewer` is an identity and nothing more. What they may act on is not a
  * property of the person — it is a property of the row, and it lives in

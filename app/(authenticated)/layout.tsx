@@ -1,39 +1,36 @@
-import { redirect } from 'next/navigation';
-import { SessionProvider } from 'next-auth/react';
-import { auth } from '@/app/auth';
-import { AppSidebar } from '@/components/app-sidebar';
+import { Suspense } from 'react';
 import { GlobalSearchProvider } from '@/components/global-search/global-search-provider';
-import { SidebarProvider } from '@/components/ui/sidebar';
-import {
-  getClaimedWishesForMe,
-  getUsersForPeoplePage,
-} from '@/lib/db/queries-cached';
-import { shoppingProgress } from '@/lib/shopping-progress';
+import { AppShell } from '@/components/shell/app-shell';
+import { ShellFab } from '@/components/shell/shell-fab';
+import { ShellUser } from '@/components/shell/shell-user';
+import { UserMenuSkeleton } from '@/components/shell/user-menu';
 
-async function Layout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user) redirect('/');
-
-  const [people, claimedByMe] = await Promise.all([
-    getUsersForPeoplePage(session.user.id),
-    getClaimedWishesForMe(session.user.id),
-  ]);
-  const { sortedPeople, total, percent } = shoppingProgress(
-    people,
-    claimedByMe,
-  );
-
+/**
+ * The chrome, and nothing that has to be awaited.
+ *
+ * Under Cache Components a layout that reads runtime data outside a boundary
+ * costs every route below it its prerendered shell, so the two pieces that need
+ * a viewer arrive as Suspense holes. `proxy.ts` bounces signed-out visitors and
+ * each page's `requireViewerOrRedirect()` is the guard.
+ */
+function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider session={session}>
-      <GlobalSearchProvider>
-        <SidebarProvider defaultOpen={false}>
-          <AppSidebar
-            progress={{ sorted: sortedPeople.length, total, percent }}
-          />
-          <main className="flex flex-1">{children}</main>
-        </SidebarProvider>
-      </GlobalSearchProvider>
-    </SessionProvider>
+    <GlobalSearchProvider>
+      <AppShell
+        user={
+          <Suspense fallback={<UserMenuSkeleton />}>
+            <ShellUser />
+          </Suspense>
+        }
+        fab={
+          <Suspense fallback={null}>
+            <ShellFab />
+          </Suspense>
+        }
+      >
+        {children}
+      </AppShell>
+    </GlobalSearchProvider>
   );
 }
 export default Layout;
